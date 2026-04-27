@@ -68,7 +68,7 @@ Fix instructions: node → `brew install node`, firebase → `npm install -g fir
 Delegate to **firebase-fetcher** agent. Do NOT duplicate discovery/fetch logic.
 
 **NEVER** use `mcp__plugin_crashlytics_firebase__firebase_login` — broken.
-**NOTE:** Crashlytics data MCP tools (`crashlytics_get_issue`, etc.) do NOT exist. MCP is for discovery only.
+**NOTE:** MCP crash tools (`crashlytics_list_events`, `crashlytics_get_issue`, `crashlytics_batch_get_events`) DO work and can be used as fallback if REST API fails.
 
 ```yaml
 Task(

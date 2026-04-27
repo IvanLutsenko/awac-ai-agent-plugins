@@ -21,7 +21,7 @@ PLACEHOLDER_RE = re.compile(
     re.IGNORECASE,
 )
 
-VALID_COMPONENTS = {'ui', 'network', 'database', 'services', 'background'}
+VALID_COMPONENTS = {'ui', 'network', 'database', 'services', 'background', 'business'}
 
 CRITICAL_FIELDS = {'Assignee', 'Fix before', 'Fix after', 'Executed commands', 'JIRA Brief'}
 
@@ -240,7 +240,7 @@ def chk_prevention(sections):
     return 'OK' if word_count(text) >= 3 else 'MISSING'
 
 
-def chk_jira_brief(text):
+def chk_jira_brief(text, console_url=None):
     """Check JIRA Brief section. Returns (status, missing_sub_fields)."""
     m = re.search(r'#{2,3}\s*JIRA\s*Brief(.*?)(?=\n#{2,3}\s[^#]|\Z)', text, re.IGNORECASE | re.DOTALL)
     if not m:
@@ -252,6 +252,8 @@ def chk_jira_brief(text):
         f for f in required
         if not re.search(r'(?:\*\*)?{}(?:\*\*)?[:\s]'.format(re.escape(f)), jira, re.IGNORECASE)
     ]
+    if console_url and console_url not in jira:
+        missing.append('Firebase URL (expected: {})'.format(console_url))
     return ('OK', []) if not missing else ('PARTIAL', missing)
 
 
@@ -294,7 +296,7 @@ def validate(text, console_url=None):
             ok += 1  # counts toward score, but flagged for LLM review
 
     # JIRA Brief — 1 check (14th field)
-    jira_status, jira_missing = chk_jira_brief(text)
+    jira_status, jira_missing = chk_jira_brief(text, console_url)
     if jira_status == 'OK':
         ok += 1
     elif jira_status == 'MISSING':

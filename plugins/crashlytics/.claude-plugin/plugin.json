@@ -5,7 +5,7 @@
   "mcpServers": "./.mcp.json",
   "author": {
     "name": "Ivan Lutsenko",
-    "email": "ivan@lutsenko.com",
+    "email": "lutsenkoivan@gmail.com",
     "url": "https://github.com/IvanLutsenko"
   },
   "keywords": ["crashlytics", "crash-report", "firebase", "android", "ios", "swift", "kotlin", "debugging", "git-blame", "multi-agent"],
