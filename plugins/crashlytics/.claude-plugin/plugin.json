@@ -1,7 +1,7 @@
 {
   "name": "crashlytics",
   "description": "Multi-platform crash analysis for Android & iOS with git blame forensics, code-level fixes, and deterministic quality gate. 2-level fallback (CLI REST API → Enhanced Manual). MCP used for project/app discovery only.",
-  "version": "4.4.0",
+  "version": "4.4.1",
   "mcpServers": "./.mcp.json",
   "author": {
     "name": "Ivan Lutsenko",

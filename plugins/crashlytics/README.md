@@ -2,7 +2,7 @@
 
 Crash log analysis with root cause identification, code-level fixes, and developer assignment via git blame.
 
-**Version:** 4.4.0 — Android & iOS
+**Version:** 4.4.1 — Android & iOS
 
 ---
 
@@ -94,7 +94,7 @@ The plugin falls back between modes: CLI REST API → Enhanced Manual.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      crashlytics v4.4.0                         │
+│                      crashlytics v4.4.1                         │
 └─────────────────────────────────────────────────────────────────┘
                               │
               ┌───────────────┴───────────────┐
@@ -279,6 +279,10 @@ MCP is also used for **project/app discovery** (`firebase_get_environment`, `fir
 ---
 
 ## Changelog
+
+### 4.4.1
+- **Fixed:** `validate-report.py` — синхронизирован список `VALID_COMPONENTS` с фактическими компонентами, корректное чтение `console_url`
+- **Fixed:** iOS документация — мелкие правки
 
 ### 4.4.0
 - **Fixed:** REST API version `v1beta1` → `v1alpha` (root cause of all 404 errors)
