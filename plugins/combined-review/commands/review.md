@@ -150,10 +150,39 @@ Launch the `test-analyzer` agent. It checks:
 
 ### Agent 5 — CodeRabbit (if available)
 
+CodeRabbit reviews the working tree against `--base <target>`. If the working tree is on a branch other than the source we're reviewing (PR mode or branch-diff mode where current branch ≠ source), run CodeRabbit inside a temp git worktree checked out to the source branch.
+
+**Determine which path to take:**
+- `current` mode (uncommitted changes) → run in cwd, no worktree, no `--base`.
+- `--base <X>` mode → run in cwd with `--base <X>`. Current branch IS source.
+- `pr` mode and `branch-diff` mode → if `git branch --show-current` differs from the source branch, use the worktree path. Otherwise run in cwd with `--base <target>`.
+
+**Worktree path (when needed):**
+
+Substitute `<source>` and `<target>` with the resolved branch names from Step 1.
+
 ```bash
-coderabbit review --plain
+WORKTREE=$(mktemp -d -t coderabbit-XXXXXX)
+if git worktree add --detach "$WORKTREE" "origin/<source>" 2>&1; then
+  ( cd "$WORKTREE" && coderabbit review --plain --base "origin/<target>" 2>&1 | tail -200 )
+  git worktree remove --force "$WORKTREE" 2>/dev/null || true
+else
+  echo "CodeRabbit skipped: worktree creation failed for origin/<source>"
+fi
 ```
-Or with base branch: `coderabbit review --plain --base <branch>`
+
+**In-cwd path (when current branch is the source):**
+
+```bash
+coderabbit review --plain --base <target> 2>&1 | tail -200
+```
+
+Or, in `current` mode:
+```bash
+coderabbit review --plain 2>&1 | tail -200
+```
+
+**If `git worktree add` fails or CodeRabbit aborts**, do not fail the review — log the skip reason and continue with the 4 agents' output.
 
 ### Optional agents (by request)
 
