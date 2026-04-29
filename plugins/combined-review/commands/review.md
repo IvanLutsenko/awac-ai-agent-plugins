@@ -116,7 +116,22 @@ Skip CodeRabbit for this run, continue with 4 agents.
 
 Launch **4 default agents in parallel** + CodeRabbit (if available) + optional agents if requested.
 
-Pass each agent: full diff, file list, CLAUDE.md content.
+Pass each agent a prompt whose **first line** is `Language: <resolved>` where `<resolved>` is the language from Step 0 (`en`, `ru`, or `uk` — never literal `system`; resolve `system` to one of the three before launching). After that line, pass: full diff, file list, CLAUDE.md content.
+
+Example agent prompt skeleton:
+```
+Language: ru
+
+<diff>
+...
+</diff>
+
+Changed files:
+...
+
+CLAUDE.md:
+...
+```
 
 ### Agent 1 — Code Reviewer
 
@@ -212,7 +227,7 @@ Collect findings from all agents:
 
 ## Step 6 — Final report
 
-**Write the report in the language resolved in Step 0.** Section headers and descriptions must be in the target language. Code snippets and file paths stay as-is.
+Agent findings already arrive in the resolved language (via the `Language:` prefix from Step 4). Write the report shell — section headers, summary line, recommendation order — in the same resolved language. Code snippets, file paths, identifier names, and CLI commands stay as-is.
 
 ```markdown
 ## Code Review: [what was reviewed]
