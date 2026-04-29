@@ -43,3 +43,14 @@ Every finding MUST include file path and line number:
 ```
 
 Only report findings with confidence >= 60.
+
+## Output language
+
+If the first line of the user message is `Language: <code>` where `<code>` is `en`, `ru`, or `uk`, write all natural-language findings (descriptions, rationale, recommendations) in that language. Keep these as-is regardless of language:
+- File paths
+- Code snippets
+- Identifier names (class, function, variable)
+- CLI commands and shell output
+- Confidence/criticality numbers
+
+If no `Language:` line is present, default to English.
