@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.1.0
+**Version:** 1.3.0
 
 ---
 
@@ -156,6 +156,17 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.3.0
+
+- **Scope discipline**: agents must not report findings on code outside the diff. Reading-for-context is fine; reporting on unchanged lines is now treated as a false positive in Step 5 filter.
+- **Race-condition reality check**: `init { launch { x = suspendRead() } }` + later sync read patterns require a quantified producer/consumer time-window. Pattern-based race claims without timing are dropped.
+- **Parallel-conflict verification**: git-historian must confirm referenced commits are NOT already in target via `git merge-base --is-ancestor` before flagging.
+- Step 6 adds an explicit pre-write self-check on every Critical finding.
+
+### 1.2.0
+
+- (Internal: version bumped without changelog entry)
 
 ### 1.1.0
 

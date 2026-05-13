@@ -216,6 +216,9 @@ Collect findings from all agents:
 
 1. **Deduplicate** — if two agents found the same issue, keep one with highest confidence
 2. **Filter out** confidence < 60
+3. **Scope check** — for every finding, verify the cited `file:line` is in the diff (added or modified). Run `grep` on the saved diff file if unsure. If the line is not in the diff, drop the finding even if multiple agents reported it. Reading-for-context is fine; reporting-on-unchanged-code is not.
+4. **Race-condition sanity check** — if any finding flags an `init { launch { x = suspendRead() } }` + later sync read pattern as Critical or Warning, demand the time-window estimate. If the finding doesn't quantify producer-time (typically ms for DataStore/prefs) vs consumer-time (the realistic user steps before x is read), downgrade severity or drop. Pattern-based race claims without timing are false positives.
+5. **Parallel-conflict sanity check** — if a finding cites a parallel branch/commit as a conflict source, verify with `git merge-base --is-ancestor <commit> origin/<target>`. If the commit is already in target, drop the finding.
 
 **False positives (skip):**
 - Pre-existing issues (existed before this diff)
@@ -223,9 +226,18 @@ Collect findings from all agents:
 - Stylistic nitpicks not backed by CLAUDE.md
 - Intentional functionality changes
 - Generic advice without specifics ("add tests" without saying for what)
-- Issues on lines not changed in this diff
+- **Issues on lines not changed in this diff** — verified by Scope check above. Common trap: an agent reads `Foo.kt` for context (because the diff calls into it) and then flags pre-existing patterns in `Foo.kt` itself. Drop these.
+- **Speculative race conditions** — async-init + sync-read patterns without a quantified non-zero race window.
+- **Already-merged "parallel" conflicts** — a referenced commit that's already an ancestor of target.
 
 ## Step 6 — Final report
+
+Before writing the report, do a last self-check on every Critical:
+- Is the `file:line` actually in the saved diff? (`grep` it if unsure)
+- For race-condition findings: is the time-window quantified, and is producer << consumer? If not, downgrade or drop.
+- For parallel-work findings: did you confirm the referenced commit is NOT already in target?
+
+A handful of well-grounded Critical findings is better than a long list with pattern-matched speculation. If after filtering only one Critical remains — that's fine, report just that one.
 
 Agent findings already arrive in the resolved language (via the `Language:` prefix from Step 4). Write the report shell — section headers, summary line, recommendation order — in the same resolved language. Code snippets, file paths, identifier names, and CLI commands stay as-is.
 

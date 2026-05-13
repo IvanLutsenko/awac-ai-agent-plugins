@@ -31,7 +31,7 @@ gh pr list --search "<filename>" --state merged --limit 5 2>/dev/null
 
 - **Reverted fixes**: This change undoes something that was recently fixed. Check if the original fix commit message mentions a bug ticket.
 - **Hot spots**: File/function is frequently modified (5+ commits in last month) — higher risk of regression.
-- **Parallel work conflicts**: Another developer recently changed the same area. Risk of merge conflict or semantic conflict.
+- **Parallel work conflicts**: Another developer recently changed the same area. Risk of merge conflict or semantic conflict. **Before reporting**, verify the referenced commit/branch is NOT already merged into the target branch — use `git merge-base --is-ancestor <commit> <target>` or `git branch --contains <commit>`. If it's already in target, there is no parallel conflict.
 - **Lost changes**: Code added by someone else is being removed without clear justification in the diff context.
 - **Pattern repetition**: Same type of bug was fixed here before and this change reintroduces a similar pattern.
 
