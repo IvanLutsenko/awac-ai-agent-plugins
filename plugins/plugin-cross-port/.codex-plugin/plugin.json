@@ -8,9 +8,12 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Plugin Cross Port",
-    "shortDescription": "Convert Claude Code plugins to Codex plugins",
+    "shortDescription": "Convert plugins between Claude Code and Codex formats",
     "developerName": "Ivan Lutsenko",
     "category": "Development",
-    "capabilities": ["Read", "Write"]
+    "capabilities": [
+      "Read",
+      "Write"
+    ]
   }
 }

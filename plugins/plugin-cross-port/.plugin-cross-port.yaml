@@ -1,0 +1,11 @@
+version: 1
+plugin: 'plugin-cross-port'
+generated_at: '2026-05-29T10:33:17+00:00'
+source_of_truth: 'claude-code'
+decisions:
+  skills_shared: true
+  commands_converted: false
+  agents_converted: false
+  hooks_converted: false
+warnings: []
+manually_maintained: []
