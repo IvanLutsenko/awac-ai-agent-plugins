@@ -1,0 +1,60 @@
+#!/bin/bash
+# Pre-commit hook: sync Codex generated files for any CC plugin with staged changes.
+# Runs convert_cc_to_codex.py automatically and stages the generated files.
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+CONVERTER="$REPO_ROOT/plugins/plugin-cross-port/scripts/convert_cc_to_codex.py"
+
+# Skip silently if plugin-cross-port is not installed
+if [ ! -f "$CONVERTER" ]; then
+  exit 0
+fi
+
+# Find all plugins that have staged changes
+CHANGED_PLUGINS=$(git diff --cached --name-only | grep '^plugins/' | cut -d/ -f1,2 | sort -u)
+
+if [ -z "$CHANGED_PLUGINS" ]; then
+  exit 0
+fi
+
+SYNCED=0
+
+for PLUGIN in $CHANGED_PLUGINS; do
+  # Only process CC plugins (must have .claude-plugin/plugin.json)
+  if [ ! -f "$REPO_ROOT/$PLUGIN/.claude-plugin/plugin.json" ]; then
+    continue
+  fi
+
+  # Only run if CC-side files changed — skip if only generated/Codex files were staged
+  CC_CHANGED=$(git diff --cached --name-only \
+    | grep "^$PLUGIN/" \
+    | grep -v "generated-from-commands\|generated-from-codex\|\.codex-plugin\|\.plugin-cross-port\.yaml")
+
+  if [ -z "$CC_CHANGED" ]; then
+    continue
+  fi
+
+  echo "plugin-cross-port: syncing $PLUGIN"
+
+  python3 "$CONVERTER" "$PLUGIN" --repo-root "$REPO_ROOT" --force
+  STATUS=$?
+
+  if [ $STATUS -ne 0 ]; then
+    echo "❌ plugin-cross-port: conversion failed for $PLUGIN. Commit aborted."
+    exit 1
+  fi
+
+  # Stage all generated Codex output
+  git add "$REPO_ROOT/$PLUGIN/.codex-plugin/" 2>/dev/null || true
+  git add "$REPO_ROOT/$PLUGIN/skills/generated-from-commands/" 2>/dev/null || true
+  git add "$REPO_ROOT/$PLUGIN/.plugin-cross-port.yaml" 2>/dev/null || true
+  git add "$REPO_ROOT/.agents/plugins/marketplace.json" 2>/dev/null || true
+
+  SYNCED=$((SYNCED + 1))
+done
+
+if [ $SYNCED -gt 0 ]; then
+  echo "✅ plugin-cross-port: $SYNCED plugin(s) synced"
+fi
+
+exit 0

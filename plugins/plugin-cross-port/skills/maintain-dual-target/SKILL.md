@@ -75,14 +75,14 @@ Report what changed:
 - N commands added
 - Warnings for agents/hooks
 
-## CI / pre-commit integration
+## Pre-commit integration
 
-See `references/continuous-mode.md` for GitHub Actions and pre-commit hook examples.
+See `references/continuous-mode.md` for full details.
 
-The recommended approach:
-1. Developer modifies a Claude Code plugin
-2. GitHub Action runs `python3 scripts/convert_cc_to_codex.py <plugin-path> --repo-root . --strict`
-3. If changes are produced, commit them in the same PR (or fail and ask the developer to run it locally)
+The hook at `.githooks/pre-commit` runs automatically:
+1. Developer modifies a Claude Code plugin and stages the changes
+2. Pre-commit hook detects CC-side staged files and runs `convert_cc_to_codex.py --force`
+3. Generated Codex files are staged in the same commit automatically
 
 ## Generated vs manually maintained
 

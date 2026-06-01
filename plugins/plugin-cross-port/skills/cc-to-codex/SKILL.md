@@ -170,7 +170,7 @@ Manual steps:
   1. Review generated skills in skills/generated-from-commands/
      Remove CC-specific allowed-tools lines and MCP tool references that differ in Codex.
   2. Optionally convert agents to skills manually.
-  3. Run: python3 scripts/convert_cc_to_codex.py <plugin-path> --repo-root .
+  3. Run: python3 plugins/plugin-cross-port/scripts/convert_cc_to_codex.py <plugin-path> --repo-root .
      to validate idempotency.
 ```
 
