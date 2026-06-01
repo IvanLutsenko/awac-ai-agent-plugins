@@ -1,12 +1,16 @@
 #!/bin/bash
-# Pre-commit hook: sync Codex generated files for any CC plugin with staged changes.
-# Runs convert_cc_to_codex.py automatically and stages the generated files.
+# Pre-commit hook: bidirectional sync based on source_of_truth in .plugin-cross-port.yaml.
+#
+# source_of_truth: claude-code  →  convert_cc_to_codex.py   (CC-side changes trigger Codex sync)
+# source_of_truth: codex        →  convert_codex_to_cc.py   (Codex-side changes trigger CC sync)
+# no .plugin-cross-port.yaml    →  infer from which manifest exists
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
-CONVERTER="$REPO_ROOT/plugins/plugin-cross-port/scripts/convert_cc_to_codex.py"
+CC_TO_CODEX="$REPO_ROOT/plugins/plugin-cross-port/scripts/convert_cc_to_codex.py"
+CODEX_TO_CC="$REPO_ROOT/plugins/plugin-cross-port/scripts/convert_codex_to_cc.py"
 
 # Skip silently if plugin-cross-port is not installed
-if [ ! -f "$CONVERTER" ]; then
+if [ ! -f "$CC_TO_CODEX" ] || [ ! -f "$CODEX_TO_CC" ]; then
   exit 0
 fi
 
@@ -20,35 +24,81 @@ fi
 SYNCED=0
 
 for PLUGIN in $CHANGED_PLUGINS; do
-  # Only process CC plugins (must have .claude-plugin/plugin.json)
-  if [ ! -f "$REPO_ROOT/$PLUGIN/.claude-plugin/plugin.json" ]; then
+  PLUGIN_ABS="$REPO_ROOT/$PLUGIN"
+  DECISION_FILE="$PLUGIN_ABS/.plugin-cross-port.yaml"
+  HAS_CC="$PLUGIN_ABS/.claude-plugin/plugin.json"
+  HAS_CODEX="$PLUGIN_ABS/.codex-plugin/plugin.json"
+
+  # Determine source_of_truth
+  SOURCE_OF_TRUTH=""
+  if [ -f "$DECISION_FILE" ]; then
+    SOURCE_OF_TRUTH=$(grep '^source_of_truth:' "$DECISION_FILE" | awk '{print $2}' | tr -d "'\"")
+  fi
+
+  # Infer if not set
+  if [ -z "$SOURCE_OF_TRUTH" ]; then
+    if [ -f "$HAS_CC" ] && [ ! -f "$HAS_CODEX" ]; then
+      SOURCE_OF_TRUTH="claude-code"
+    elif [ -f "$HAS_CODEX" ] && [ ! -f "$HAS_CC" ]; then
+      SOURCE_OF_TRUTH="codex"
+    elif [ -f "$HAS_CC" ]; then
+      SOURCE_OF_TRUTH="claude-code"  # default when both exist
+    else
+      continue  # not a managed plugin
+    fi
+  fi
+
+  if [ "$SOURCE_OF_TRUTH" = "claude-code" ]; then
+    # Detect CC-side staged changes (exclude generated and Codex files)
+    SIDE_CHANGED=$(git diff --cached --name-only \
+      | grep "^$PLUGIN/" \
+      | grep -v "generated-from-commands\|generated-from-codex\|\.codex-plugin\|\.plugin-cross-port\.yaml")
+
+    if [ -z "$SIDE_CHANGED" ]; then
+      continue
+    fi
+
+    echo "plugin-cross-port: CC→Codex syncing $PLUGIN"
+    python3 "$CC_TO_CODEX" "$PLUGIN" --repo-root "$REPO_ROOT" --force
+    STATUS=$?
+
+    if [ $STATUS -ne 0 ]; then
+      echo "❌ plugin-cross-port: CC→Codex conversion failed for $PLUGIN. Commit aborted."
+      exit 1
+    fi
+
+    git add "$PLUGIN_ABS/.codex-plugin/" 2>/dev/null || true
+    git add "$PLUGIN_ABS/skills/generated-from-commands/" 2>/dev/null || true
+    git add "$PLUGIN_ABS/.plugin-cross-port.yaml" 2>/dev/null || true
+    git add "$REPO_ROOT/.agents/plugins/marketplace.json" 2>/dev/null || true
+
+  elif [ "$SOURCE_OF_TRUTH" = "codex" ]; then
+    # Detect Codex-side staged changes (exclude generated CC files)
+    SIDE_CHANGED=$(git diff --cached --name-only \
+      | grep "^$PLUGIN/" \
+      | grep -v "generated-from-commands\|generated-from-codex\|\.claude-plugin\|\.plugin-cross-port\.yaml")
+
+    if [ -z "$SIDE_CHANGED" ]; then
+      continue
+    fi
+
+    echo "plugin-cross-port: Codex→CC syncing $PLUGIN"
+    python3 "$CODEX_TO_CC" "$PLUGIN" --repo-root "$REPO_ROOT" --force
+    STATUS=$?
+
+    if [ $STATUS -ne 0 ]; then
+      echo "❌ plugin-cross-port: Codex→CC conversion failed for $PLUGIN. Commit aborted."
+      exit 1
+    fi
+
+    git add "$PLUGIN_ABS/.claude-plugin/" 2>/dev/null || true
+    git add "$PLUGIN_ABS/commands/generated-from-codex-"*.md 2>/dev/null || true
+    git add "$PLUGIN_ABS/.plugin-cross-port.yaml" 2>/dev/null || true
+
+  else
+    echo "⚠️  plugin-cross-port: unknown source_of_truth '$SOURCE_OF_TRUTH' in $PLUGIN — skipping"
     continue
   fi
-
-  # Only run if CC-side files changed — skip if only generated/Codex files were staged
-  CC_CHANGED=$(git diff --cached --name-only \
-    | grep "^$PLUGIN/" \
-    | grep -v "generated-from-commands\|generated-from-codex\|\.codex-plugin\|\.plugin-cross-port\.yaml")
-
-  if [ -z "$CC_CHANGED" ]; then
-    continue
-  fi
-
-  echo "plugin-cross-port: syncing $PLUGIN"
-
-  python3 "$CONVERTER" "$PLUGIN" --repo-root "$REPO_ROOT" --force
-  STATUS=$?
-
-  if [ $STATUS -ne 0 ]; then
-    echo "❌ plugin-cross-port: conversion failed for $PLUGIN. Commit aborted."
-    exit 1
-  fi
-
-  # Stage all generated Codex output
-  git add "$REPO_ROOT/$PLUGIN/.codex-plugin/" 2>/dev/null || true
-  git add "$REPO_ROOT/$PLUGIN/skills/generated-from-commands/" 2>/dev/null || true
-  git add "$REPO_ROOT/$PLUGIN/.plugin-cross-port.yaml" 2>/dev/null || true
-  git add "$REPO_ROOT/.agents/plugins/marketplace.json" 2>/dev/null || true
 
   SYNCED=$((SYNCED + 1))
 done

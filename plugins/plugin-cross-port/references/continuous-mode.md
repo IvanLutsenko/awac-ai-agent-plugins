@@ -10,11 +10,19 @@
 
 The hook lives at `.githooks/pre-commit` and runs automatically before every commit (the repo already has `core.hooksPath = .githooks`).
 
+**Direction is determined by `source_of_truth` in `.plugin-cross-port.yaml`:**
+
+- `source_of_truth: claude-code` → CC-side changes trigger `convert_cc_to_codex.py`
+- `source_of_truth: codex` → Codex-side changes trigger `convert_codex_to_cc.py`
+- No `.plugin-cross-port.yaml` → inferred from which manifest exists (CC manifest → `claude-code`, Codex-only → `codex`)
+
 **What it does:**
-1. Detects staged CC-side files (`commands/`, `.claude-plugin/`, `skills/` excluding generated dirs)
-2. For each affected CC plugin, runs `convert_cc_to_codex.py --force`
-3. Stages all generated Codex files in the same commit
-4. Fails the commit if conversion errors out
+1. Scans staged files to find changed plugins
+2. Reads `source_of_truth` for each plugin
+3. Detects changes on the authoritative side (ignores generated files)
+4. Runs the appropriate converter with `--force`
+5. Stages all generated output in the same commit
+6. Fails the commit if conversion errors out
 
 **Nothing to configure** — the hook is already wired. To verify it's active:
 
