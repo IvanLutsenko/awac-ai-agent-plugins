@@ -98,7 +98,7 @@
     },
     {
       "name": "plugin-cross-port",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "description": "Bidirectional conversion between Claude Code and Codex plugin formats. CC → Codex and Codex → CC, one-shot or continuous.",
       "source": "./plugins/plugin-cross-port",
       "author": {

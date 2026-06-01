@@ -1,10 +1,10 @@
 version: 1
 plugin: 'plugin-cross-port'
-generated_at: '2026-06-01T14:46:47+00:00'
+generated_at: '2026-06-01T15:19:08+00:00'
 source_of_truth: 'claude-code'
 decisions:
   skills_shared: true
-  commands_converted: false
+  commands_converted: true
   agents_converted: false
   hooks_converted: false
 warnings: []

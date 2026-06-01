@@ -4,7 +4,7 @@ Bridge between Claude Code and Codex plugin formats.
 
 Converts a Claude Code plugin to Codex format — one-shot or continuously via CI. Source of truth is always the Claude Code side.
 
-**Version:** 0.2.0
+**Version:** 0.3.0
 
 ---
 
@@ -120,6 +120,9 @@ See `references/continuous-mode.md` for GitHub Actions and pre-commit hook examp
 ---
 
 ## Changelog
+
+### 0.3.0
+- `/cross-port:install-hook` — install pre-commit hook into any git repo with absolute scripts path
 
 ### 0.2.0
 - Added Codex → CC direction: `convert_codex_to_cc.py` script + `codex-to-cc` skill
