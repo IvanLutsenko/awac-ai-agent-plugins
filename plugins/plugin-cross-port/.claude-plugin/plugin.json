@@ -1,7 +1,7 @@
 {
   "name": "plugin-cross-port",
-  "description": "Convert plugins between Claude Code and Codex formats. One-shot conversion and continuous dual-target maintenance.",
-  "version": "0.1.0",
+  "description": "Bidirectional conversion between Claude Code and Codex plugin formats. CC → Codex and Codex → CC, one-shot or continuous.",
+  "version": "0.2.0",
   "author": {
     "name": "Ivan Lutsenko",
     "email": "ivan@lutsenko.com",
@@ -11,6 +11,7 @@
   "license": "MIT",
   "skills": [
     "./skills/cc-to-codex/SKILL.md",
+    "./skills/codex-to-cc/SKILL.md",
     "./skills/maintain-dual-target/SKILL.md"
   ]
 }

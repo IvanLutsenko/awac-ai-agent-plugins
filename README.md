@@ -258,15 +258,14 @@ python3 plugins/plugin-cross-port/scripts/convert_cc_to_codex.py plugins/obsidia
 python3 plugins/plugin-cross-port/scripts/convert_cc_to_codex.py plugins/obsidian-tracker --repo-root . --dry-run
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.1.0
+**Status:** 🔨 Beta | **Version:** 0.2.0
 
 **Features:**
-- CC manifest -> Codex manifest (removes hooks, adds interface block)
-- `commands/*.md` -> `skills/generated-from-commands/` (automated)
+- CC → Codex: manifest conversion, `commands/` → `skills/generated-from-commands/`
+- Codex → CC: manifest conversion, `skills/` → `commands/generated-from-codex-*/`
 - Idempotent: re-run without duplicates
-- Decision file `.plugin-cross-port.yaml` tracks what was converted
-- `--dry-run`, `--force`, `--strict` flags
-- Codex marketplace entry management
+- Decision file `.plugin-cross-port.yaml` tracks source_of_truth and what was converted
+- `--dry-run`, `--force`, `--strict` flags for both directions
 
 ---
 

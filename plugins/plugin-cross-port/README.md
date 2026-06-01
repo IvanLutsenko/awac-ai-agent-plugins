@@ -4,7 +4,7 @@ Bridge between Claude Code and Codex plugin formats.
 
 Converts a Claude Code plugin to Codex format — one-shot or continuously via CI. Source of truth is always the Claude Code side.
 
-**Version:** 0.1.0
+**Version:** 0.2.0
 
 ---
 
@@ -56,6 +56,37 @@ plugins/obsidian-tracker/
 
 ---
 
+## Codex → Claude Code
+
+### Via skill (interactive)
+
+```
+Convert plugins/my-codex-plugin from Codex to Claude Code
+```
+
+### Via script (deterministic)
+
+```bash
+# Preview changes
+python3 plugins/plugin-cross-port/scripts/convert_codex_to_cc.py plugins/my-codex-plugin --repo-root . --dry-run
+
+# Run conversion
+python3 plugins/plugin-cross-port/scripts/convert_codex_to_cc.py plugins/my-codex-plugin --repo-root .
+```
+
+### Output
+
+```
+plugins/my-codex-plugin/
+  .claude-plugin/
+    plugin.json                          <- CC manifest
+  commands/
+    generated-from-codex-<skill>.md      <- one per Codex skill
+  .plugin-cross-port.yaml                <- source_of_truth: codex
+```
+
+---
+
 ## Continuous mode
 
 After initial conversion, re-run the script whenever commands change:
@@ -89,6 +120,12 @@ See `references/continuous-mode.md` for GitHub Actions and pre-commit hook examp
 ---
 
 ## Changelog
+
+### 0.2.0
+- Added Codex → CC direction: `convert_codex_to_cc.py` script + `codex-to-cc` skill
+- Capabilities → allowed-tools mapping (Read/Write/Execute/Network)
+- Round-trip recovery: strips "Converted from Claude Code command" headers on reverse pass
+- `source_of_truth` field in `.plugin-cross-port.yaml`
 
 ### 0.1.0
 - Initial release: one-shot conversion script, cc-to-codex skill, maintain-dual-target skill
