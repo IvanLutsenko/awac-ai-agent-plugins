@@ -56,13 +56,13 @@ def update_plugin_json(plugin_name, new_version):
     return old_version, path
 
 
-def update_file_version(filepath, old_version, new_version):
+def update_file_version(filepath, old_version, new_version, count=-1):
     """Replace old_version with new_version in a file. Returns True if changed."""
     with open(filepath) as f:
         content = f.read()
     if old_version not in content:
         return False
-    new_content = content.replace(old_version, new_version)
+    new_content = content.replace(old_version, new_version, count)
     with open(filepath, 'w') as f:
         f.write(new_content)
     return True
@@ -128,7 +128,7 @@ def main():
 
     # 2. Update plugin README.md
     plugin_readme = os.path.join(plugin_dir, 'README.md')
-    if os.path.isfile(plugin_readme) and update_file_version(plugin_readme, old_version, new_version):
+    if os.path.isfile(plugin_readme) and update_file_version(plugin_readme, old_version, new_version, count=1):
         updated.append(f"plugins/{plugin_name}/README.md")
 
     # 3. Update root README.md
