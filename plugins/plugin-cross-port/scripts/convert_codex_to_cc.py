@@ -13,6 +13,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -197,6 +198,7 @@ class ReverseConverter:
         self.strict = strict
         self.warnings: list[str] = []
         self.created: list[str] = []
+        self.removed: list[str] = []
         self.skipped: list[str] = []
         self.config = load_repo_config(repo_root.resolve())
 
@@ -218,6 +220,21 @@ class ReverseConverter:
         path.write_text(content, encoding='utf-8')
         self.created.append(self._rel(path))
         return True
+
+    def _plugin_rel(self, path: Path) -> str:
+        return str(path.relative_to(self.plugin_path))
+
+    def _is_manually_maintained(self, path: Path, entries: list[str]) -> bool:
+        return self._plugin_rel(path) in entries
+
+    def _remove(self, path: Path) -> None:
+        if self.dry_run:
+            print(f"  [dry-run] would remove: {self._rel(path)}")
+        elif path.is_dir():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
+        self.removed.append(self._rel(path))
 
     # ------------------------------------------------------------------
 
@@ -351,7 +368,7 @@ class ReverseConverter:
         # --- .claude-plugin/plugin.json ---
         cc_manifest_path = self.plugin_path / '.claude-plugin' / 'plugin.json'
         rel_cc = self._rel(cc_manifest_path)
-        if rel_cc not in manually_maintained:
+        if not self._is_manually_maintained(cc_manifest_path, manually_maintained):
             cc_manifest = self.build_cc_manifest(codex, skill_files)
             self._write(
                 cc_manifest_path,
@@ -371,7 +388,7 @@ class ReverseConverter:
             out_path = self.plugin_path / 'commands' / f'generated-from-codex-{skill_name}.md'
             rel_out = self._rel(out_path)
 
-            if rel_out in manually_maintained:
+            if self._is_manually_maintained(out_path, manually_maintained):
                 print(f"  Skipping manually maintained: {rel_out}")
                 continue
 
@@ -386,6 +403,17 @@ class ReverseConverter:
             content = self.convert_skill_to_command(skill_path, plugin_name, capabilities)
             self._write(out_path, content, overwrite=True)
             converted_count += 1
+
+        commands_dir = self.plugin_path / 'commands'
+        expected = {f'generated-from-codex-{skill.parent.name}.md' for skill in non_generated}
+        if commands_dir.exists():
+            for command_path in sorted(commands_dir.glob('generated-from-codex-*.md')):
+                if command_path.name in expected:
+                    continue
+                if self._is_manually_maintained(command_path, manually_maintained):
+                    self.skipped.append(self._rel(command_path))
+                    continue
+                self._remove(command_path)
 
         # --- .plugin-cross-port.yaml ---
         decision_data = {
@@ -408,6 +436,11 @@ class ReverseConverter:
         print('\nGenerated:')
         for f in self.created:
             print(f'  ✅ {f}')
+
+        if self.removed:
+            print('\nRemoved stale generated files:')
+            for f in self.removed:
+                print(f'  🗑️  {f}')
 
         if self.skipped:
             print('\nSkipped (up-to-date):')

@@ -185,6 +185,7 @@ class Converter:
         self.strict = strict
         self.warnings: list[str] = []
         self.created: list[str] = []
+        self.removed: list[str] = []
         self.skipped: list[str] = []
         self.config = load_repo_config(repo_root.resolve())
 
@@ -207,6 +208,21 @@ class Converter:
         path.write_text(content, encoding='utf-8')
         self.created.append(self._rel(path))
         return True
+
+    def _plugin_rel(self, path: Path) -> str:
+        return str(path.relative_to(self.plugin_path))
+
+    def _is_manually_maintained(self, path: Path, entries: list[str]) -> bool:
+        return self._plugin_rel(path) in entries
+
+    def _remove(self, path: Path) -> None:
+        if self.dry_run:
+            print(f"  [dry-run] would remove: {self._rel(path)}")
+        elif path.is_dir():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
+        self.removed.append(self._rel(path))
 
     def _copy(self, src: Path, dst: Path) -> bool:
         if dst.exists() and not self.force:
@@ -346,7 +362,7 @@ class Converter:
 
         # --- .codex-plugin/plugin.json ---
         codex_manifest_path = self.plugin_path / '.codex-plugin' / 'plugin.json'
-        if self._rel(codex_manifest_path) not in manually_maintained:
+        if not self._is_manually_maintained(codex_manifest_path, manually_maintained):
             codex = self.build_codex_manifest(cc)
             self._write(
                 codex_manifest_path,
@@ -382,7 +398,7 @@ class Converter:
                 out_path = out_dir / 'SKILL.md'
                 rel_out = self._rel(out_path)
 
-                if rel_out in manually_maintained:
+                if self._is_manually_maintained(out_path, manually_maintained):
                     print(f"  Skipping manually maintained: {rel_out}")
                     continue
 
@@ -399,6 +415,18 @@ class Converter:
                 converted_count += 1
         else:
             cmd_files = []
+
+        generated_root = self.plugin_path / 'skills' / 'generated-from-commands'
+        expected = {cmd_file.stem for cmd_file in cmd_files}
+        if generated_root.exists():
+            for generated_dir in sorted(generated_root.iterdir()):
+                skill_path = generated_dir / 'SKILL.md'
+                if not generated_dir.is_dir() or generated_dir.name in expected:
+                    continue
+                if self._is_manually_maintained(skill_path, manually_maintained):
+                    self.skipped.append(self._rel(skill_path))
+                    continue
+                self._remove(generated_dir)
 
         # --- agents/ --- warn or strict fail
         agents_dir = self.plugin_path / 'agents'
@@ -457,6 +485,11 @@ class Converter:
         print('\nGenerated:')
         for f in self.created:
             print(f'  ✅ {f}')
+
+        if self.removed:
+            print('\nRemoved stale generated files:')
+            for f in self.removed:
+                print(f'  🗑️  {f}')
 
         if self.skipped:
             print('\nSkipped (up-to-date):')
