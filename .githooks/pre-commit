@@ -1,11 +1,12 @@
 #!/bin/bash
-# Pre-commit hook: bidirectional sync based on WHICH files changed.
+# plugin-cross-port pre-commit hook — bidirectional sync
 #
-# Direction is determined by staged changes, not configuration:
+# Reads .plugin-cross-port.config.yaml from repo root (if present).
+# Direction determined by staged files:
 #   commands/ or .claude-plugin/ changed  →  CC→Codex
 #   .codex-plugin/ changed                →  Codex→CC
-#   both sides changed                    →  warn + use source_of_truth as tiebreaker
-#   only skills/ or other shared files    →  no conversion needed
+#   both sides                            →  source_of_truth as tiebreaker
+#   only shared files (skills/, README)   →  no conversion
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 CC_TO_CODEX="$REPO_ROOT/plugins/plugin-cross-port/scripts/convert_cc_to_codex.py"
@@ -15,7 +16,22 @@ if [ ! -f "$CC_TO_CODEX" ] || [ ! -f "$CODEX_TO_CC" ]; then
   exit 0
 fi
 
-CHANGED_PLUGINS=$(git diff --cached --name-only | grep '^plugins/' | cut -d/ -f1,2 | sort -u)
+# --- Read repo-level config ---
+CONFIG_FILE="$REPO_ROOT/.plugin-cross-port.config.yaml"
+PLUGINS_DIR="plugins"
+CODEX_MARKETPLACE=".agents/plugins/marketplace.json"
+DEFAULT_SOT="claude-code"
+
+if [ -f "$CONFIG_FILE" ]; then
+  val=$(grep '^plugins_dir:' "$CONFIG_FILE" | awk '{print $2}' | tr -d "'\"")
+  [ -n "$val" ] && PLUGINS_DIR="$val"
+  val=$(grep '^codex_marketplace:' "$CONFIG_FILE" | awk '{print $2}' | tr -d "'\"")
+  [ -n "$val" ] && CODEX_MARKETPLACE="$val"
+  val=$(grep '^default_source_of_truth:' "$CONFIG_FILE" | awk '{print $2}' | tr -d "'\"")
+  [ -n "$val" ] && DEFAULT_SOT="$val"
+fi
+
+CHANGED_PLUGINS=$(git diff --cached --name-only | grep "^$PLUGINS_DIR/" | cut -d/ -f1,2 | sort -u)
 if [ -z "$CHANGED_PLUGINS" ]; then
   exit 0
 fi
@@ -24,23 +40,16 @@ get_source_of_truth() {
   local plugin="$1"
   local decision_file="$REPO_ROOT/$plugin/.plugin-cross-port.yaml"
   local sot=""
-
   if [ -f "$decision_file" ]; then
     sot=$(grep '^source_of_truth:' "$decision_file" | awk '{print $2}' | tr -d "'\"")
   fi
-
   if [ -z "$sot" ]; then
     local has_cc="$REPO_ROOT/$plugin/.claude-plugin/plugin.json"
     local has_codex="$REPO_ROOT/$plugin/.codex-plugin/plugin.json"
-    if [ -f "$has_cc" ] && [ ! -f "$has_codex" ]; then
-      sot="claude-code"
-    elif [ -f "$has_codex" ] && [ ! -f "$has_cc" ]; then
-      sot="codex"
-    else
-      sot="claude-code"
-    fi
+    if [ -f "$has_cc" ] && [ ! -f "$has_codex" ]; then sot="claude-code"
+    elif [ -f "$has_codex" ] && [ ! -f "$has_cc" ]; then sot="codex"
+    else sot="$DEFAULT_SOT"; fi
   fi
-
   echo "$sot"
 }
 
@@ -56,7 +65,7 @@ run_cc_to_codex() {
   git add "$REPO_ROOT/$plugin/.codex-plugin/" 2>/dev/null || true
   git add "$REPO_ROOT/$plugin/skills/generated-from-commands/" 2>/dev/null || true
   git add "$REPO_ROOT/$plugin/.plugin-cross-port.yaml" 2>/dev/null || true
-  git add "$REPO_ROOT/.agents/plugins/marketplace.json" 2>/dev/null || true
+  git add "$REPO_ROOT/$CODEX_MARKETPLACE" 2>/dev/null || true
 }
 
 run_codex_to_cc() {
@@ -74,39 +83,22 @@ run_codex_to_cc() {
 }
 
 SYNCED=0
-
 for PLUGIN in $CHANGED_PLUGINS; do
   STAGED=$(git diff --cached --name-only | grep "^$PLUGIN/")
-
-  # CC-exclusive: commands/ and .claude-plugin/ (exclude generated-from-codex)
-  CC_CHANGED=$(echo "$STAGED" \
-    | grep -E "^$PLUGIN/(commands/[^/]+\.md|\.claude-plugin/)" \
-    | grep -v "generated-from-codex")
-
-  # Codex-exclusive: .codex-plugin/
+  CC_CHANGED=$(echo "$STAGED" | grep -E "^$PLUGIN/(commands/[^/]+\.md|\.claude-plugin/)" | grep -v "generated-from-codex")
   CODEX_CHANGED=$(echo "$STAGED" | grep "^$PLUGIN/\.codex-plugin/")
 
   if [ -n "$CC_CHANGED" ] && [ -n "$CODEX_CHANGED" ]; then
     SOT=$(get_source_of_truth "$PLUGIN")
-    echo "⚠️  plugin-cross-port: both CC and Codex files staged in $PLUGIN — using source_of_truth=$SOT"
-    if [ "$SOT" = "codex" ]; then
-      run_codex_to_cc "$PLUGIN"
-    else
-      run_cc_to_codex "$PLUGIN"
-    fi
+    echo "⚠️  plugin-cross-port: both sides staged in $PLUGIN — using source_of_truth=$SOT"
+    [ "$SOT" = "codex" ] && run_codex_to_cc "$PLUGIN" || run_cc_to_codex "$PLUGIN"
     SYNCED=$((SYNCED + 1))
   elif [ -n "$CC_CHANGED" ]; then
-    run_cc_to_codex "$PLUGIN"
-    SYNCED=$((SYNCED + 1))
+    run_cc_to_codex "$PLUGIN"; SYNCED=$((SYNCED + 1))
   elif [ -n "$CODEX_CHANGED" ]; then
-    run_codex_to_cc "$PLUGIN"
-    SYNCED=$((SYNCED + 1))
+    run_codex_to_cc "$PLUGIN"; SYNCED=$((SYNCED + 1))
   fi
-  # only skills/ or other shared files changed → no conversion needed
 done
 
-if [ $SYNCED -gt 0 ]; then
-  echo "✅ plugin-cross-port: $SYNCED plugin(s) synced"
-fi
-
+[ $SYNCED -gt 0 ] && echo "✅ plugin-cross-port: $SYNCED plugin(s) synced"
 exit 0

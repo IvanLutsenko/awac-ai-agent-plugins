@@ -4,7 +4,7 @@ Bridge between Claude Code and Codex plugin formats.
 
 Converts a Claude Code plugin to Codex format — one-shot or continuously via CI. Source of truth is always the Claude Code side.
 
-**Version:** 0.3.0
+**Version:** 0.4.0
 
 ---
 
@@ -120,6 +120,10 @@ See `references/continuous-mode.md` for GitHub Actions and pre-commit hook examp
 ---
 
 ## Changelog
+
+### 0.4.0
+- Repo-level config `.plugin-cross-port.config.yaml`: `plugins_dir`, `codex_marketplace`, `default_source_of_truth`
+- Config read by both Python scripts and pre-commit hook
 
 ### 0.3.0
 - `/cross-port:install-hook` — install pre-commit hook into any git repo with absolute scripts path

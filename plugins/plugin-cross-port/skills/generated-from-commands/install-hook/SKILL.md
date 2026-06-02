@@ -63,40 +63,43 @@ Hook content (substitute `__SCRIPTS_DIR__` literally):
 #!/bin/bash
 # plugin-cross-port pre-commit hook
 # Installed by /cross-port:install-hook — re-run after plugin updates
-#
-# CC-exclusive changes  (commands/, .claude-plugin/) → CC→Codex
-# Codex-exclusive changes (.codex-plugin/)           → Codex→CC
-# Both sides changed                                 → source_of_truth as tiebreaker
-# Only shared files (skills/, README, etc.)          → no conversion
 
 CC_TO_CODEX="__SCRIPTS_DIR__/convert_cc_to_codex.py"
 CODEX_TO_CC="__SCRIPTS_DIR__/convert_codex_to_cc.py"
 
 if [ ! -f "$CC_TO_CODEX" ] || [ ! -f "$CODEX_TO_CC" ]; then
-  echo "⚠️  plugin-cross-port: scripts not found at $CC_TO_CODEX"
-  echo "   Re-install the hook: /cross-port:install-hook"
+  echo "⚠️  plugin-cross-port: scripts not found. Re-run /cross-port:install-hook"
   exit 0
 fi
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
-CHANGED_PLUGINS=$(git diff --cached --name-only | grep '^plugins/' | cut -d/ -f1,2 | sort -u)
-if [ -z "$CHANGED_PLUGINS" ]; then
-  exit 0
+CONFIG_FILE="$REPO_ROOT/.plugin-cross-port.config.yaml"
+PLUGINS_DIR="plugins"
+CODEX_MARKETPLACE=".agents/plugins/marketplace.json"
+DEFAULT_SOT="claude-code"
+
+if [ -f "$CONFIG_FILE" ]; then
+  val=$(grep '^plugins_dir:' "$CONFIG_FILE" | awk '{print $2}' | tr -d "'\"")
+  [ -n "$val" ] && PLUGINS_DIR="$val"
+  val=$(grep '^codex_marketplace:' "$CONFIG_FILE" | awk '{print $2}' | tr -d "'\"")
+  [ -n "$val" ] && CODEX_MARKETPLACE="$val"
+  val=$(grep '^default_source_of_truth:' "$CONFIG_FILE" | awk '{print $2}' | tr -d "'\"")
+  [ -n "$val" ] && DEFAULT_SOT="$val"
 fi
 
+CHANGED_PLUGINS=$(git diff --cached --name-only | grep "^$PLUGINS_DIR/" | cut -d/ -f1,2 | sort -u)
+if [ -z "$CHANGED_PLUGINS" ]; then exit 0; fi
+
 get_source_of_truth() {
-  local plugin="$1"
-  local decision_file="$REPO_ROOT/$plugin/.plugin-cross-port.yaml"
-  local sot=""
-  if [ -f "$decision_file" ]; then
-    sot=$(grep '^source_of_truth:' "$decision_file" | awk '{print $2}' | tr -d "'\"")
-  fi
+  local plugin="$1"; local sot=""
+  local df="$REPO_ROOT/$plugin/.plugin-cross-port.yaml"
+  [ -f "$df" ] && sot=$(grep '^source_of_truth:' "$df" | awk '{print $2}' | tr -d "'\"")
   if [ -z "$sot" ]; then
-    local has_cc="$REPO_ROOT/$plugin/.claude-plugin/plugin.json"
-    local has_codex="$REPO_ROOT/$plugin/.codex-plugin/plugin.json"
-    if [ -f "$has_cc" ] && [ ! -f "$has_codex" ]; then sot="claude-code"
-    elif [ -f "$has_codex" ] && [ ! -f "$has_cc" ]; then sot="codex"
-    else sot="claude-code"; fi
+    local hc="$REPO_ROOT/$plugin/.claude-plugin/plugin.json"
+    local hd="$REPO_ROOT/$plugin/.codex-plugin/plugin.json"
+    if [ -f "$hc" ] && [ ! -f "$hd" ]; then sot="claude-code"
+    elif [ -f "$hd" ] && [ ! -f "$hc" ]; then sot="codex"
+    else sot="$DEFAULT_SOT"; fi
   fi
   echo "$sot"
 }
@@ -105,7 +108,7 @@ run_cc_to_codex() {
   local plugin="$1"
   echo "plugin-cross-port: CC→Codex syncing $plugin"
   python3 "$CC_TO_CODEX" "$plugin" --repo-root "$REPO_ROOT" --force || { echo "❌ CC→Codex failed for $plugin. Commit aborted."; exit 1; }
-  git add "$REPO_ROOT/$plugin/.codex-plugin/" "$REPO_ROOT/$plugin/skills/generated-from-commands/" "$REPO_ROOT/$plugin/.plugin-cross-port.yaml" "$REPO_ROOT/.agents/plugins/marketplace.json" 2>/dev/null || true
+  git add "$REPO_ROOT/$plugin/.codex-plugin/" "$REPO_ROOT/$plugin/skills/generated-from-commands/" "$REPO_ROOT/$plugin/.plugin-cross-port.yaml" "$REPO_ROOT/$CODEX_MARKETPLACE" 2>/dev/null || true
 }
 
 run_codex_to_cc() {
@@ -120,7 +123,6 @@ for PLUGIN in $CHANGED_PLUGINS; do
   STAGED=$(git diff --cached --name-only | grep "^$PLUGIN/")
   CC_CHANGED=$(echo "$STAGED" | grep -E "^$PLUGIN/(commands/[^/]+\.md|\.claude-plugin/)" | grep -v "generated-from-codex")
   CODEX_CHANGED=$(echo "$STAGED" | grep "^$PLUGIN/\.codex-plugin/")
-
   if [ -n "$CC_CHANGED" ] && [ -n "$CODEX_CHANGED" ]; then
     SOT=$(get_source_of_truth "$PLUGIN")
     echo "⚠️  plugin-cross-port: both sides staged in $PLUGIN — using source_of_truth=$SOT"
@@ -132,7 +134,6 @@ for PLUGIN in $CHANGED_PLUGINS; do
     run_codex_to_cc "$PLUGIN"; SYNCED=$((SYNCED + 1))
   fi
 done
-
 [ $SYNCED -gt 0 ] && echo "✅ plugin-cross-port: $SYNCED plugin(s) synced"
 exit 0
 ```

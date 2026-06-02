@@ -258,7 +258,7 @@ python3 plugins/plugin-cross-port/scripts/convert_cc_to_codex.py plugins/obsidia
 python3 plugins/plugin-cross-port/scripts/convert_cc_to_codex.py plugins/obsidian-tracker --repo-root . --dry-run
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.3.0
+**Status:** 🔨 Beta | **Version:** 0.4.0
 
 **Features:**
 - CC → Codex: manifest conversion, `commands/` → `skills/generated-from-commands/`

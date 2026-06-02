@@ -126,6 +126,25 @@ def _parse_yaml_simple(text: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Repo-level config
+# ---------------------------------------------------------------------------
+
+DEFAULT_CONFIG: dict = {
+    'plugins_dir': 'plugins',
+    'codex_marketplace': '.agents/plugins/marketplace.json',
+    'default_source_of_truth': 'claude-code',
+}
+
+
+def load_repo_config(repo_root: Path) -> dict:
+    path = repo_root / '.plugin-cross-port.config.yaml'
+    if not path.exists():
+        return dict(DEFAULT_CONFIG)
+    raw = _parse_yaml_simple(path.read_text(encoding='utf-8'))
+    return {**DEFAULT_CONFIG, **{k: v for k, v in raw.items() if k in DEFAULT_CONFIG}}
+
+
+# ---------------------------------------------------------------------------
 # Frontmatter helpers
 # ---------------------------------------------------------------------------
 
@@ -167,6 +186,7 @@ class Converter:
         self.warnings: list[str] = []
         self.created: list[str] = []
         self.skipped: list[str] = []
+        self.config = load_repo_config(repo_root.resolve())
 
     def _rel(self, path: Path) -> str:
         try:
@@ -273,7 +293,7 @@ class Converter:
         )
 
     def update_codex_marketplace(self, plugin_name: str) -> None:
-        marketplace_path = self.repo_root / '.agents' / 'plugins' / 'marketplace.json'
+        marketplace_path = self.repo_root / self.config['codex_marketplace']
 
         if marketplace_path.exists():
             data = json.loads(marketplace_path.read_text(encoding='utf-8'))

@@ -9,7 +9,7 @@
 - **combined-review** (v1.3.0) — Multi-agent code review + CodeRabbit CLI
 - **clip-maker** (v1.3.0) — Automated vertical clip creator (whisper + Claude + ffmpeg)
 - **drawbridge** (v0.1.0) — Bridge briefs to image-gen web UIs (Gemini/ChatGPT/Grok/Midjourney), per-target prompt tuning
-- **plugin-cross-port** (v0.3.0) — Bidirectional CC ↔ Codex plugin conversion
+- **plugin-cross-port** (v0.4.0) — Bidirectional CC ↔ Codex plugin conversion
 
 ## Plugin Structure
 

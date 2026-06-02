@@ -120,6 +120,25 @@ def _parse_yaml_simple(text: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Repo-level config
+# ---------------------------------------------------------------------------
+
+DEFAULT_CONFIG: dict = {
+    'plugins_dir': 'plugins',
+    'codex_marketplace': '.agents/plugins/marketplace.json',
+    'default_source_of_truth': 'claude-code',
+}
+
+
+def load_repo_config(repo_root: Path) -> dict:
+    path = repo_root / '.plugin-cross-port.config.yaml'
+    if not path.exists():
+        return dict(DEFAULT_CONFIG)
+    raw = _parse_yaml_simple(path.read_text(encoding='utf-8'))
+    return {**DEFAULT_CONFIG, **{k: v for k, v in raw.items() if k in DEFAULT_CONFIG}}
+
+
+# ---------------------------------------------------------------------------
 # Frontmatter helpers
 # ---------------------------------------------------------------------------
 
@@ -179,6 +198,7 @@ class ReverseConverter:
         self.warnings: list[str] = []
         self.created: list[str] = []
         self.skipped: list[str] = []
+        self.config = load_repo_config(repo_root.resolve())
 
     def _rel(self, path: Path) -> str:
         try:
