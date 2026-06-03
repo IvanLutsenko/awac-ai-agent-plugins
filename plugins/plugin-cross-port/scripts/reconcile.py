@@ -98,6 +98,10 @@ class Reconciler:
         changed_only: set[str] | None = None,
         stage: bool = False,
     ) -> ReconcileReport:
+        if changed_only is not None:
+            validation = self._validate_staged_generated_edits(changed_only)
+            if validation is not None:
+                return validation
         if self.dry_run:
             return self._dry_run_reconcile(changed_only=changed_only)
         report = self._reconcile(changed_only=changed_only)
@@ -239,6 +243,56 @@ class Reconciler:
         if not self.marketplace_state_path.exists():
             raise ValueError("Repository marketplace state is missing")
         return load_state(self.marketplace_state_path, default={})
+
+    def _validate_staged_generated_edits(
+        self, changed_only: set[str]
+    ) -> ReconcileReport | None:
+        staged = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
+            cwd=self.repo_root,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if staged.returncode != 0:
+            return None
+        state = self._load_marketplace_state()
+        for name in changed_only:
+            plugin_info = state.get("plugins", {}).get(name, {})
+            plugin_path = self.repo_root / plugin_info.get("path", f"plugins/{name}")
+            plugin_state = load_state(
+                plugin_path / ".plugin-cross-port.yaml",
+                default=new_plugin_state(name, plugin_info.get("source_of_truth", state["source_of_truth"])),
+            )
+            source = plugin_state.get("source_of_truth", state["source_of_truth"])
+            manually_maintained = set(plugin_state.get("manually_maintained", []) or [])
+            for rel_path in staged.stdout.splitlines():
+                prefix = f"plugins/{name}/"
+                if not rel_path.startswith(prefix):
+                    continue
+                plugin_rel = rel_path[len(prefix):]
+                if plugin_rel in manually_maintained:
+                    continue
+                if self._is_generated_side_path(plugin_rel, source):
+                    target = self._opposite(source)
+                    message = (
+                        f"Generated-side edit is not allowed: {rel_path}. "
+                        f"Source of truth: {source}"
+                    )
+                    return ReconcileReport(
+                        [PluginResult(name, "failed", target, message)],
+                        [],
+                    )
+        return None
+
+    def _is_generated_side_path(self, plugin_rel: str, source: str) -> bool:
+        if source == "claude-code":
+            return plugin_rel.startswith(".codex-plugin/") or plugin_rel.startswith(
+                "skills/generated-from-commands/"
+            )
+        return plugin_rel.startswith(".claude-plugin/") or plugin_rel.startswith(
+            "commands/generated-from-codex-"
+        )
 
     def _delete_removed_plugins(self, state: dict[str, Any], canonical_names: set[str]) -> None:
         for name, info in list(state.get("plugins", {}).items()):

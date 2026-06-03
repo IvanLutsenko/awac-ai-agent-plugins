@@ -1,104 +1,42 @@
 #!/bin/bash
-# plugin-cross-port pre-commit hook — bidirectional sync
-#
-# Reads .plugin-cross-port.config.yaml from repo root (if present).
-# Direction determined by staged files:
-#   commands/ or .claude-plugin/ changed  →  CC→Codex
-#   .codex-plugin/ changed                →  Codex→CC
-#   both sides                            →  source_of_truth as tiebreaker
-#   only shared files (skills/, README)   →  no conversion
+set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
-CC_TO_CODEX="$REPO_ROOT/plugins/plugin-cross-port/scripts/convert_cc_to_codex.py"
-CODEX_TO_CC="$REPO_ROOT/plugins/plugin-cross-port/scripts/convert_codex_to_cc.py"
+SCRIPT="$REPO_ROOT/plugins/plugin-cross-port/scripts/cross_port.py"
+STATE="$REPO_ROOT/.plugin-cross-port.marketplace.yaml"
 
-if [ ! -f "$CC_TO_CODEX" ] || [ ! -f "$CODEX_TO_CC" ]; then
-  exit 0
+[ -f "$SCRIPT" ] || exit 0
+[ -f "$STATE" ] || exit 0
+
+CHANGED=$(git diff --cached --name-only --diff-filter=ACDMRTUXB)
+[ -n "$CHANGED" ] || exit 0
+
+SOURCE_MARKETPLACE=$(python3 - "$STATE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+try:
+    state = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+except Exception:
+    sys.exit(0)
+print(state.get("source_marketplace", ""))
+PY
+)
+
+if [ -n "$SOURCE_MARKETPLACE" ] && printf '%s\n' "$CHANGED" | grep -qx "$SOURCE_MARKETPLACE"; then
+  python3 "$SCRIPT" --repo-root "$REPO_ROOT" marketplace sync --stage
+  exit $?
 fi
 
-# --- Read repo-level config ---
-CONFIG_FILE="$REPO_ROOT/.plugin-cross-port.config.yaml"
-PLUGINS_DIR="plugins"
-CODEX_MARKETPLACE=".agents/plugins/marketplace.json"
-DEFAULT_SOT="claude-code"
+PLUGINS=$(
+  printf '%s\n' "$CHANGED" |
+    awk -F/ '$1 == "plugins" && NF >= 2 {print $2}' |
+    sort -u |
+    paste -sd, -
+)
 
-if [ -f "$CONFIG_FILE" ]; then
-  val=$(grep '^plugins_dir:' "$CONFIG_FILE" | awk '{print $2}' | tr -d "'\"")
-  [ -n "$val" ] && PLUGINS_DIR="$val"
-  val=$(grep '^codex_marketplace:' "$CONFIG_FILE" | awk '{print $2}' | tr -d "'\"")
-  [ -n "$val" ] && CODEX_MARKETPLACE="$val"
-  val=$(grep '^default_source_of_truth:' "$CONFIG_FILE" | awk '{print $2}' | tr -d "'\"")
-  [ -n "$val" ] && DEFAULT_SOT="$val"
-fi
+[ -n "$PLUGINS" ] || exit 0
 
-CHANGED_PLUGINS=$(git diff --cached --name-only | grep "^$PLUGINS_DIR/" | cut -d/ -f1,2 | sort -u)
-if [ -z "$CHANGED_PLUGINS" ]; then
-  exit 0
-fi
-
-get_source_of_truth() {
-  local plugin="$1"
-  local decision_file="$REPO_ROOT/$plugin/.plugin-cross-port.yaml"
-  local sot=""
-  if [ -f "$decision_file" ]; then
-    sot=$(grep '^source_of_truth:' "$decision_file" | awk '{print $2}' | tr -d "'\"")
-  fi
-  if [ -z "$sot" ]; then
-    local has_cc="$REPO_ROOT/$plugin/.claude-plugin/plugin.json"
-    local has_codex="$REPO_ROOT/$plugin/.codex-plugin/plugin.json"
-    if [ -f "$has_cc" ] && [ ! -f "$has_codex" ]; then sot="claude-code"
-    elif [ -f "$has_codex" ] && [ ! -f "$has_cc" ]; then sot="codex"
-    else sot="$DEFAULT_SOT"; fi
-  fi
-  echo "$sot"
-}
-
-run_cc_to_codex() {
-  local plugin="$1"
-  echo "plugin-cross-port: CC→Codex syncing $plugin"
-  python3 "$CC_TO_CODEX" "$plugin" --repo-root "$REPO_ROOT" --force
-  local status=$?
-  if [ $status -ne 0 ]; then
-    echo "❌ plugin-cross-port: CC→Codex failed for $plugin. Commit aborted."
-    exit 1
-  fi
-  git add "$REPO_ROOT/$plugin/.codex-plugin/" 2>/dev/null || true
-  git add "$REPO_ROOT/$plugin/skills/generated-from-commands/" 2>/dev/null || true
-  git add "$REPO_ROOT/$plugin/.plugin-cross-port.yaml" 2>/dev/null || true
-  git add "$REPO_ROOT/$CODEX_MARKETPLACE" 2>/dev/null || true
-}
-
-run_codex_to_cc() {
-  local plugin="$1"
-  echo "plugin-cross-port: Codex→CC syncing $plugin"
-  python3 "$CODEX_TO_CC" "$plugin" --repo-root "$REPO_ROOT" --force
-  local status=$?
-  if [ $status -ne 0 ]; then
-    echo "❌ plugin-cross-port: Codex→CC failed for $plugin. Commit aborted."
-    exit 1
-  fi
-  git add "$REPO_ROOT/$plugin/.claude-plugin/" 2>/dev/null || true
-  git add "$REPO_ROOT/$plugin/commands/generated-from-codex-"*.md 2>/dev/null || true
-  git add "$REPO_ROOT/$plugin/.plugin-cross-port.yaml" 2>/dev/null || true
-}
-
-SYNCED=0
-for PLUGIN in $CHANGED_PLUGINS; do
-  STAGED=$(git diff --cached --name-only | grep "^$PLUGIN/")
-  CC_CHANGED=$(echo "$STAGED" | grep -E "^$PLUGIN/(commands/[^/]+\.md|\.claude-plugin/)" | grep -v "generated-from-codex")
-  CODEX_CHANGED=$(echo "$STAGED" | grep "^$PLUGIN/\.codex-plugin/")
-
-  if [ -n "$CC_CHANGED" ] && [ -n "$CODEX_CHANGED" ]; then
-    SOT=$(get_source_of_truth "$PLUGIN")
-    echo "⚠️  plugin-cross-port: both sides staged in $PLUGIN — using source_of_truth=$SOT"
-    [ "$SOT" = "codex" ] && run_codex_to_cc "$PLUGIN" || run_cc_to_codex "$PLUGIN"
-    SYNCED=$((SYNCED + 1))
-  elif [ -n "$CC_CHANGED" ]; then
-    run_cc_to_codex "$PLUGIN"; SYNCED=$((SYNCED + 1))
-  elif [ -n "$CODEX_CHANGED" ]; then
-    run_codex_to_cc "$PLUGIN"; SYNCED=$((SYNCED + 1))
-  fi
-done
-
-[ $SYNCED -gt 0 ] && echo "✅ plugin-cross-port: $SYNCED plugin(s) synced"
-exit 0
+python3 "$SCRIPT" --repo-root "$REPO_ROOT" \
+  marketplace sync --changed-only "$PLUGINS" --stage
