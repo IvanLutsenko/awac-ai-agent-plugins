@@ -6,7 +6,7 @@ Converts individual plugins in either direction and reconciles dual-target
 Claude Code and Codex marketplaces. A repository chooses one canonical
 marketplace, while each plugin keeps its own `source_of_truth`.
 
-**Version:** 0.5.0
+**Version:** 0.6.0
 
 ---
 

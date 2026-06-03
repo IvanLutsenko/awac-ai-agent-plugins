@@ -237,7 +237,8 @@ Bridge between a short brief and image-gen web UIs (Gemini Imagen 3, ChatGPT DAL
 
 ### Plugin Cross Port
 
-Bridge between Claude Code and Codex plugin formats. One-shot conversion and continuous dual-target maintenance.
+Bridge between Claude Code and Codex plugin formats. One-shot conversion plus
+deterministic dual-target marketplace reconciliation.
 
 **[Full Documentation](plugins/plugin-cross-port/README.md)**
 
@@ -251,21 +252,27 @@ Bridge between Claude Code and Codex plugin formats. One-shot conversion and con
 # Interactive (via skill)
 Convert plugins/obsidian-tracker to Codex
 
-# Deterministic script
-python3 plugins/plugin-cross-port/scripts/convert_cc_to_codex.py plugins/obsidian-tracker --repo-root .
-python3 plugins/plugin-cross-port/scripts/convert_cc_to_codex.py plugins/obsidian-tracker --repo-root . --dry-run
+# Attach and reconcile a marketplace
+python3 plugins/plugin-cross-port/scripts/cross_port.py marketplace attach --source claude-code
+python3 plugins/plugin-cross-port/scripts/cross_port.py marketplace sync
+python3 plugins/plugin-cross-port/scripts/cross_port.py marketplace check
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.5.0
+**Status:** 🔨 Beta | **Version:** 0.6.0
+
+**What's New in 0.6.0:**
+- Marketplace attach, sync and check workflows
+- Mixed Claude Code-first and Codex-first plugin support
+- Ordered marketplace reconciliation with Codex `NOT_AVAILABLE` publication for unavailable targets
+- Pre-commit hook uses declared plugin source-of-truth instead of guessing direction
 
 **Features:**
 - CC → Codex: manifest conversion, `commands/` → `skills/generated-from-commands/`
 - Codex → CC: manifest conversion, `skills/` → `commands/generated-from-codex-*/`
-- Idempotent: re-run without duplicates
-- Decision file `.plugin-cross-port.yaml` tracks source_of_truth and what was converted
+- Repository marketplace state plus per-plugin `.plugin-cross-port.yaml` source-of-truth
 - Generated output cleanup removes stale converted commands and skills
 - Plugin-relative manual maintenance rules are honored in both directions
-- `--dry-run`, `--force`, `--strict` flags for both directions
+- Standalone converter scripts remain available for one-shot conversion
 
 ---
 

@@ -1,11 +1,7 @@
-version: 1
-plugin: 'plugin-cross-port'
-generated_at: '2026-06-02T07:25:57+00:00'
-source_of_truth: 'claude-code'
-decisions:
-  skills_shared: true
-  commands_converted: true
-  agents_converted: false
-  hooks_converted: false
-warnings: []
-manually_maintained: []
+{
+  "version": 2,
+  "plugin": "plugin-cross-port",
+  "source_of_truth": "claude-code",
+  "status": "synced",
+  "manually_maintained": []
+}

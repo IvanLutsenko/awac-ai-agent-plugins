@@ -1,13 +1,20 @@
 {
   "name": "plugin-cross-port",
   "description": "Bidirectional conversion between Claude Code and Codex plugin formats. CC → Codex and Codex → CC, one-shot or continuous.",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "author": {
     "name": "Ivan Lutsenko",
     "email": "ivan@lutsenko.com",
     "url": "https://github.com/IvanLutsenko"
   },
-  "keywords": ["codex", "conversion", "cross-platform", "plugin", "claude-code", "dual-target"],
+  "keywords": [
+    "codex",
+    "conversion",
+    "cross-platform",
+    "plugin",
+    "claude-code",
+    "dual-target"
+  ],
   "license": "MIT",
   "commands": [
     "./commands/install-hook.md"
