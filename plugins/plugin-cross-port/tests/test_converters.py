@@ -1,8 +1,9 @@
 import importlib.util
-import json
 import tempfile
 import unittest
 from pathlib import Path
+
+from helpers import make_cc_plugin, make_codex_marketplace, make_codex_plugin
 
 
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
@@ -24,43 +25,16 @@ class ConverterTest(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.repo_root = Path(self.temp_dir.name)
-        (self.repo_root / ".agents" / "plugins").mkdir(parents=True)
-        (self.repo_root / ".agents" / "plugins" / "marketplace.json").write_text(
-            json.dumps({"plugins": []}),
-            encoding="utf-8",
-        )
+        make_codex_marketplace(self.repo_root, [])
 
     def tearDown(self):
         self.temp_dir.cleanup()
 
     def make_cc_plugin(self, name="sample"):
-        plugin = self.repo_root / "plugins" / name
-        (plugin / ".claude-plugin").mkdir(parents=True)
-        (plugin / ".claude-plugin" / "plugin.json").write_text(
-            json.dumps({
-                "name": name,
-                "version": "1.0.0",
-                "description": "Sample plugin.",
-                "author": {"name": "Tester"},
-            }),
-            encoding="utf-8",
-        )
-        return plugin
+        return make_cc_plugin(self.repo_root, name)
 
     def make_codex_plugin(self, name="sample"):
-        plugin = self.repo_root / "plugins" / name
-        (plugin / ".codex-plugin").mkdir(parents=True)
-        (plugin / ".codex-plugin" / "plugin.json").write_text(
-            json.dumps({
-                "name": name,
-                "version": "1.0.0",
-                "description": "Sample plugin.",
-                "author": {"name": "Tester"},
-                "interface": {"capabilities": ["Read"]},
-            }),
-            encoding="utf-8",
-        )
-        return plugin
+        return make_codex_plugin(self.repo_root, name)
 
     def test_cc_to_codex_removes_stale_generated_skill(self):
         plugin = self.make_cc_plugin()
