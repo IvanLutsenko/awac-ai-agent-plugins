@@ -10,7 +10,7 @@ TESTS_ROOT = Path(__file__).resolve().parent
 SCRIPT = TESTS_ROOT.parents[0] / "scripts" / "cross_port.py"
 sys.path.insert(0, str(TESTS_ROOT))
 
-from helpers import make_cc_marketplace, make_cc_plugin, read_json, write_json
+from helpers import add_cc_hook, make_cc_marketplace, make_cc_plugin, read_json, write_json
 
 
 class CliTest(unittest.TestCase):
@@ -32,6 +32,10 @@ class CliTest(unittest.TestCase):
         make_cc_marketplace(self.repo, ["one"])
         make_cc_plugin(self.repo, "one")
         return self.run_cli("marketplace", "attach", "--source", "claude-code")
+
+    def attach_one_with_hook(self):
+        self.attach_one()
+        add_cc_hook(self.repo, "one")
 
     def test_marketplace_attach_requires_source(self):
         result = self.run_cli("marketplace", "attach")
@@ -108,6 +112,45 @@ class CliTest(unittest.TestCase):
         make_cc_plugin(self.repo, "one")
         result = self.run_cli("plugin", "attach", "plugins/one")
         self.assertNotEqual(result.returncode, 0)
+
+    def test_plugin_adapt_writes_plan_without_target_changes(self):
+        self.attach_one_with_hook()
+        plan = self.repo / "plugins/one/.plugin-cross-port/adaptation-plan.md"
+        target = self.repo / "plugins/one/skills/generated-from-hooks/sessionstart/SKILL.md"
+
+        result = self.run_cli("plugin", "adapt", "plugins/one")
+
+        self.assertEqual(result.returncode, 0)
+        self.assertTrue(plan.exists())
+        self.assertFalse(target.exists())
+
+    def test_plugin_adapt_apply_writes_targets(self):
+        self.attach_one_with_hook()
+        target = self.repo / "plugins/one/skills/generated-from-hooks/sessionstart/SKILL.md"
+
+        plan_result = self.run_cli("plugin", "adapt", "plugins/one")
+        apply_result = self.run_cli("plugin", "adapt", "plugins/one", "--apply")
+
+        self.assertEqual(plan_result.returncode, 0)
+        self.assertEqual(apply_result.returncode, 0)
+        self.assertTrue(target.exists())
+
+    def test_plugin_adapt_apply_rejects_stale_plan(self):
+        self.attach_one_with_hook()
+        manifest_path = self.repo / "plugins/one/.claude-plugin/plugin.json"
+        manifest = read_json(manifest_path)
+        manifest["description"] = "Changed after planning."
+
+        plan_result = self.run_cli("plugin", "adapt", "plugins/one")
+        write_json(manifest_path, manifest)
+        apply_result = self.run_cli("plugin", "adapt", "plugins/one", "--apply")
+
+        self.assertEqual(plan_result.returncode, 0)
+        self.assertEqual(apply_result.returncode, 1)
+        self.assertIn(
+            "stale source snapshot",
+            apply_result.stdout + apply_result.stderr,
+        )
 
     def test_plugin_switch_source_updates_state_after_clean_sync(self):
         self.attach_one()

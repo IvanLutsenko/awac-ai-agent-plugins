@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import adaptation
 from convert_cc_to_codex import Converter
 from convert_codex_to_cc import ReverseConverter
 from marketplace_sync import plugin_source_path, upsert_cc_entry, upsert_codex_entry
@@ -62,6 +63,9 @@ def build_parser() -> argparse.ArgumentParser:
     switch = plugin_sub.add_parser("switch-source")
     switch.add_argument("path")
     switch.add_argument("--to", dest="to_source", choices=["claude-code", "codex"], required=True)
+    adapt = plugin_sub.add_parser("adapt")
+    adapt.add_argument("path")
+    adapt.add_argument("--apply", action="store_true")
     return parser
 
 
@@ -93,6 +97,12 @@ def run_plugin(args: argparse.Namespace, repo_root: Path) -> int:
     if args.command == "switch-source":
         report = plugin_switch_source(args, repo_root)
         print_summary(report)
+        return report.exit_code
+    if args.command == "adapt":
+        report = plugin_adapt(args, repo_root)
+        print_adaptation_summary(report, repo_root)
+        if report.error:
+            print(report.error, file=sys.stderr)
         return report.exit_code
     raise ValueError(f"Unknown plugin command: {args.command}")
 
@@ -156,6 +166,13 @@ def plugin_switch_source(args: argparse.Namespace, repo_root: Path) -> Reconcile
     state["source_of_truth"] = args.to_source
     save_state(state_path, state)
     return reconciler.sync(changed_only={state.get("plugin", name)})
+
+
+def plugin_adapt(args: argparse.Namespace, repo_root: Path) -> adaptation.AdaptationReport:
+    plugin_path = resolve_plugin_path(repo_root, args.path)
+    if args.apply:
+        return adaptation.apply_plan(repo_root, plugin_path)
+    return adaptation.analyze(repo_root, plugin_path)
 
 
 def append_to_canonical(
@@ -227,6 +244,26 @@ def print_summary(report: ReconcileReport) -> None:
         print("\nStale output:")
         for path in report.changed_paths:
             print(f"  {path}")
+
+
+def print_adaptation_summary(
+    report: adaptation.AdaptationReport, repo_root: Path
+) -> None:
+    print("Plugin Cross-Port Adaptation")
+    print("============================")
+    print(f"Status: {report.status}")
+    print(f"Adaptations: {len(report.adaptations)}")
+    if report.changed_paths:
+        print("Changed paths:")
+        for path in report.changed_paths:
+            print(f"  {display_path(path, repo_root)}")
+
+
+def display_path(path: Path, repo_root: Path) -> str:
+    try:
+        return path.resolve().relative_to(repo_root).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
 if __name__ == "__main__":
