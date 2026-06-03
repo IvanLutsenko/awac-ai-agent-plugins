@@ -14,9 +14,12 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from convert_cc_to_codex import Converter, load_repo_config
 from convert_codex_to_cc import ReverseConverter
+import adaptation
+import adaptation_state
 from marketplace_sync import (
     plugin_source_path,
     reconcile_order,
+    remove_entry,
     seed_cc_marketplace,
     seed_codex_marketplace,
     upsert_cc_entry,
@@ -182,21 +185,62 @@ class Reconciler:
                     Path(self.config["plugins_dir"]),
                 )
                 status = "synced"
+                error = ""
+                state_warnings: list[str] = []
+                stale_adaptation: dict[str, Any] | None = None
+                adaptation_payload = self._load_adaptation_state(plugin_path)
+                if adaptation_payload:
+                    adaptation.replay_reproducible_adaptations(
+                        plugin_path, adaptation_payload
+                    )
+                    stale_adaptation = adaptation_state.classify_staleness(
+                        adaptation_payload, plugin_path
+                    )
+                    stale_status = stale_adaptation["status"]
+                    if stale_status == "stale-critical":
+                        status = "needs-review"
+                        error = "stale critical adaptation requires review"
+                    elif stale_status == "stale-non-critical":
+                        warning = "stale non-critical adaptation"
+                        state_warnings.append(warning)
+                        error = warning
                 if target == "codex":
-                    upsert_codex_entry(sibling, manifest, source_path, status, "Development")
-                else:
+                    upsert_codex_entry(
+                        sibling, manifest, source_path, status, "Development"
+                    )
+                elif status == "synced":
                     upsert_cc_entry(sibling, manifest, source_path, "development")
+                else:
+                    remove_entry(sibling, manifest["name"])
                 if plugin_source != source:
-                    self._update_canonical_entry(canonical, plugin_source, manifest, source_path)
-                plugin_state = new_plugin_state(name, plugin_source)
+                    self._update_canonical_entry(
+                        canonical, plugin_source, manifest, source_path
+                    )
+                plugin_state = self._load_generated_plugin_state(
+                    plugin_path, name, plugin_source
+                )
                 plugin_state["status"] = status
+                if error and status != "synced":
+                    plugin_state["last_error"] = error
+                elif "last_error" in plugin_state:
+                    del plugin_state["last_error"]
+                if state_warnings:
+                    plugin_state["warnings"] = (
+                        list(plugin_state.get("warnings", [])) + state_warnings
+                    )
+                if stale_adaptation and stale_adaptation["status"] != "current":
+                    plugin_state["stale_adaptation"] = stale_adaptation
+                elif "stale_adaptation" in plugin_state:
+                    del plugin_state["stale_adaptation"]
                 save_state(plugin_path / ".plugin-cross-port.yaml", plugin_state)
                 state["plugins"][name] = {
                     "path": self._rel(plugin_path),
                     "source_of_truth": plugin_source,
                     "status": status,
                 }
-                self.results.append(PluginResult(name, status, plugin_target))
+                if error:
+                    state["plugins"][name]["last_error"] = error
+                self.results.append(PluginResult(name, status, plugin_target, error))
             except BaseException as error:
                 self._restore_plugin(plugin_path, snapshot)
                 status = "failed"
@@ -220,6 +264,8 @@ class Reconciler:
                         status,
                         "Development",
                     )
+                else:
+                    remove_entry(sibling, name)
                 self.results.append(PluginResult(name, status, plugin_target, str(error)))
 
         order_names = canonical_names if changed_only is not None else active_names
@@ -238,6 +284,22 @@ class Reconciler:
         self._write_json(canonical_path, canonical)
         save_state(self.marketplace_state_path, state)
         return ReconcileReport(self.results, [])
+
+    def _load_adaptation_state(self, plugin_path: Path) -> dict[str, Any]:
+        state_path = adaptation_state.state_path(plugin_path)
+        if not state_path.exists():
+            return {}
+        return adaptation_state.load(state_path)
+
+    def _load_generated_plugin_state(
+        self, plugin_path: Path, name: str, source: str
+    ) -> dict[str, Any]:
+        path = plugin_path / ".plugin-cross-port.yaml"
+        default = new_plugin_state(name, source)
+        try:
+            return load_state(path, default=default)
+        except ValueError:
+            return _load_converter_legacy_state(path, default)
 
     def _load_marketplace_state(self) -> dict[str, Any]:
         if not self.marketplace_state_path.exists():
@@ -436,3 +498,59 @@ def _file_hashes(root: Path) -> dict[str, str]:
         if path.is_file() and ".git" not in path.parts:
             hashes[str(path.relative_to(root))] = hashlib.sha256(path.read_bytes()).hexdigest()
     return hashes
+
+
+def _load_converter_legacy_state(path: Path, default: dict[str, Any]) -> dict[str, Any]:
+    if not path.exists():
+        return dict(default)
+    payload: dict[str, Any] = {}
+    current_key: str | None = None
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        if not raw_line.strip() or raw_line.lstrip().startswith("#"):
+            continue
+        if raw_line.startswith("  - "):
+            if current_key is not None:
+                payload.setdefault(current_key, []).append(
+                    _parse_converter_scalar(raw_line[4:].strip())
+                )
+            continue
+        if raw_line.startswith("  "):
+            if current_key is None:
+                continue
+            key, sep, value = raw_line.strip().partition(":")
+            if sep:
+                payload.setdefault(current_key, {})[key.strip()] = _parse_converter_scalar(
+                    value.strip()
+                )
+            continue
+        key, sep, value = raw_line.partition(":")
+        if not sep:
+            continue
+        current_key = key.strip()
+        if value.strip():
+            payload[current_key] = _parse_converter_scalar(value.strip())
+            current_key = None
+        elif current_key in {"warnings", "manually_maintained"}:
+            payload[current_key] = []
+        else:
+            payload[current_key] = {}
+    merged = dict(default)
+    merged.update(payload)
+    return merged
+
+
+def _parse_converter_scalar(value: str) -> Any:
+    if value in {"true", "True"}:
+        return True
+    if value in {"false", "False"}:
+        return False
+    if value in {"null", "None"}:
+        return None
+    if (value.startswith("'") and value.endswith("'")) or (
+        value.startswith('"') and value.endswith('"')
+    ):
+        return value[1:-1]
+    try:
+        return int(value)
+    except ValueError:
+        return value
