@@ -3,3 +3,5 @@ WARP.md
 firebase-debug.log
 node_modules/
 *.local.md
+__pycache__/
+*.pyc
