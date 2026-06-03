@@ -178,7 +178,7 @@ class Reconciler:
                     Path(self.config["plugins_dir"]),
                 )
                 status = "synced"
-                if plugin_target == "codex":
+                if target == "codex":
                     upsert_codex_entry(sibling, manifest, source_path, status, "Development")
                 else:
                     upsert_cc_entry(sibling, manifest, source_path, "development")
@@ -207,7 +207,7 @@ class Reconciler:
                 failed_state["last_error"] = str(error)
                 if plugin_path.exists():
                     save_state(plugin_path / ".plugin-cross-port.yaml", failed_state)
-                if plugin_target == "codex":
+                if target == "codex":
                     source_path = f"./plugins/{name}"
                     upsert_codex_entry(
                         sibling,
@@ -218,10 +218,16 @@ class Reconciler:
                     )
                 self.results.append(PluginResult(name, status, plugin_target, str(error)))
 
+        order_names = canonical_names if changed_only is not None else active_names
         if target == "codex":
-            sibling = reconcile_order(sibling, active_names)
+            sibling = reconcile_order(sibling, order_names)
         else:
-            synced_names = [result.name for result in self.results if result.status == "synced"]
+            synced_names = [
+                name
+                for name in order_names
+                if any(result.name == name and result.status == "synced" for result in self.results)
+                or changed_only is not None
+            ]
             sibling = reconcile_order(sibling, synced_names)
 
         self._write_json(sibling_path, sibling)
