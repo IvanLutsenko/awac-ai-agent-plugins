@@ -34,6 +34,14 @@ class AdaptationStateTest(unittest.TestCase):
         self.assertTrue(first.startswith(state.HASH_PREFIX))
         self.assertTrue(second.startswith(state.HASH_PREFIX))
 
+    def test_source_snapshot_rejects_paths_outside_plugin(self):
+        state = load_module()
+        with tempfile.TemporaryDirectory() as directory:
+            plugin = Path(directory) / "plugins" / "one"
+
+            with self.assertRaisesRegex(ValueError, "outside plugin"):
+                state.source_snapshot(plugin, ["../../outside.md"])
+
     def test_state_round_trip_uses_json_compatible_yaml(self):
         state = load_module()
         payload = {

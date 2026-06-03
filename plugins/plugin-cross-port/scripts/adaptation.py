@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import sys
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -63,7 +64,7 @@ def analyze(repo_root: Path, plugin_path: Path) -> AdaptationReport:
         "source_snapshot": adaptation_state.source_snapshot(plugin, source_files),
         "adaptations": adaptations,
     }
-    payload["plan_hash"] = adaptation_state.plan_hash(render_plan(payload))
+    payload["plan_hash"] = plan_payload_hash(payload)
     plan_text = render_plan(payload)
 
     plan_path = adaptation_state.plan_path(plugin)
@@ -116,6 +117,13 @@ def render_plan(payload: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def plan_payload_hash(payload: dict[str, Any]) -> str:
+    canonical = deepcopy(payload)
+    canonical["plan_hash"] = ""
+    machine_text = json.dumps(canonical, indent=2, sort_keys=True)
+    return adaptation_state.plan_hash(machine_text)
+
+
 def parse_plan(text: str) -> dict[str, Any]:
     start = text.find(MACHINE_BLOCK_START)
     if start == -1:
@@ -161,9 +169,28 @@ def apply_plan(repo_root: Path, plugin_path: Path) -> AdaptationReport:
         )
 
     adaptations = payload.get("adaptations", [])
+    expected_plan_hash = payload.get("plan_hash")
+    if expected_plan_hash and expected_plan_hash != plan_payload_hash(payload):
+        return AdaptationReport(
+            plugin=plugin,
+            adaptations=adaptations,
+            changed_paths=[],
+            status="error",
+            error="stale plan hash; rerun plugin adapt before --apply",
+        )
     saved_state = adaptation_state.load(plugin)
     source_files = _all_source_files(adaptations)
-    current_snapshot = adaptation_state.source_snapshot(plugin, source_files)
+    try:
+        current_snapshot = adaptation_state.source_snapshot(plugin, source_files)
+        target_paths = _target_paths(plugin, adaptations)
+    except ValueError as error:
+        return AdaptationReport(
+            plugin=plugin,
+            adaptations=adaptations,
+            changed_paths=[],
+            status="error",
+            error=str(error),
+        )
     expected_snapshot = saved_state.get("source_snapshot") or payload.get("source_snapshot")
     if expected_snapshot and expected_snapshot != current_snapshot:
         return AdaptationReport(
@@ -174,7 +201,6 @@ def apply_plan(repo_root: Path, plugin_path: Path) -> AdaptationReport:
             error="stale source snapshot; rerun plugin adapt before --apply",
         )
 
-    target_paths = _target_paths(plugin, adaptations)
     target_snapshots = _snapshot_paths(target_paths)
     changed_paths: list[Path] = []
     try:
@@ -277,7 +303,7 @@ def _append_text(
     text = action.get("text", "")
     changed: list[Path] = []
     for relative in item.get("target_files", []):
-        path = plugin / relative
+        path = _safe_plugin_path(plugin, relative, "target")
         existing = path.read_text(encoding="utf-8") if path.exists() else ""
         if text in existing:
             continue
@@ -301,7 +327,7 @@ def _target_paths(plugin: Path, adaptations: list[dict[str, Any]]) -> list[Path]
     paths: list[Path] = []
     for item in adaptations:
         for relative in item.get("target_files", []):
-            paths.append(plugin / relative)
+            paths.append(_safe_plugin_path(plugin, relative, "target"))
     return _unique_paths(paths)
 
 
@@ -333,11 +359,26 @@ def _unique_paths(paths: list[Path]) -> list[Path]:
     return unique
 
 
+def _safe_plugin_path(plugin: Path, relative: str, label: str) -> Path:
+    path = Path(relative)
+    if path.is_absolute():
+        raise ValueError(f"Adaptation {label} path is outside plugin: {relative}")
+    plugin_root = plugin.resolve()
+    resolved = (plugin_root / path).resolve()
+    try:
+        resolved.relative_to(plugin_root)
+    except ValueError as error:
+        raise ValueError(
+            f"Adaptation {label} path is outside plugin: {relative}"
+        ) from error
+    return plugin / path
+
+
 def _write_review_stub(plugin: Path, item: dict[str, Any]) -> list[Path]:
     text = item.get("action", {}).get("text", _review_stub(item.get("id", "adaptation")))
     changed: list[Path] = []
     for relative in item.get("target_files", []):
-        path = plugin / relative
+        path = _safe_plugin_path(plugin, relative, "target")
         if path.exists():
             continue
         path.parent.mkdir(parents=True, exist_ok=True)

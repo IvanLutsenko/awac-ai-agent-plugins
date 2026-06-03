@@ -187,6 +187,7 @@ class Reconciler:
                 status = "synced"
                 error = ""
                 state_warnings: list[str] = []
+                result_warning = ""
                 stale_adaptation: dict[str, Any] | None = None
                 adaptation_payload = self._load_adaptation_state(plugin_path)
                 if adaptation_payload:
@@ -203,7 +204,7 @@ class Reconciler:
                     elif stale_status == "stale-non-critical":
                         warning = "stale non-critical adaptation"
                         state_warnings.append(warning)
-                        error = warning
+                        result_warning = warning
                 if target == "codex":
                     upsert_codex_entry(
                         sibling, manifest, source_path, status, "Development"
@@ -225,9 +226,9 @@ class Reconciler:
                 elif "last_error" in plugin_state:
                     del plugin_state["last_error"]
                 if state_warnings:
-                    plugin_state["warnings"] = (
-                        list(plugin_state.get("warnings", [])) + state_warnings
-                    )
+                    plugin_state["warnings"] = _as_list(
+                        plugin_state.get("warnings", [])
+                    ) + state_warnings
                 if stale_adaptation and stale_adaptation["status"] != "current":
                     plugin_state["stale_adaptation"] = stale_adaptation
                 elif "stale_adaptation" in plugin_state:
@@ -240,7 +241,11 @@ class Reconciler:
                 }
                 if error:
                     state["plugins"][name]["last_error"] = error
-                self.results.append(PluginResult(name, status, plugin_target, error))
+                if state_warnings:
+                    state["plugins"][name]["warnings"] = state_warnings
+                self.results.append(
+                    PluginResult(name, status, plugin_target, error or result_warning)
+                )
             except BaseException as error:
                 self._restore_plugin(plugin_path, snapshot)
                 status = "failed"
@@ -537,6 +542,14 @@ def _load_converter_legacy_state(path: Path, default: dict[str, Any]) -> dict[st
     merged = dict(default)
     merged.update(payload)
     return merged
+
+
+def _as_list(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        return value
+    if value in {"", "[]", None}:
+        return []
+    return [value]
 
 
 def _parse_converter_scalar(value: str) -> Any:

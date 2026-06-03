@@ -45,7 +45,7 @@ def plan_hash(text: str) -> str:
 def source_snapshot(plugin_dir: Path, source_files: Iterable[str]) -> str:
     digest = hashlib.sha256()
     for relative in sorted(str(source_file) for source_file in source_files):
-        path = plugin_dir / relative
+        path = _safe_plugin_path(plugin_dir, relative)
         digest.update(relative.encode("utf-8"))
         digest.update(b"\0")
         if path.exists():
@@ -91,6 +91,19 @@ def _resolve_state_path(path_or_plugin_dir: Path) -> Path:
 
 def _hash_bytes(content: bytes) -> str:
     return f"{HASH_PREFIX}{hashlib.sha256(content).hexdigest()}"
+
+
+def _safe_plugin_path(plugin_dir: Path, relative: str) -> Path:
+    path = Path(relative)
+    if path.is_absolute():
+        raise ValueError(f"Adaptation source path is outside plugin: {relative}")
+    resolved_plugin = plugin_dir.resolve()
+    resolved_path = (resolved_plugin / path).resolve()
+    try:
+        resolved_path.relative_to(resolved_plugin)
+    except ValueError as error:
+        raise ValueError(f"Adaptation source path is outside plugin: {relative}") from error
+    return resolved_path
 
 
 def _adaptation_source_files(payload: dict[str, Any]) -> list[str]:

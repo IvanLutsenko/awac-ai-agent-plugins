@@ -65,6 +65,7 @@ class AdaptationTest(unittest.TestCase):
         first = payload["adaptations"][0]
 
         self.assertIn(adaptation.MACHINE_BLOCK_START, plan_text)
+        self.assertEqual(payload["plan_hash"], adaptation.plan_payload_hash(payload))
         self.assertEqual(first["id"], "hooks-sessionstart")
         self.assertEqual(first["strategy"], "semantic")
         self.assertEqual(first["criticality"], "critical")
@@ -84,6 +85,23 @@ class AdaptationTest(unittest.TestCase):
         self.assertEqual(command_adaptation["id"], "command-main-plugin-root-path")
         self.assertEqual(command_adaptation["strategy"], "semantic")
         self.assertEqual(command_adaptation["criticality"], "non-critical")
+
+    def test_builtin_detectors_create_semantic_adaptations_only(self):
+        plugin = make_cc_plugin(self.repo, "one")
+        add_cc_hook(self.repo, "one")
+        add_cc_command(
+            self.repo,
+            "one",
+            "main",
+            "Read ${CLAUDE_PLUGIN_ROOT}/references/config.md",
+        )
+
+        report = adaptation.analyze(self.repo, plugin)
+
+        self.assertEqual(
+            {item["strategy"] for item in report.adaptations},
+            {"semantic"},
+        )
 
     def test_replay_reproducible_append_text_is_idempotent(self):
         plugin = make_cc_plugin(self.repo, "one")
@@ -113,6 +131,25 @@ class AdaptationTest(unittest.TestCase):
         self.assertEqual(second, [])
         self.assertEqual(read_text(target).count("Review note"), 1)
 
+    def test_replay_rejects_target_path_outside_plugin(self):
+        plugin = make_cc_plugin(self.repo, "one")
+        outside = self.repo / "outside.md"
+        payload = {
+            "adaptations": [
+                {
+                    "id": "escape",
+                    "strategy": "reproducible",
+                    "target_files": ["../../outside.md"],
+                    "action": {"type": "append_text", "text": "escape"},
+                }
+            ]
+        }
+
+        with self.assertRaisesRegex(ValueError, "outside plugin"):
+            adaptation.replay_reproducible_adaptations(plugin, payload)
+
+        self.assertFalse(outside.exists())
+
     def test_apply_rejects_stale_source_snapshot(self):
         plugin = make_cc_plugin(self.repo, "one")
         add_cc_hook(self.repo, "one")
@@ -140,6 +177,37 @@ class AdaptationTest(unittest.TestCase):
         self.assertTrue(target.exists())
         self.assertEqual(read_json(state_path)["status"], "applied")
 
+    def test_apply_rejects_tampered_plan_hash(self):
+        plugin = make_cc_plugin(self.repo, "one")
+        add_cc_hook(self.repo, "one")
+        adaptation.analyze(self.repo, plugin)
+        plan_path = plugin / ".plugin-cross-port/adaptation-plan.md"
+        payload = adaptation.parse_plan(read_text(plan_path))
+        payload["adaptations"][0]["rationale"] = "Changed without refreshing hash."
+        plan_path.write_text(adaptation.render_plan(payload), encoding="utf-8")
+
+        report = adaptation.apply_plan(self.repo, plugin)
+
+        self.assertEqual(report.exit_code, 1)
+        self.assertIn("stale plan hash", report.error)
+
+    def test_apply_rejects_target_path_outside_plugin(self):
+        plugin = make_cc_plugin(self.repo, "one")
+        add_cc_hook(self.repo, "one")
+        outside = self.repo / "outside.md"
+        adaptation.analyze(self.repo, plugin)
+        plan_path = plugin / ".plugin-cross-port/adaptation-plan.md"
+        payload = adaptation.parse_plan(read_text(plan_path))
+        payload["adaptations"][0]["target_files"] = ["../../outside.md"]
+        payload["plan_hash"] = adaptation.plan_payload_hash(payload)
+        plan_path.write_text(adaptation.render_plan(payload), encoding="utf-8")
+
+        report = adaptation.apply_plan(self.repo, plugin)
+
+        self.assertEqual(report.exit_code, 1)
+        self.assertIn("outside plugin", report.error)
+        self.assertFalse(outside.exists())
+
     def test_apply_rolls_back_all_targets_when_one_action_fails(self):
         plugin = make_cc_plugin(self.repo, "one")
         add_cc_hook(self.repo, "one")
@@ -162,6 +230,7 @@ class AdaptationTest(unittest.TestCase):
                 },
             }
         )
+        payload["plan_hash"] = adaptation.plan_payload_hash(payload)
         plan_path.write_text(adaptation.render_plan(payload), encoding="utf-8")
 
         report = adaptation.apply_plan(self.repo, plugin)

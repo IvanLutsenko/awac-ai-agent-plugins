@@ -93,10 +93,15 @@ class ReconcileAdaptationTest(unittest.TestCase):
         report = self.reconciler().sync()
 
         entry = read_json(self.repo / ".agents/plugins/marketplace.json")["plugins"][0]
+        marketplace_state = read_json(self.repo / ".plugin-cross-port.marketplace.yaml")
+        plugin_state = read_json(self.plugin() / ".plugin-cross-port.yaml")
         self.assertEqual(report.exit_code, 0)
         self.assertEqual(report.results[0].status, "synced")
         self.assertIn("stale non-critical adaptation", report.results[0].error)
         self.assertEqual(entry["policy"]["installation"], "AVAILABLE")
+        self.assertNotIn("last_error", marketplace_state["plugins"]["one"])
+        self.assertNotIn("last_error", plugin_state)
+        self.assertIn("stale non-critical adaptation", plugin_state["warnings"][0])
 
     def test_reproducible_adaptation_replays_after_sync(self):
         self.attach_cc_marketplace()
