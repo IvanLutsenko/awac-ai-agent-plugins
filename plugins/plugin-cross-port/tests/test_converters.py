@@ -50,6 +50,30 @@ class ConverterTest(unittest.TestCase):
         self.assertEqual(converter.run(), 0)
         self.assertFalse(stale.exists())
 
+    def test_cc_to_codex_rewrites_plugin_root_to_repo_relative_path(self):
+        plugin = self.make_cc_plugin("drawbridge")
+        command = plugin / "commands" / "draw.md"
+        command.parent.mkdir()
+        command.write_text(
+            "---\n"
+            "description: Draw\n"
+            "allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/*)\n"
+            "---\n\n"
+            "source ${CLAUDE_PLUGIN_ROOT}/scripts/lib.sh\n",
+            encoding="utf-8",
+        )
+
+        self.assertEqual(
+            cc_to_codex.Converter(plugin, self.repo_root, False, False, False).run(), 0
+        )
+
+        skill = (plugin / "skills/generated-from-commands/draw/SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("source plugins/drawbridge/scripts/lib.sh", skill)
+        self.assertNotIn("${CLAUDE_PLUGIN_ROOT}", skill)
+        self.assertNotIn("remove `allowed-tools`", skill)
+
     def test_cc_to_codex_preserves_plugin_relative_manually_maintained_skill(self):
         plugin = self.make_cc_plugin()
         command = plugin / "commands" / "kept.md"

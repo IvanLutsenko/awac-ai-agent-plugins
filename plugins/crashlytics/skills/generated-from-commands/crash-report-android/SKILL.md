@@ -5,7 +5,7 @@ version: 0.1.0
 ---
 
 > Converted from Claude Code command `/crash-report-android`.
-> Review and adapt: remove `allowed-tools` references and any `${CLAUDE_PLUGIN_ROOT}` paths.
+> Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
 
 # Android Crash Analysis - Multi-Agent Edition
 
@@ -59,7 +59,7 @@ Skip if `.claude/crashlytics-prereqs-ok` exists. Otherwise run and cache on succ
 Bash: test -f .claude/crashlytics-prereqs-ok && echo "CACHED_OK"
 
 If not cached:
-  Bash: ${CLAUDE_PLUGIN_ROOT}/scripts/check-prerequisites.sh
+  Bash: plugins/crashlytics/scripts/check-prerequisites.sh
   Parse: OK → pass, MISSING → show fix instruction
   If ALL OK → Bash: touch .claude/crashlytics-prereqs-ok
   If any MISSING → show checklist, degrade gracefully (do NOT cache)
@@ -148,7 +148,7 @@ Pass the full forensics output through a tmp file — `echo "..."` mangles markd
 1. Write tool: /tmp/crashlytics-forensics-{ISSUE_ID}.md
    contents: <full forensics_output verbatim, no truncation>
 
-2. Bash: python3 ${CLAUDE_PLUGIN_ROOT}/scripts/validate-report.py \
+2. Bash: python3 plugins/crashlytics/scripts/validate-report.py \
            --console-url "{console_url}" \
            < /tmp/crashlytics-forensics-{ISSUE_ID}.md
 ```

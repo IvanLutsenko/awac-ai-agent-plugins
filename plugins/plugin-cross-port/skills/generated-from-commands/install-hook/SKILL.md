@@ -5,7 +5,7 @@ version: 0.1.0
 ---
 
 > Converted from Claude Code command `/install-hook`.
-> Review and adapt: remove `allowed-tools` references and any `${CLAUDE_PLUGIN_ROOT}` paths.
+> Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
 
 # Install Hook
 
@@ -31,7 +31,7 @@ If this fails: stop with "Not a git repository: <target>".
 
 Run to get the absolute path to the converter scripts:
 ```bash
-echo "${CLAUDE_PLUGIN_ROOT}/scripts"
+echo "plugins/plugin-cross-port/scripts"
 ```
 
 Store the result as `SCRIPTS_DIR`. This is the path that will be embedded in the generated hook.

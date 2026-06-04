@@ -62,7 +62,7 @@ reconciliation.
 - **Agents**: Codex does not support a separate `agents/` concept. Multi-agent workflows must be inlined into skills.
 - **allowed-tools**: CC's per-command tool allowlist has no Codex analog. Codex uses manifest-level `capabilities`.
 - **MCP tool names**: Same `.mcp.json` format works, but tool IDs may differ between environments. Review generated skills for `mcp__*` references.
-- **`${CLAUDE_PLUGIN_ROOT}`**: This CC variable is not available in Codex. Scripts referenced via this variable need path adjustment.
+- **`${CLAUDE_PLUGIN_ROOT}`**: This CC variable is not available in Codex. The converter auto-rewrites it to the plugin's repo-relative path (`plugins/<name>`) in generated skills, matching the convention used by hand-written Codex skills.
 
 ## Marketplace Mapping
 

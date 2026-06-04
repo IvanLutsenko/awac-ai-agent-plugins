@@ -5,7 +5,7 @@ version: 0.1.0
 ---
 
 > Converted from Claude Code command `/project-bug`.
-> Review and adapt: remove `allowed-tools` references and any `${CLAUDE_PLUGIN_ROOT}` paths.
+> Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
 
 # Project Bug Command
 
@@ -73,7 +73,7 @@ mcp__plugin_obsidian_tracker_obsidian__getConfig
 5. **Auto-start tracking (если ещё не активен):**
    Если `.claude/obsidian-tracking.json` не существует — создай через скрипт:
    ```bash
-   ${CLAUDE_PLUGIN_ROOT}/scripts/start-tracking.sh "{project}" "Bug: {title}" "Created bug: {title}"
+   plugins/obsidian-tracker/scripts/start-tracking.sh "{project}" "Bug: {title}" "Created bug: {title}"
    ```
    Выведи: `Tracking started for {project}`
 

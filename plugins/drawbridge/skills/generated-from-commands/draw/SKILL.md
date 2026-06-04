@@ -5,7 +5,7 @@ version: 0.1.0
 ---
 
 > Converted from Claude Code command `/draw`.
-> Review and adapt: remove `allowed-tools` references and any `${CLAUDE_PLUGIN_ROOT}` paths.
+> Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
 
 # /draw — bridge brief to image-gen web UI
 
@@ -22,7 +22,7 @@ If no brief is given, stop and report: `Usage: /draw [-t target] <brief>`.
 ### 1. Resolve target and translate flag
 
 ```bash
-source ${CLAUDE_PLUGIN_ROOT}/scripts/lib.sh
+source plugins/drawbridge/scripts/lib.sh
 echo "default_target=$(db_default_target)"
 echo "translate=$(db_translate_enabled)"
 ```
@@ -45,7 +45,7 @@ PROMPT_EOF
 TARGET="<resolved target>"
 BRIEF="<original brief>"
 
-source ${CLAUDE_PLUGIN_ROOT}/scripts/lib.sh
+source plugins/drawbridge/scripts/lib.sh
 printf "%s" "$PROMPT" | db_copy_clipboard
 db_history_append "$TARGET" "$BRIEF" "$PROMPT"
 db_open_url "$(db_target_url "$TARGET")"

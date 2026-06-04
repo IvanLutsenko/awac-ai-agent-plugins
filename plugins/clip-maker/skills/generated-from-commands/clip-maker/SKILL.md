@@ -5,7 +5,7 @@ version: 0.1.0
 ---
 
 > Converted from Claude Code command `/clip-maker`.
-> Review and adapt: remove `allowed-tools` references and any `${CLAUDE_PLUGIN_ROOT}` paths.
+> Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
 
 # Clip Maker — Full Pipeline
 
@@ -30,7 +30,7 @@ Execute steps sequentially. Report progress to the user after each step.
 ### Step 1: Check dependencies
 
 ```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/install-deps.sh [--api if user passed --api]
+bash plugins/clip-maker/scripts/install-deps.sh [--api if user passed --api]
 ```
 
 If it fails, stop and report what's missing.
@@ -40,7 +40,7 @@ If it fails, stop and report what's missing.
 If `<video_path>` looks like a URL (starts with `http://`, `https://`, or `youtube.com`, `youtu.be`):
 
 ```bash
-VIDEO_PATH=$(bash ${CLAUDE_PLUGIN_ROOT}/scripts/download-video.sh "<url>" ~/Downloads)
+VIDEO_PATH=$(bash plugins/clip-maker/scripts/download-video.sh "<url>" ~/Downloads)
 ```
 
 The script outputs the downloaded file path. Use it as `<video_path>` for subsequent steps.
@@ -52,7 +52,7 @@ Create output directory next to the video: `{video_dir}/{video_name}_clips/`
 ### Step 4: Transcribe
 
 ```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/transcribe.sh "<video_path>" "<output_dir>" [--api] [--language LANG] [--prompt "terms"]
+bash plugins/clip-maker/scripts/transcribe.sh "<video_path>" "<output_dir>" [--api] [--language LANG] [--prompt "terms"]
 ```
 
 This produces `<output_dir>/transcript.json`.
@@ -86,7 +86,7 @@ If `--auto` IS set: proceed with all moments.
 ### Step 7: Extract frames
 
 ```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/extract-frames.sh "<video_path>" "<output_dir>/moments.json" "<output_dir>"
+bash plugins/clip-maker/scripts/extract-frames.sh "<video_path>" "<output_dir>/moments.json" "<output_dir>"
 ```
 
 ### Step 8: Analyze crop positions
@@ -108,13 +108,13 @@ Read each moment's frames, locate the speaker, and write crop_coords.json.
 ### Step 9: Cut clips
 
 ```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/cut-clip.sh "<video_path>" "<output_dir>/moments.json" "<output_dir>/crop_coords.json" "<output_dir>"
+bash plugins/clip-maker/scripts/cut-clip.sh "<video_path>" "<output_dir>/moments.json" "<output_dir>/crop_coords.json" "<output_dir>"
 ```
 
 ### Step 10: Burn subtitles (unless --no-subtitles)
 
 ```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/burn-subtitles.sh "<output_dir>/moments.json" "<output_dir>/transcript.json" "<output_dir>"
+bash plugins/clip-maker/scripts/burn-subtitles.sh "<output_dir>/moments.json" "<output_dir>/transcript.json" "<output_dir>"
 ```
 
 ### Step 11: Generate social media copy (unless --no-copy)

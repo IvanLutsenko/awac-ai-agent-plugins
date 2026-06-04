@@ -5,7 +5,7 @@ version: 0.1.0
 ---
 
 > Converted from Claude Code command `/transcribe`.
-> Review and adapt: remove `allowed-tools` references and any `${CLAUDE_PLUGIN_ROOT}` paths.
+> Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
 
 # Transcribe Video
 
@@ -23,7 +23,7 @@ Parse `$ARGUMENTS` for:
 ### 1. Check dependencies
 
 ```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/install-deps.sh [--api if passed]
+bash plugins/clip-maker/scripts/install-deps.sh [--api if passed]
 ```
 
 ### 2. Determine output location
@@ -34,7 +34,7 @@ Output file: `<video_name>_transcript.json`
 ### 3. Transcribe
 
 ```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/transcribe.sh "<video_path>" "<output_dir>" [--api] [--language LANG]
+bash plugins/clip-maker/scripts/transcribe.sh "<video_path>" "<output_dir>" [--api] [--language LANG]
 ```
 
 ### 4. Report

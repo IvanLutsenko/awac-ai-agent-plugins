@@ -5,7 +5,7 @@ version: 0.1.0
 ---
 
 > Converted from Claude Code command `/task`.
-> Review and adapt: remove `allowed-tools` references and any `${CLAUDE_PLUGIN_ROOT}` paths.
+> Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
 
 # Task Command
 
@@ -70,6 +70,6 @@ Creates a task with auto-increment ID and adds to kanban board (Backlog column).
 8. **Auto-start tracking:**
    Если `.claude/obsidian-tracking.json` НЕ существует — запусти трекинг:
    ```bash
-   ${CLAUDE_PLUGIN_ROOT}/scripts/start-tracking.sh "{project}"
+   plugins/obsidian-tracker/scripts/start-tracking.sh "{project}"
    ```
    Если файл уже существует — прочитай через Read, добавь `"Created TASK-{id}: {title}"` в actions, перезапиши через `Bash(cat*)`.

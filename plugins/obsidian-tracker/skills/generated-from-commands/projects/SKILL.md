@@ -5,7 +5,7 @@ version: 0.1.0
 ---
 
 > Converted from Claude Code command `/projects`.
-> Review and adapt: remove `allowed-tools` references and any `${CLAUDE_PLUGIN_ROOT}` paths.
+> Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
 
 # Projects Command
 
@@ -88,5 +88,5 @@ mcp__plugin_obsidian_tracker_obsidian__getConfig
    **Auto-start tracking:**
    После вывода информации о проекте, автоматически запусти трекинг:
    ```bash
-   ${CLAUDE_PLUGIN_ROOT}/scripts/start-tracking.sh "{project-name}"
+   plugins/obsidian-tracker/scripts/start-tracking.sh "{project-name}"
    ```

@@ -304,6 +304,10 @@ class Converter:
             skill_description = skill_description.rstrip() + '.'
         skill_description = f'{skill_description} {trigger_hint}'
 
+        # Codex has no ${CLAUDE_PLUGIN_ROOT}; rewrite to the plugin's repo-relative
+        # path, matching the convention used by hand-written Codex skills here.
+        body = body.replace('${CLAUDE_PLUGIN_ROOT}', self._rel(self.plugin_path))
+
         return (
             f'---\n'
             f'name: {skill_name}\n'
@@ -311,7 +315,7 @@ class Converter:
             f'version: 0.1.0\n'
             f'---\n\n'
             f'> Converted from Claude Code command `/{command_name}`.\n'
-            f'> Review and adapt: remove `allowed-tools` references and any `${{CLAUDE_PLUGIN_ROOT}}` paths.\n\n'
+            f'> Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.\n\n'
             f'{body}'
         )
 
@@ -516,7 +520,7 @@ class Converter:
             print(f'Shared skills/ (no action): {len(non_generated)} skill(s)')
 
         print('\nManual steps:')
-        print('  1. Review skills/generated-from-commands/ — remove CC-specific allowed-tools and ${CLAUDE_PLUGIN_ROOT} references.')
+        print('  1. Review skills/generated-from-commands/ — hooks and MCP tool IDs may need manual mapping (allowed-tools dropped, ${CLAUDE_PLUGIN_ROOT} rewritten to plugin path automatically).')
         if agent_warnings:
             print('  2. Convert agents manually (see warnings above).')
         if hook_warnings:

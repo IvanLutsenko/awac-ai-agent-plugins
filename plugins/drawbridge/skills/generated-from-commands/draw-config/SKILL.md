@@ -5,7 +5,7 @@ version: 0.1.0
 ---
 
 > Converted from Claude Code command `/draw-config`.
-> Review and adapt: remove `allowed-tools` references and any `${CLAUDE_PLUGIN_ROOT}` paths.
+> Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
 
 # /draw-config — view or update settings
 
@@ -16,7 +16,7 @@ Settings live in YAML frontmatter of `~/.claude/drawbridge.local.md` (project-lo
 ### `show` (default if no args)
 
 ```bash
-source ${CLAUDE_PLUGIN_ROOT}/scripts/lib.sh
+source plugins/drawbridge/scripts/lib.sh
 echo "config_path: $(db_config_path)"
 echo "default_target: $(db_default_target)"
 echo "translate_to_english: $(db_translate_enabled)"

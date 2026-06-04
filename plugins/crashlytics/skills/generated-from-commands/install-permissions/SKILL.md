@@ -5,7 +5,7 @@ version: 0.1.0
 ---
 
 > Converted from Claude Code command `/install-permissions`.
-> Review and adapt: remove `allowed-tools` references and any `${CLAUDE_PLUGIN_ROOT}` paths.
+> Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
 
 # Install Crashlytics permissions
 
@@ -73,9 +73,9 @@ SAFE_SET = [
     "Bash(git config --get:*)",
 
     # crashlytics scripts
-    "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-prerequisites.sh:*)",
-    "Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/validate-report.py:*)",
-    "Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/fetch-crash-data.py:*)",
+    "Bash(plugins/crashlytics/scripts/check-prerequisites.sh:*)",
+    "Bash(python3 plugins/crashlytics/scripts/validate-report.py:*)",
+    "Bash(python3 plugins/crashlytics/scripts/fetch-crash-data.py:*)",
 
     # generic safe utils used by the plugin
     "Bash(test -f:*)",

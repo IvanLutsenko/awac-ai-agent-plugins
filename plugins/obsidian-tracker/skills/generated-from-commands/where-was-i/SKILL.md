@@ -5,7 +5,7 @@ version: 0.1.0
 ---
 
 > Converted from Claude Code command `/where-was-i`.
-> Review and adapt: remove `allowed-tools` references and any `${CLAUDE_PLUGIN_ROOT}` paths.
+> Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
 
 # /where-was-i — Resume Context
 
@@ -58,5 +58,5 @@ Bugs:
 6. **Auto-start tracking:**
    If `.claude/obsidian-tracking.json` does not exist, start tracking for the resolved project:
    ```bash
-   ${CLAUDE_PLUGIN_ROOT}/scripts/start-tracking.sh "{project}"
+   plugins/obsidian-tracker/scripts/start-tracking.sh "{project}"
    ```

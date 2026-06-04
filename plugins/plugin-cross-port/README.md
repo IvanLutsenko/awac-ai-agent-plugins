@@ -164,8 +164,8 @@ available and emit a warning.
 
 - **Hooks** — `SessionStart`, `PostToolUse`, etc. have no Codex equivalent. Implement as GitHub Actions if needed.
 - **Agents** — not auto-converted; requires manual review and placement in `skills/`.
-- **`${CLAUDE_PLUGIN_ROOT}`** — CC-specific path variable; remove from generated skills or replace with relative paths.
-- **`allowed-tools`** — CC per-command tool allowlist has no Codex analog; remove from generated skills.
+- **`${CLAUDE_PLUGIN_ROOT}`** — CC-specific path variable; **auto-rewritten** to the plugin's repo-relative path (`plugins/<name>`) in generated skills.
+- **`allowed-tools`** — CC per-command tool allowlist has no Codex analog; **auto-dropped** from generated skill frontmatter.
 - **MCP tool names** — same `.mcp.json` format, but verify tool IDs work in target environment.
 - **Semantic adaptation** — hooks and ecosystem-specific paths still require
   review through `plugin adapt`; sync never invents new semantic behavior.

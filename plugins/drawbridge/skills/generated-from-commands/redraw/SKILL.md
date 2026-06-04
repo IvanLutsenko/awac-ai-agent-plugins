@@ -5,7 +5,7 @@ version: 0.1.0
 ---
 
 > Converted from Claude Code command `/redraw`.
-> Review and adapt: remove `allowed-tools` references and any `${CLAUDE_PLUGIN_ROOT}` paths.
+> Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
 
 # /redraw — variation of last brief
 
@@ -14,7 +14,7 @@ version: 0.1.0
 ### 1. Read last entry
 
 ```bash
-source ${CLAUDE_PLUGIN_ROOT}/scripts/lib.sh
+source plugins/drawbridge/scripts/lib.sh
 LAST=$(db_history_last)
 ```
 

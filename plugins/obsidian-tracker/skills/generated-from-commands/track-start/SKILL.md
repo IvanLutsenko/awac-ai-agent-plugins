@@ -5,7 +5,7 @@ version: 0.1.0
 ---
 
 > Converted from Claude Code command `/track-start`.
-> Review and adapt: remove `allowed-tools` references and any `${CLAUDE_PLUGIN_ROOT}` paths.
+> Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
 
 # Track Start Command
 
@@ -54,7 +54,7 @@ cat .claude/obsidian-tracking.json 2>/dev/null || echo "NO_TRACKING"
 Создай трекинг-файл через скрипт:
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/start-tracking.sh "{project-name}" "{goal}"
+plugins/obsidian-tracker/scripts/start-tracking.sh "{project-name}" "{goal}"
 ```
 
 ## Step 5: Confirm

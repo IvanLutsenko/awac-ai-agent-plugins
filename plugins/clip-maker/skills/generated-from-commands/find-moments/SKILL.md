@@ -5,7 +5,7 @@ version: 0.1.0
 ---
 
 > Converted from Claude Code command `/find-moments`.
-> Review and adapt: remove `allowed-tools` references and any `${CLAUDE_PLUGIN_ROOT}` paths.
+> Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
 
 # Find Interesting Moments
 
@@ -27,8 +27,8 @@ Check the file extension:
 - If `.json` → use as transcript directly
 - If video file → transcribe first using:
   ```bash
-  bash ${CLAUDE_PLUGIN_ROOT}/scripts/install-deps.sh
-  bash ${CLAUDE_PLUGIN_ROOT}/scripts/transcribe.sh "<video_path>" "<output_dir>"
+  bash plugins/clip-maker/scripts/install-deps.sh
+  bash plugins/clip-maker/scripts/transcribe.sh "<video_path>" "<output_dir>"
   ```
 
 ### 2. Find moments
