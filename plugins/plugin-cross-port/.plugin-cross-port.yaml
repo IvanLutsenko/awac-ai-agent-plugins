@@ -4,7 +4,7 @@
   "source_of_truth": "claude-code",
   "status": "synced",
   "manually_maintained": "[]",
-  "generated_at": "2026-06-04T08:14:33+00:00",
+  "generated_at": "2026-06-04T10:14:22+00:00",
   "decisions": {
     "skills_shared": true,
     "commands_converted": true,

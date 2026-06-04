@@ -225,6 +225,33 @@ class ReconcileTest(unittest.TestCase):
         self.assertEqual(report.exit_code, 1)
         self.assertEqual(file_hashes(self.repo), before)
 
+    def test_codex_exclude_skips_generation_and_removes_artifacts(self):
+        make_cc_marketplace(self.repo, ["one", "two"])
+        make_cc_plugin(self.repo, "one")
+        make_cc_plugin(self.repo, "two")
+        self.reconciler().attach_marketplace("claude-code")
+        self.assertTrue((self.repo / "plugins/two/.codex-plugin/plugin.json").exists())
+
+        state_path = self.repo / ".plugin-cross-port.marketplace.yaml"
+        state = read_json(state_path)
+        state["codex_exclude"] = ["two"]
+        write_json(state_path, state)
+
+        report = self.reconciler().sync()
+
+        self.assertEqual(report.exit_code, 0)
+        self.assertFalse((self.repo / "plugins/two/.codex-plugin").exists())
+        codex_names = [
+            p["name"]
+            for p in read_json(self.repo / ".agents/plugins/marketplace.json")["plugins"]
+        ]
+        self.assertNotIn("two", codex_names)
+        self.assertIn("one", codex_names)
+        self.assertTrue((self.repo / "plugins/one/.codex-plugin/plugin.json").exists())
+        # CC side of the excluded plugin is left intact; cross-port marker removed
+        self.assertTrue((self.repo / "plugins/two/.claude-plugin/plugin.json").exists())
+        self.assertFalse((self.repo / "plugins/two/.plugin-cross-port.yaml").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

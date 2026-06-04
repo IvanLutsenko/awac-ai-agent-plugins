@@ -41,30 +41,6 @@
       "category": "Development"
     },
     {
-      "name": "locale-notifications",
-      "source": {
-        "source": "local",
-        "path": "./plugins/locale-notifications"
-      },
-      "category": "Development",
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      }
-    },
-    {
-      "name": "auto-theme",
-      "source": {
-        "source": "local",
-        "path": "./plugins/auto-theme"
-      },
-      "category": "Development",
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      }
-    },
-    {
       "name": "combined-review",
       "source": {
         "source": "local",

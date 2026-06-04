@@ -21,16 +21,6 @@
       "source_of_truth": "claude-code",
       "status": "synced"
     },
-    "locale-notifications": {
-      "path": "plugins/locale-notifications",
-      "source_of_truth": "claude-code",
-      "status": "synced"
-    },
-    "auto-theme": {
-      "path": "plugins/auto-theme",
-      "source_of_truth": "claude-code",
-      "status": "synced"
-    },
     "combined-review": {
       "path": "plugins/combined-review",
       "source_of_truth": "claude-code",
@@ -51,5 +41,9 @@
       "source_of_truth": "claude-code",
       "status": "synced"
     }
-  }
+  },
+  "codex_exclude": [
+    "auto-theme",
+    "locale-notifications"
+  ]
 }

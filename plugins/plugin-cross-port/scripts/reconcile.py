@@ -82,6 +82,9 @@ class Reconciler:
             "targets": {target: self.config[self._marketplace_config_key(target)]},
             "plugins": {},
         }
+        existing_state = load_state(self.marketplace_state_path, default={})
+        if existing_state.get("codex_exclude"):
+            state["codex_exclude"] = existing_state["codex_exclude"]
         for entry in selected_entries:
             name = entry["name"]
             plugin_path = self._entry_plugin_path(source, entry)
@@ -157,11 +160,20 @@ class Reconciler:
             canonical_entries = [
                 entry for entry in canonical_entries if entry.get("name") in changed_only
             ]
+        excluded = set(state.get("codex_exclude") or []) if target == "codex" else set()
+        if excluded:
+            canonical_entries = [
+                entry for entry in canonical_entries if entry.get("name") not in excluded
+            ]
         canonical_names = [entry["name"] for entry in canonical.get("plugins", [])]
         active_names = [entry["name"] for entry in canonical_entries]
 
         sibling_path = self._marketplace_path(target)
         sibling = self._seed_or_load_marketplace(target, source, canonical, sibling_path)
+
+        for name in excluded:
+            remove_entry(sibling, name)
+            self._detach_codex_target(name, state)
 
         if selected_entries is None and changed_only is None:
             self._delete_removed_plugins(state, set(canonical_names))
@@ -310,6 +322,24 @@ class Reconciler:
         if not self.marketplace_state_path.exists():
             raise ValueError("Repository marketplace state is missing")
         return load_state(self.marketplace_state_path, default={})
+
+    def _detach_codex_target(self, name: str, state: dict[str, Any]) -> None:
+        """Remove generated Codex artifacts for a plugin marked CC-only.
+        The plugin's authoritative (CC) side is left untouched."""
+        info = state.get("plugins", {}).get(name, {})
+        rel = info.get("path", f"{self.config['plugins_dir']}/{name}")
+        plugin_path = (self.repo_root / rel).resolve()
+        plugins_dir = (self.repo_root / self.config["plugins_dir"]).resolve()
+        if plugin_path.name != name or plugins_dir not in plugin_path.parents:
+            return
+        for sub in (".codex-plugin", "skills/generated-from-commands", ".plugin-cross-port"):
+            artifact = plugin_path / sub
+            if artifact.exists():
+                shutil.rmtree(artifact)
+        marker = plugin_path / ".plugin-cross-port.yaml"
+        if marker.exists():
+            marker.unlink()
+        state.get("plugins", {}).pop(name, None)
 
     def _validate_staged_generated_edits(
         self, changed_only: set[str]
