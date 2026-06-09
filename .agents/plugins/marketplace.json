@@ -5,18 +5,6 @@
   },
   "plugins": [
     {
-      "name": "bereke-business-test-gen",
-      "source": {
-        "source": "local",
-        "path": "./plugins/bereke-business-test-gen"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Development"
-    },
-    {
       "name": "crashlytics",
       "source": {
         "source": "local",

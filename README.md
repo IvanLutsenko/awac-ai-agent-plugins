@@ -16,41 +16,6 @@ Claude Code marketplace installations.
 
 ## Available Plugins
 
-### Bereke Business Test Gen
-
-Automated unit test generation for Kotlin/Android business logic with corporate standards.
-
-📚 **[Full Documentation](plugins/bereke-business-test-gen/README.md)**
-
-**Installation:**
-```bash
-/plugin install bereke-business-test-gen
-```
-
-**Quick Start:**
-```bash
-/test-class src/main/java/.../YourClass.kt      # Single class (2-15 min)
-/test-module feature/auth                        # Full module coverage (30-90 min)
-/test-diff [--branch origin/master]             # PR workflow (tests only for changed files)
-/test-fix [--all] feature/auth                   # Auto-fix existing tests to standards
-/validate-tests feature/auth                     # Validate tests against standards
-```
-
-**Status:** ✅ Production Ready | **Version:** 2.7.2
-
-**What's New in 2.7.2:**
-- Marketplace standards loaders now prefer `awac-ai-agent-plugins` and fall back
-  to the legacy `awac-claude-code-plugins` install path.
-
-**Key Features:**
-- Multi-agent architecture (10+ specialized agents)
-- Two-stage improvement loop (coverage 80%+ + quality score 3.0+/4.0)
-- Auto edge case detection from method signatures
-- Flow/PagingData testing with Turbine
-- Full PR workflow support
-
----
-
 ### Crashlytics
 
 Multi-platform crash analysis for Android & iOS with git blame forensics, code-level fixes, and a deterministic quality gate.

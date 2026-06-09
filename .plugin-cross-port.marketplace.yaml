@@ -6,11 +6,6 @@
     "codex": ".agents/plugins/marketplace.json"
   },
   "plugins": {
-    "bereke-business-test-gen": {
-      "path": "plugins/bereke-business-test-gen",
-      "source_of_truth": "claude-code",
-      "status": "synced"
-    },
     "crashlytics": {
       "path": "plugins/crashlytics",
       "source_of_truth": "claude-code",

@@ -9,17 +9,6 @@
   },
   "plugins": [
     {
-      "name": "bereke-business-test-gen",
-      "version": "2.7.2",
-      "description": "Automated unit test generation for Kotlin/Android business logic with corporate standards",
-      "source": "./plugins/bereke-business-test-gen",
-      "author": {
-        "name": "Ivan Lutsenko",
-        "url": "https://github.com/IvanLutsenko"
-      },
-      "category": "testing"
-    },
-    {
       "name": "crashlytics",
       "version": "4.4.3",
       "description": "Multi-platform crash analysis for Android & iOS with git blame forensics and code-level fixes. Language-aware validator (en/ru/es/de/fr/pt/it), origin/<branch> forensics. MCP-primary fetch with REST API fallback.",

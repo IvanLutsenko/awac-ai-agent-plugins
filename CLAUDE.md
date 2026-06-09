@@ -2,7 +2,6 @@
 
 ## Active Plugins
 
-- **bereke-business-test-gen** (v2.7.2) — Kotlin unit test generation with coverage validation
 - **crashlytics** (v4.4.3) — Multi-platform crash analysis with git blame forensics
 - **obsidian-tracker** (v4.3.2) — Project tracking, task management, session logging via Obsidian
 - **locale-notifications** (v2.0.0) — macOS notifications in system language
