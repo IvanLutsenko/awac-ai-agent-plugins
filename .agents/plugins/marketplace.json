@@ -34,11 +34,11 @@
         "source": "local",
         "path": "./plugins/combined-review"
       },
-      "category": "Development",
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"
-      }
+      },
+      "category": "Development"
     },
     {
       "name": "clip-maker",

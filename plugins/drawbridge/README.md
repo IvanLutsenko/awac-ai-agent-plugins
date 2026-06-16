@@ -2,6 +2,20 @@
 
 Bridge between a short brief and image-gen web UIs (Gemini Imagen 3, ChatGPT DALL-E 3, Grok Aurora, Midjourney). No API keys, no payments — uses your existing browser sessions.
 
+## Installation
+
+**Claude Code:**
+```bash
+/plugin marketplace add https://github.com/IvanLutsenko/awac-ai-agent-plugins
+/plugin install drawbridge
+```
+
+**Codex CLI:**
+```bash
+codex plugin marketplace add IvanLutsenko/awac-ai-agent-plugins
+codex plugin add drawbridge@awac-ai-agent-plugins
+```
+
 ## Flow
 
 ```

@@ -6,6 +6,25 @@ Crash log analysis with root cause identification, code-level fixes, and develop
 
 ---
 
+## Installation
+
+**Claude Code:**
+```bash
+/plugin marketplace add https://github.com/IvanLutsenko/awac-ai-agent-plugins
+/plugin install crashlytics
+```
+
+**Codex CLI:**
+```bash
+codex plugin marketplace add IvanLutsenko/awac-ai-agent-plugins
+codex plugin add crashlytics@awac-ai-agent-plugins
+```
+
+See [Prerequisites](#prerequisites) below for the runtime dependencies the
+plugin checks on first run (Node.js, Firebase access, etc.).
+
+---
+
 ## Prerequisites
 
 > **The plugin checks prerequisites automatically** on every run and shows what's missing.

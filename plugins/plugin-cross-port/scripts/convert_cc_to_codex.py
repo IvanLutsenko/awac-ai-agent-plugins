@@ -20,54 +20,11 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from plugin_state import load as load_state
+from plugin_state import load as load_state, dumps as dump_state
 
 # ---------------------------------------------------------------------------
 # YAML helpers (no external deps — minimal subset we actually need)
 # ---------------------------------------------------------------------------
-
-def _yaml_str(value: str) -> str:
-    if any(c in value for c in (':', '#', '[', ']', '{', '}', ',', '&', '*', '?', '|', '-', '<', '>', '=', '!', '%', '@', '`', '"', "'")):
-        escaped = value.replace("'", "''")
-        return f"'{escaped}'"
-    if '\n' in value:
-        lines = value.split('\n')
-        body = '\n'.join('  ' + l for l in lines)
-        return f"|\n{body}"
-    return value
-
-
-def _build_yaml(data: dict, indent: int = 0) -> list[str]:
-    lines: list[str] = []
-    pad = '  ' * indent
-    for key, value in data.items():
-        if isinstance(value, bool):
-            lines.append(f"{pad}{key}: {'true' if value else 'false'}")
-        elif isinstance(value, (int, float)):
-            lines.append(f"{pad}{key}: {value}")
-        elif value is None:
-            lines.append(f"{pad}{key}:")
-        elif isinstance(value, str):
-            lines.append(f"{pad}{key}: {_yaml_str(value)}")
-        elif isinstance(value, list):
-            if not value:
-                lines.append(f"{pad}{key}: []")
-            else:
-                lines.append(f"{pad}{key}:")
-                for item in value:
-                    if isinstance(item, str):
-                        lines.append(f"{pad}  - {_yaml_str(item)}")
-                    else:
-                        lines.append(f"{pad}  - {item}")
-        elif isinstance(value, dict):
-            lines.append(f"{pad}{key}:")
-            lines.extend(_build_yaml(value, indent + 1))
-    return lines
-
-
-def dump_yaml(data: dict) -> str:
-    return '\n'.join(_build_yaml(data)) + '\n'
-
 
 def _parse_yaml_simple(text: str) -> dict:
     """Parse the subset of YAML we write (flat and one-level nested lists only)."""
@@ -321,6 +278,42 @@ class Converter:
             f'{body}'
         )
 
+    def convert_agent_to_skill(self, agent_path: Path, plugin_name: str) -> str:
+        """CC agent (frontmatter + system prompt) → Codex skill.
+
+        Mirrors convert_command_to_skill. An agent's description is already
+        trigger-shaped ("Use when ...") so it is reused verbatim rather than
+        appending an invocation hint.
+        """
+        text = agent_path.read_text(encoding='utf-8')
+        fm, body = parse_frontmatter(text)
+        agent_name = agent_path.stem
+        description = fm.get('description', f'Agent: {agent_name}')
+        skill_name = f'{plugin_name}-{agent_name}'
+
+        # CC agents pack <example> trigger blocks into the description as a
+        # quoted single line with literal \n escapes. Keep only the trigger
+        # text before "Examples:" and unescape; the examples are CC-specific.
+        skill_description = description.split('Examples:')[0]
+        skill_description = skill_description.replace('\\n', ' ').replace('\\"', '"')
+        skill_description = ' '.join(skill_description.split()).rstrip()
+        if skill_description and not skill_description.endswith('.'):
+            skill_description += '.'
+
+        # Codex has no ${CLAUDE_PLUGIN_ROOT}; rewrite to the plugin's repo-relative path.
+        body = body.replace('${CLAUDE_PLUGIN_ROOT}', self._rel(self.plugin_path))
+
+        return (
+            f'---\n'
+            f'name: {skill_name}\n'
+            f'description: {skill_description}\n'
+            f'version: 0.1.0\n'
+            f'---\n\n'
+            f'> Converted from Claude Code agent `{agent_name}`.\n'
+            f'> Codex has no separate agents concept; this runs as a standalone skill.\n\n'
+            f'{body}'
+        )
+
     def update_codex_marketplace(self, plugin_name: str) -> None:
         marketplace_path = self.repo_root / self.config['codex_marketplace']
 
@@ -398,6 +391,7 @@ class Converter:
         non_generated = [
             s for s in existing_skills
             if 'generated-from-commands' not in str(s)
+            and 'generated-from-agents' not in str(s)
         ]
 
         # --- commands/ → skills/generated-from-commands/ ---
@@ -446,21 +440,45 @@ class Converter:
                         continue
                     self._remove(generated_dir)
 
-        # --- agents/ --- warn or strict fail
+        # --- agents/ → skills/generated-from-agents/ ---
+        # ponytail: each agent becomes a standalone skill. Orchestration that a
+        # command does via the Task tool (spawning these agents) is NOT rewritten —
+        # the generated command-skill still references them by name, and they now
+        # exist as skills. Inlining full orchestration is per-plugin manual work.
         agents_dir = self.plugin_path / 'agents'
-        agent_warnings: list[str] = []
-        if agents_dir.exists():
-            for agent_file in sorted(agents_dir.glob('*.md')):
-                msg = f"agents/{agent_file.name}: not auto-converted — add manually to skills/"
-                agent_warnings.append(msg)
-                self.warnings.append(msg)
+        agent_files: list[Path] = []
+        agents_generated_root = self.plugin_path / 'skills' / 'generated-from-agents'
 
-        if agent_warnings and self.strict:
-            print("\nSTRICT MODE: unresolved agents detected:")
-            for w in agent_warnings:
-                print(f"  ✗ {w}")
-            print("\nUpdate .plugin-cross-port.yaml decisions.agents_converted before proceeding.")
-            return 1
+        if agents_dir.exists():
+            agent_files = sorted(agents_dir.glob('*.md'))
+            for agent_file in agent_files:
+                agent_name = agent_file.stem
+                out_path = agents_generated_root / agent_name / 'SKILL.md'
+                rel_out = self._rel(out_path)
+
+                if self._is_manually_maintained(out_path, manually_maintained):
+                    print(f"  Skipping manually maintained: {rel_out}")
+                    continue
+
+                # Idempotent: skip if generated file is newer than source
+                if out_path.exists() and not self.force:
+                    if out_path.stat().st_mtime >= agent_file.stat().st_mtime:
+                        self.skipped.append(rel_out)
+                        continue
+
+                content = self.convert_agent_to_skill(agent_file, plugin_name)
+                self._write(out_path, content, overwrite=True)
+
+        expected_agents = {f.stem for f in agent_files}
+        if agents_generated_root.exists():
+            for generated_dir in sorted(agents_generated_root.iterdir()):
+                skill_path = generated_dir / 'SKILL.md'
+                if not generated_dir.is_dir() or generated_dir.name in expected_agents:
+                    continue
+                if self._is_manually_maintained(skill_path, manually_maintained):
+                    self.skipped.append(self._rel(skill_path))
+                    continue
+                self._remove(generated_dir)
 
         # --- hooks --- warn or strict fail
         hooks = cc.get('hooks', {})
@@ -487,14 +505,17 @@ class Converter:
             'decisions': {
                 'skills_shared': bool(non_generated),
                 'commands_converted': commands_dir.exists(),
-                'agents_converted': False,
+                'agents_converted': bool(agent_files),
                 'hooks_converted': False,
             },
             'warnings': self.warnings,
             'manually_maintained': manually_maintained,
         }
         decision_path = self.plugin_path / '.plugin-cross-port.yaml'
-        self._write(decision_path, dump_yaml(decision_data), overwrite=True)
+        # JSON (via plugin_state) so the file round-trips: load_decision_file
+        # reads it back with the same module. dump_yaml emitted nested YAML that
+        # the loader's legacy fallback rejected, crashing every re-run.
+        self._write(decision_path, dump_state(decision_data), overwrite=True)
 
         # --- Codex marketplace ---
         if self.sync_marketplace:
@@ -523,13 +544,16 @@ class Converter:
         if commands_dir.exists() and len(cmd_files) > 0:
             print(f'\nConverted {converted_count}/{len(cmd_files)} commands to Codex skills.')
 
+        if agent_files:
+            print(f'Converted {len(agent_files)} agent(s) to Codex skills (generated-from-agents/).')
+
         if non_generated:
             print(f'Shared skills/ (no action): {len(non_generated)} skill(s)')
 
         print('\nManual steps:')
         print('  1. Review skills/generated-from-commands/ — hooks and MCP tool IDs may need manual mapping (allowed-tools dropped, ${CLAUDE_PLUGIN_ROOT} rewritten to plugin path automatically).')
-        if agent_warnings:
-            print('  2. Convert agents manually (see warnings above).')
+        if agent_files:
+            print('  2. Review skills/generated-from-agents/ — agents run as standalone skills; any command that orchestrated them references them by name (orchestration not rewritten).')
         if hook_warnings:
             print('  3. Re-implement hooks as GitHub Actions or remove (see references/continuous-mode.md).')
 
@@ -548,7 +572,7 @@ def main() -> None:
     parser.add_argument('--repo-root', default='.', help='Repository root (default: current directory)')
     parser.add_argument('--dry-run', action='store_true', help='Print planned changes without writing')
     parser.add_argument('--force', action='store_true', help='Overwrite all generated files')
-    parser.add_argument('--strict', action='store_true', help='Fail on unresolved agents/hooks')
+    parser.add_argument('--strict', action='store_true', help='Fail on unresolved hooks')
     args = parser.parse_args()
 
     plugin_path = Path(args.plugin_path)

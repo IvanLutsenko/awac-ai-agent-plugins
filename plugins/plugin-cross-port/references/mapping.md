@@ -13,7 +13,7 @@ reconciliation.
 | `author.name` | `author.name` | Only `name` field in Codex |
 | `hooks` | — | No equivalent; warn |
 | `commands` array | — | Commands become skills |
-| `agents` array | — | Not supported; warn |
+| `agents` array | — | No manifest field; each agent becomes a skill |
 | `mcpServers` | `.mcp.json` | Same format |
 
 ## Components
@@ -23,7 +23,7 @@ reconciliation.
 | `.mcp.json` | `.mcp.json` | Copy as-is |
 | `skills/<name>/SKILL.md` | `skills/<name>/SKILL.md` | Shared directory, no conversion needed |
 | `commands/<name>.md` | `skills/generated-from-commands/<name>/SKILL.md` | Automated via script |
-| `agents/<name>.md` | — | Manual; no auto-conversion |
+| `agents/<name>.md` | `skills/generated-from-agents/<name>/SKILL.md` | Automated via script; `<example>` blocks stripped from description |
 | `hooks/*` | — | Manual; no Codex equivalent |
 
 ## Field mapping: CC command → Codex skill
@@ -59,7 +59,7 @@ reconciliation.
 ## Known limitations
 
 - **Hooks**: SessionStart, PostToolUse, PreCompact, Stop, etc. have no Codex equivalent. Functionality must be reimplemented as GitHub Actions or skill side-effects.
-- **Agents**: Codex does not support a separate `agents/` concept. Multi-agent workflows must be inlined into skills.
+- **Agents**: Codex has no separate `agents/` concept, so each `agents/<name>.md` is converted to a standalone skill under `skills/generated-from-agents/`. The agent's system prompt becomes the skill body and its description is reused (CC `<example>` trigger blocks stripped). What does *not* convert is orchestration: a command that spawned several agents via the Task tool keeps referencing them by name — they now resolve as skills, but inlining a true multi-agent workflow into one skill is per-plugin manual work.
 - **allowed-tools**: CC's per-command tool allowlist has no Codex analog. Codex uses manifest-level `capabilities`.
 - **MCP tool names**: Same `.mcp.json` format works, but tool IDs may differ between environments. Review generated skills for `mcp__*` references.
 - **`${CLAUDE_PLUGIN_ROOT}`**: This CC variable is not available in Codex. The converter auto-rewrites it to the plugin's repo-relative path (`plugins/<name>`) in generated skills, matching the convention used by hand-written Codex skills.

@@ -58,16 +58,18 @@ manually."
 
 ### Step 4 — Strict mode check
 
-If `--strict` or the user said "strict mode":
-- Any unresolved agent or hook that is NOT listed in `.plugin-cross-port.yaml` under `decisions` causes a **hard stop**:
-  > "Strict mode: new agents/hooks detected — update .plugin-cross-port.yaml decisions before continuing."
+Agents are auto-converted to `skills/generated-from-agents/`, so only hooks can
+be unresolved. If `--strict` or the user said "strict mode":
+- Any unresolved hook that has no Codex equivalent causes a **hard stop**:
+  > "Strict mode: unresolved hooks detected — update .plugin-cross-port.yaml decisions before continuing."
 
 Otherwise emit warnings only.
 
 ### Step 5 — Update `.plugin-cross-port.yaml`
 
-Update plugin `status` after sync. The state is JSON-compatible YAML and must
-remain readable without PyYAML.
+Update plugin `status` after sync. The converters write this file as JSON via
+`plugin_state`, and it is read back the same way — keep it JSON so it round-trips
+across re-runs.
 
 ### Step 6 — Validate Codex manifest
 
@@ -81,10 +83,9 @@ If version mismatch, update `.codex-plugin/plugin.json` version to match.
 ### Step 7 — Summary
 
 Report what changed:
-- N commands re-generated
-- N commands deleted
-- N commands added
-- Warnings for agents/hooks
+- N commands re-generated / deleted / added
+- N agents re-generated / deleted / added
+- Warnings for hooks
 
 ## Pre-commit integration
 

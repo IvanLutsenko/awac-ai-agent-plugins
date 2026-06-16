@@ -1,19 +1,15 @@
 {
   "version": 1,
   "plugin": "clip-maker",
+  "generated_at": "2026-06-16T14:56:57+00:00",
   "source_of_truth": "claude-code",
-  "status": "synced",
-  "manually_maintained": "[]",
-  "generated_at": "2026-06-09T08:58:31+00:00",
   "decisions": {
     "skills_shared": false,
     "commands_converted": true,
-    "agents_converted": false,
+    "agents_converted": true,
     "hooks_converted": false
   },
-  "warnings": [
-    "agents/copywriter.md: not auto-converted — add manually to skills/",
-    "agents/crop-analyzer.md: not auto-converted — add manually to skills/",
-    "agents/moment-finder.md: not auto-converted — add manually to skills/"
-  ]
+  "warnings": [],
+  "manually_maintained": "[]",
+  "status": "synced"
 }

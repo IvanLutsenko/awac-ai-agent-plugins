@@ -102,10 +102,34 @@ version: 0.1.0
 
 Skip files already in `skills/generated-from-commands/` if they are newer than the source command (idempotent).
 
-### Step 6 — Report agents/ and hooks warnings
+### Step 6 — Convert `agents/` to Codex skills
 
+Codex has no separate agents concept, so each agent becomes a standalone skill.
 For each `.md` file in `<plugin-path>/agents/`:
-- **WARNING**: `agents/<filename>` — agents are not auto-converted. Add manually to Codex skills or `skills/generated-from-agents/` after review.
+
+1. Read the file and extract frontmatter (`name`, `description`)
+2. Clean the description: CC agents pack `<example>` trigger blocks into a
+   quoted single-line description with literal `\n` escapes. Keep only the text
+   before `Examples:` and unescape it.
+3. Create directory: `<plugin-path>/skills/generated-from-agents/<agent-name>/`
+4. Write `SKILL.md`:
+
+```markdown
+---
+name: <plugin-name>-<agent-name>
+description: <cleaned description, already trigger-shaped>
+version: 0.1.0
+---
+
+> Converted from Claude Code agent `<agent-name>`.
+> Codex has no separate agents concept; this runs as a standalone skill.
+
+<original agent system prompt — everything after frontmatter, ${CLAUDE_PLUGIN_ROOT} rewritten>
+```
+
+Skip files already in `skills/generated-from-agents/` if they are newer than the source agent (idempotent).
+
+**Orchestration is not rewritten.** A command that spawned these agents via the Task tool keeps referencing them by name — they now resolve as skills. Inlining a full multi-agent workflow into one skill is per-plugin manual work.
 
 For hooks in `plugin.json`:
 - **WARNING**: Hooks (`SessionStart`, `PostToolUse`, etc.) have no Codex equivalent. Review and implement as skill side-effects or GitHub Actions if needed.
@@ -114,22 +138,23 @@ For hooks in `plugin.json`:
 
 Write `<plugin-path>/.plugin-cross-port.yaml`:
 
-```yaml
-version: 1
-plugin: <plugin-name>
-generated_at: <ISO date>
-source_of_truth: claude-code
+Write it as JSON (the loader reads it back JSON-first; nested YAML breaks re-runs):
 
-decisions:
-  skills_shared: true          # skills/ is shared between CC and Codex
-  commands_converted: true     # commands/ -> skills/generated-from-commands/
-  agents_converted: false      # requires manual review
-  hooks_converted: false       # no Codex equivalent
-
-warnings: []  # fill with actual warnings from steps 5-6
-
-manually_maintained:
-  - .codex-plugin/plugin.json  # mark as maintained if user customized it
+```json
+{
+  "version": 1,
+  "plugin": "<plugin-name>",
+  "generated_at": "<ISO date>",
+  "source_of_truth": "claude-code",
+  "decisions": {
+    "skills_shared": true,
+    "commands_converted": true,
+    "agents_converted": true,
+    "hooks_converted": false
+  },
+  "warnings": [],
+  "manually_maintained": []
+}
 ```
 
 ### Step 8 — Update Codex marketplace
@@ -174,6 +199,7 @@ Plugin Cross-Port: <plugin-name>
 Generated:
   ✅ .codex-plugin/plugin.json
   ✅ skills/generated-from-commands/<N> skills
+  ✅ skills/generated-from-agents/<N> skills
   ✅ .plugin-cross-port.yaml
   ✅ .agents/plugins/marketplace.json updated
 
@@ -181,13 +207,13 @@ Shared (no action):
   📁 skills/ — <N existing skills>
 
 Warnings:
-  ⚠️  agents/<name> — manual conversion required
   ⚠️  hooks — no Codex equivalent
 
 Manual steps:
   1. Review generated skills in skills/generated-from-commands/
      Remove CC-specific allowed-tools lines and MCP tool references that differ in Codex.
-  2. Optionally convert agents to skills manually.
+  2. Review skills/generated-from-agents/ — agents run as standalone skills;
+     any command that orchestrated them references them by name.
   3. Run: python3 plugins/plugin-cross-port/scripts/convert_cc_to_codex.py <plugin-path> --repo-root .
      to validate idempotency.
 ```

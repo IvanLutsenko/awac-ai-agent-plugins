@@ -2,6 +2,24 @@
 
 Project tracking, task management with kanban boards, bug logging, decision records (ADR), session management, and engineering traceability via Obsidian. **Auto-tracks sessions, actions, bugs, and commits via hooks.**
 
+## Installation
+
+**Claude Code:**
+```bash
+/plugin marketplace add https://github.com/IvanLutsenko/awac-ai-agent-plugins
+/plugin install obsidian-tracker
+cd plugins/obsidian-tracker/mcp && npm install && npm run build   # build the MCP server
+```
+
+**Codex CLI:**
+```bash
+codex plugin marketplace add IvanLutsenko/awac-ai-agent-plugins
+codex plugin add obsidian-tracker@awac-ai-agent-plugins
+```
+
+> The Obsidian features run through an MCP server (`plugins/obsidian-tracker/mcp`).
+> Auto-tracking hooks are Claude Code-specific and do not run under Codex.
+
 ## Features
 
 - **Project Management**: List, create, archive, restore, and delete projects

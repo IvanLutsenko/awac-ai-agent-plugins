@@ -4,8 +4,16 @@ Automated vertical clip creator for talks and presentations. Combines Whisper tr
 
 ## Installation
 
+**Claude Code:**
 ```bash
+/plugin marketplace add https://github.com/IvanLutsenko/awac-ai-agent-plugins
 /plugin install clip-maker
+```
+
+**Codex CLI:**
+```bash
+codex plugin marketplace add IvanLutsenko/awac-ai-agent-plugins
+codex plugin add clip-maker@awac-ai-agent-plugins
 ```
 
 Dependencies (auto-installed on first run):

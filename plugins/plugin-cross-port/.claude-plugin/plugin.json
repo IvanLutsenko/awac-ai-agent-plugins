@@ -1,7 +1,7 @@
 {
   "name": "plugin-cross-port",
-  "description": "Bidirectional conversion between Claude Code and Codex plugin formats. CC → Codex and Codex → CC, one-shot or continuous.",
-  "version": "0.8.0",
+  "description": "Bidirectional conversion between Claude Code and Codex plugin formats. CC → Codex and Codex → CC, one-shot or continuous. Auto-converts agents to standalone Codex skills.",
+  "version": "0.9.0",
   "author": {
     "name": "Ivan Lutsenko",
     "email": "ivan@lutsenko.com",
@@ -20,8 +20,8 @@
     "./commands/install-hook.md"
   ],
   "skills": [
-    "./skills/cc-to-codex/SKILL.md",
-    "./skills/codex-to-cc/SKILL.md",
-    "./skills/maintain-dual-target/SKILL.md"
+    "./skills/cc-to-codex",
+    "./skills/codex-to-cc",
+    "./skills/maintain-dual-target"
   ]
 }

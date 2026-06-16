@@ -63,7 +63,7 @@ python3 plugins/plugin-cross-port/scripts/cross_port.py plugin switch-source plu
 | Edit generated manifest or content | Rejected unless manually maintained |
 | Remove canonical marketplace entry | Yes — sync removes the plugin directory |
 | Edit shared `skills/<name>/SKILL.md` | Depends on plugin source and target conversion |
-| Edit `agents/*.md` | Warning only — manual action required |
+| Edit `agents/*.md` | Yes — regenerates `skills/generated-from-agents/<name>/SKILL.md` |
 | Edit hooks in `plugin.json` | Warning only — no Codex equivalent |
 
 ## Adaptation during sync

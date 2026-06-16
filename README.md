@@ -4,15 +4,47 @@ Custom AI agent plugins by Ivan Lutsenko
 
 ## Installation
 
+### Claude Code
+
 Add the marketplace once, then install plugins as needed:
 
 ```bash
 /plugin marketplace add https://github.com/IvanLutsenko/awac-ai-agent-plugins
+/plugin install crashlytics        # then any plugin by name
 ```
 
 Compatibility: the previous repository slug,
 `awac-claude-code-plugins`, is kept as a supported fallback for existing
 Claude Code marketplace installations.
+
+### Codex CLI
+
+Most plugins here are dual-target and ship a Codex build (`.codex-plugin/` +
+`skills/`), registered in the Codex marketplace manifest at
+`.agents/plugins/marketplace.json`. Add the marketplace, then install a plugin
+from it by name:
+
+```bash
+# Add this repo as a Codex marketplace (Git source — or pass a local clone path)
+codex plugin marketplace add IvanLutsenko/awac-ai-agent-plugins
+
+# Install a plugin: PLUGIN@MARKETPLACE
+codex plugin add combined-review@awac-ai-agent-plugins
+
+# Verify
+codex plugin marketplace list      # marketplaces and their roots
+codex plugin list                  # plugins and install status
+```
+
+The marketplace name is `awac-ai-agent-plugins` (the `name` field of
+`.agents/plugins/marketplace.json`). Codex snapshots it under
+`~/.codex/.tmp/marketplaces/awac-ai-agent-plugins/` and records the source in
+`~/.codex/config.toml`. Claude Code commands become Codex skills under
+`skills/generated-from-commands/`, and agents become skills under
+`skills/generated-from-agents/`.
+
+> Codex-only caveat: `locale-notifications` is Claude Code-only (excluded from
+> the Codex target).
 
 ## Available Plugins
 
@@ -229,7 +261,11 @@ python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/exa
 python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/example --apply
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.8.0
+**Status:** 🔨 Beta | **Version:** 0.9.0
+
+**What's New in 0.9.0:**
+- Agents auto-convert to standalone Codex skills (`agents/*.md` → `skills/generated-from-agents/<name>/SKILL.md`); CC `<example>` trigger blocks stripped from descriptions
+- Fixed decision-file round-trip — `.plugin-cross-port.yaml` is written as JSON so re-runs no longer crash
 
 **What's New in 0.8.0:**
 - `skills_authored` marketplace flag — plugins whose Codex skills are hand-authored skip mechanical `commands/` → `skills/` generation (manifest + marketplace still synced)

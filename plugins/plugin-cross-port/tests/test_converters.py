@@ -121,6 +121,62 @@ class ConverterTest(unittest.TestCase):
         )
         self.assertEqual(converter.run(), 0)
 
+    def _write_agent(self, plugin: Path, name: str, body: str = "System prompt.") -> None:
+        agent = plugin / "agents" / f"{name}.md"
+        agent.parent.mkdir(exist_ok=True)
+        # CC agents pack <example> trigger blocks into a quoted single-line
+        # description with literal \n escapes.
+        agent.write_text(
+            f'---\n'
+            f'name: {name}\n'
+            f'description: "Reviews code. Use when reviewing.\\n\\nExamples:\\n'
+            f'<example>\\nuser: \\"review\\"\\n</example>"\n'
+            f'tools: Read\n'
+            f'---\n\n'
+            f'{body}\n',
+            encoding="utf-8",
+        )
+
+    def test_cc_to_codex_converts_agent_to_skill(self):
+        plugin = self.make_cc_plugin("combined-review")
+        self._write_agent(plugin, "code-reviewer", "Run ${CLAUDE_PLUGIN_ROOT}/x.sh")
+
+        self.assertEqual(
+            cc_to_codex.Converter(plugin, self.repo_root, False, False, False).run(), 0
+        )
+
+        skill_path = plugin / "skills/generated-from-agents/code-reviewer/SKILL.md"
+        self.assertTrue(skill_path.exists())
+        skill = skill_path.read_text(encoding="utf-8")
+        # Description cleaned: examples block dropped, escapes gone.
+        self.assertIn("description: Reviews code. Use when reviewing.", skill)
+        self.assertNotIn("Examples:", skill)
+        self.assertNotIn("<example>", skill)
+        self.assertNotIn("\\n", skill)
+        self.assertIn("name: combined-review-code-reviewer", skill)
+        # Body path rewritten, agent body preserved.
+        self.assertIn("Run plugins/combined-review/x.sh", skill)
+        self.assertNotIn("${CLAUDE_PLUGIN_ROOT}", skill)
+
+        decision = read_json(plugin / ".plugin-cross-port.yaml")
+        self.assertTrue(decision["decisions"]["agents_converted"])
+
+    def test_cc_to_codex_decision_file_round_trips_across_reruns(self):
+        # Regression: the decision file was written as nested YAML but read back
+        # with a JSON-first loader that rejected nesting, crashing every re-run.
+        plugin = self.make_cc_plugin("combined-review")
+        self._write_agent(plugin, "code-reviewer")
+
+        self.assertEqual(
+            cc_to_codex.Converter(plugin, self.repo_root, False, False, False).run(), 0
+        )
+        # Written file must be valid JSON (round-trips with plugin_state.load).
+        read_json(plugin / ".plugin-cross-port.yaml")
+        # Second run loads the file it just wrote — no crash, idempotent.
+        self.assertEqual(
+            cc_to_codex.Converter(plugin, self.repo_root, False, False, False).run(), 0
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

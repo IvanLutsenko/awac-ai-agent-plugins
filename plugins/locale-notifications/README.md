@@ -5,8 +5,13 @@ macOS notifications for Claude Code in your system language.
 ## Installation
 
 ```bash
+/plugin marketplace add https://github.com/IvanLutsenko/awac-ai-agent-plugins
 /plugin install locale-notifications
 ```
+
+> **Claude Code only.** This plugin hooks Claude Code's notification events and
+> is excluded from the Codex target (`codex_exclude`) — there is no
+> `codex plugin add` for it.
 
 ## How It Works
 

@@ -6,7 +6,23 @@ Converts individual plugins in either direction and reconciles dual-target
 Claude Code and Codex marketplaces. A repository chooses one canonical
 marketplace, while each plugin keeps its own `source_of_truth`.
 
-**Version:** 0.8.0
+**Version:** 0.9.0
+
+---
+
+## Installation
+
+**Claude Code:**
+```bash
+/plugin marketplace add https://github.com/IvanLutsenko/awac-ai-agent-plugins
+/plugin install plugin-cross-port
+```
+
+**Codex CLI:**
+```bash
+codex plugin marketplace add IvanLutsenko/awac-ai-agent-plugins
+codex plugin add plugin-cross-port@awac-ai-agent-plugins
+```
 
 ---
 
@@ -34,7 +50,7 @@ python3 plugins/plugin-cross-port/scripts/convert_cc_to_codex.py plugins/obsidia
 # Force overwrite all generated files
 python3 plugins/plugin-cross-port/scripts/convert_cc_to_codex.py plugins/obsidian-tracker --repo-root . --force
 
-# Strict: fail if agents/hooks are unresolved
+# Strict: fail if hooks are unresolved (agents are auto-converted)
 python3 plugins/plugin-cross-port/scripts/convert_cc_to_codex.py plugins/obsidian-tracker --repo-root . --strict
 
 # CLI wrapper without marketplace side effects
@@ -55,7 +71,10 @@ plugins/obsidian-tracker/
       projects/SKILL.md                  <- converted from commands/projects.md
       project-new/SKILL.md
       ... (one per command)
-  .plugin-cross-port.yaml                <- decision file
+    generated-from-agents/
+      <agent-name>/SKILL.md              <- converted from agents/<agent-name>.md
+      ... (one per agent)
+  .plugin-cross-port.yaml                <- decision file (JSON)
 
 .agents/plugins/marketplace.json         <- Codex marketplace entry added in standalone script mode
 ```
@@ -163,7 +182,7 @@ available and emit a warning.
 ## Limitations
 
 - **Hooks** — `SessionStart`, `PostToolUse`, etc. have no Codex equivalent. Implement as GitHub Actions if needed.
-- **Agents** — not auto-converted; requires manual review and placement in `skills/`.
+- **Agents** — **auto-converted** to standalone Codex skills under `skills/generated-from-agents/<name>/SKILL.md` (Codex has no separate agents concept). Orchestration a command did via the Task tool is *not* rewritten — the generated command-skill still references the agents by name, and they now exist as skills. Inlining full multi-agent orchestration remains per-plugin manual work.
 - **`${CLAUDE_PLUGIN_ROOT}`** — CC-specific path variable; **auto-rewritten** to the plugin's repo-relative path (`plugins/<name>`) in generated skills.
 - **`allowed-tools`** — CC per-command tool allowlist has no Codex analog; **auto-dropped** from generated skill frontmatter.
 - **MCP tool names** — same `.mcp.json` format, but verify tool IDs work in target environment.
@@ -181,6 +200,10 @@ available and emit a warning.
 ---
 
 ## Changelog
+
+### 0.9.0
+- Auto-convert `agents/*.md` → `skills/generated-from-agents/<name>/SKILL.md` (CC → Codex). The `<example>` trigger blocks CC packs into agent descriptions are stripped; `${CLAUDE_PLUGIN_ROOT}` is rewritten. `decisions.agents_converted` now reflects reality; `--strict` only gates on hooks.
+- Fix decision-file round-trip: `.plugin-cross-port.yaml` is written as JSON (via `plugin_state`) so it loads back on re-runs. It was previously written as nested YAML that the JSON-first loader rejected, crashing every second conversion.
 
 ### 0.8.0
 - Add `skills_authored` marketplace-state flag: plugins with hand-authored Codex skills skip mechanical `commands/` → `skills/generated-from-commands/` generation (manifest + marketplace entry are still synced); existing mechanical output is removed

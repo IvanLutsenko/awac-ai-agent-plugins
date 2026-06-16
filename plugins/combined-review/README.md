@@ -8,8 +8,16 @@ Multi-agent code review with CodeRabbit CLI integration.
 
 ## Installation
 
+**Claude Code:**
 ```bash
+/plugin marketplace add https://github.com/IvanLutsenko/awac-ai-agent-plugins
 /plugin install combined-review
+```
+
+**Codex CLI:**
+```bash
+codex plugin marketplace add IvanLutsenko/awac-ai-agent-plugins
+codex plugin add combined-review@awac-ai-agent-plugins
 ```
 
 Optional (for full functionality):

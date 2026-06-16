@@ -16,6 +16,6 @@
     "./commands/draw-config.md"
   ],
   "skills": [
-    "./skills/prompt-crafting/SKILL.md"
+    "./skills/prompt-crafting"
   ]
 }

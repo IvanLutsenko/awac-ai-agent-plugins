@@ -1,21 +1,15 @@
 {
   "version": 1,
   "plugin": "crashlytics",
+  "generated_at": "2026-06-16T14:56:55+00:00",
   "source_of_truth": "claude-code",
-  "status": "synced",
-  "manually_maintained": "[]",
-  "generated_at": "2026-06-09T08:58:29+00:00",
   "decisions": {
     "skills_shared": false,
     "commands_converted": true,
-    "agents_converted": false,
+    "agents_converted": true,
     "hooks_converted": false
   },
-  "warnings": [
-    "agents/classifier-android.md: not auto-converted — add manually to skills/",
-    "agents/classifier-ios.md: not auto-converted — add manually to skills/",
-    "agents/firebase-fetcher.md: not auto-converted — add manually to skills/",
-    "agents/forensics-android.md: not auto-converted — add manually to skills/",
-    "agents/forensics-ios.md: not auto-converted — add manually to skills/"
-  ]
+  "warnings": [],
+  "manually_maintained": "[]",
+  "status": "synced"
 }

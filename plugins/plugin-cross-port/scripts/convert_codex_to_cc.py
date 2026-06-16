@@ -20,54 +20,12 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from plugin_state import load as load_state
+from plugin_state import load as load_state, dumps as dump_state
 
 
 # ---------------------------------------------------------------------------
 # YAML helpers (no external deps — minimal subset we actually need)
 # ---------------------------------------------------------------------------
-
-def _yaml_str(value: str) -> str:
-    if any(c in value for c in (':', '#', '[', ']', '{', '}', ',', '&', '*', '?', '|', '-', '<', '>', '=', '!', '%', '@', '`', '"', "'")):
-        escaped = value.replace("'", "''")
-        return f"'{escaped}'"
-    if '\n' in value:
-        lines = value.split('\n')
-        body = '\n'.join('  ' + l for l in lines)
-        return f"|\n{body}"
-    return value
-
-
-def _build_yaml(data: dict, indent: int = 0) -> list[str]:
-    lines: list[str] = []
-    pad = '  ' * indent
-    for key, value in data.items():
-        if isinstance(value, bool):
-            lines.append(f"{pad}{key}: {'true' if value else 'false'}")
-        elif isinstance(value, (int, float)):
-            lines.append(f"{pad}{key}: {value}")
-        elif value is None:
-            lines.append(f"{pad}{key}:")
-        elif isinstance(value, str):
-            lines.append(f"{pad}{key}: {_yaml_str(value)}")
-        elif isinstance(value, list):
-            if not value:
-                lines.append(f"{pad}{key}: []")
-            else:
-                lines.append(f"{pad}{key}:")
-                for item in value:
-                    if isinstance(item, str):
-                        lines.append(f"{pad}  - {_yaml_str(item)}")
-                    else:
-                        lines.append(f"{pad}  - {item}")
-        elif isinstance(value, dict):
-            lines.append(f"{pad}{key}:")
-            lines.extend(_build_yaml(value, indent + 1))
-    return lines
-
-
-def dump_yaml(data: dict) -> str:
-    return '\n'.join(_build_yaml(data)) + '\n'
 
 
 def _parse_yaml_simple(text: str) -> dict:
@@ -437,7 +395,8 @@ class ReverseConverter:
             'manually_maintained': manually_maintained,
         }
         decision_path = self.plugin_path / '.plugin-cross-port.yaml'
-        self._write(decision_path, dump_yaml(decision_data), overwrite=True)
+        # JSON (via plugin_state) so the file round-trips with load_decision_file.
+        self._write(decision_path, dump_state(decision_data), overwrite=True)
 
         # --- Summary ---
         print('\nGenerated:')
