@@ -35,10 +35,14 @@
       "path": "plugins/plugin-cross-port",
       "source_of_truth": "claude-code",
       "status": "synced"
+    },
+    "auto-theme": {
+      "path": "plugins/auto-theme",
+      "source_of_truth": "claude-code",
+      "status": "synced"
     }
   },
   "codex_exclude": [
-    "auto-theme",
     "locale-notifications"
   ]
 }

@@ -29,6 +29,18 @@
       "category": "Development"
     },
     {
+      "name": "auto-theme",
+      "source": {
+        "source": "local",
+        "path": "./plugins/auto-theme"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Development"
+    },
+    {
       "name": "combined-review",
       "source": {
         "source": "local",

@@ -158,21 +158,29 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 
 ### Auto Theme
 
-Automatically syncs Claude Code theme with macOS system appearance (dark/light mode).
+Syncs Claude Code **and Codex** themes with macOS system appearance (light/dark) on every prompt. Bundles custom `gruvbox-light` / `sunset-drive` themes.
+
+📚 **[Full Documentation](plugins/auto-theme/README.md)**
 
 **Installation:**
 ```bash
 /plugin install auto-theme
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.0.0
+**Status:** ✅ Production Ready | **Version:** 1.1.0
+
+**What's New in 1.1.0:**
+- Also themes Codex (`~/.codex/config.toml` `[tui] theme`), not just Claude Code
+- Bundles + installs custom themes (`gruvbox-light`, `sunset-drive`) on first run
+- Claude Code theme now read from `~/.claude/settings.json` (current CLI); `~/.claude.json` kept in sync
+- Light↔dark pairing: `light → gruvbox-light`, `dark → sunset-drive`
 
 **How it works:**
 - Hooks into `UserPromptSubmit` — checks macOS appearance on every message
-- Detects dark/light mode via `defaults read -g AppleInterfaceStyle`
-- Updates `~/.claude.json` theme key when system appearance changes
-- Fast-path ~40ms when theme already matches (no file write)
-- Preserves variant suffix (`-ansi`, `-daltonized`) if selected
+- Detects dark/light via `defaults read -g AppleInterfaceStyle`
+- Claude Code: sets `theme` in `~/.claude/settings.json` (+ `~/.claude.json` mirror)
+- Codex: sets `[tui] theme` in `~/.codex/config.toml` (register the hook once in `~/.codex/hooks.json`)
+- Idempotent — no write when the theme already matches
 
 ---
 

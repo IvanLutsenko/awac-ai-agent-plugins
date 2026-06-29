@@ -1,0 +1,51 @@
+{
+  "name": "sunset-drive",
+  "base": "dark",
+  "overrides": {
+    "text": "rgb(237,237,254)",
+    "inverseText": "rgb(15,15,26)",
+    "inactive": "rgb(124,124,156)",
+    "subtle": "rgb(62,62,75)",
+    "promptBorder": "rgb(62,62,75)",
+    "promptBorderShimmer": "rgb(92,92,112)",
+
+    "claude": "rgb(255,148,139)",
+    "claudeShimmer": "rgb(255,180,173)",
+    "claudeBlue_FOR_SYSTEM_SPINNER": "rgb(62,160,255)",
+    "claudeBlueShimmer_FOR_SYSTEM_SPINNER": "rgb(120,190,255)",
+
+    "success": "rgb(0,249,146)",
+    "error": "rgb(255,0,99)",
+    "warning": "rgb(255,233,0)",
+    "warningShimmer": "rgb(255,255,104)",
+
+    "permission": "rgb(0,164,255)",
+    "permissionShimmer": "rgb(62,160,255)",
+    "suggestion": "rgb(0,164,255)",
+    "remember": "rgb(0,164,255)",
+    "rate_limit_fill": "rgb(0,164,255)",
+    "rate_limit_empty": "rgb(32,42,78)",
+
+    "planMode": "rgb(0,255,237)",
+
+    "autoAccept": "rgb(255,87,253)",
+    "autoAcceptShimmer": "rgb(255,147,255)",
+    "skill": "rgb(255,87,253)",
+    "merged": "rgb(255,87,253)",
+    "effortUltra": "rgb(255,87,253)",
+    "bashBorder": "rgb(255,87,253)",
+
+    "diffAdded": "rgb(10,66,48)",
+    "diffAddedDimmed": "rgb(12,40,32)",
+    "diffAddedWord": "rgb(0,180,120)",
+    "diffRemoved": "rgb(90,18,48)",
+    "diffRemovedDimmed": "rgb(54,16,32)",
+    "diffRemovedWord": "rgb(200,0,80)",
+
+    "selectionBg": "rgb(32,32,54)",
+    "userMessageBackground": "rgb(26,26,42)",
+    "userMessageBackgroundHover": "rgb(36,36,56)",
+    "bashMessageBackgroundColor": "rgb(30,22,40)",
+    "memoryBackgroundColor": "rgb(20,30,46)"
+  }
+}
