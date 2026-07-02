@@ -9,7 +9,7 @@ If absent, all defaults apply — nothing breaks.
 plugins_dir: plugins                              # where plugins live (default: plugins)
 codex_marketplace: .agents/plugins/marketplace.json  # Codex marketplace output path
 cc_marketplace: .claude-plugin/marketplace.json   # Claude Code marketplace path
-marketplace_state: .plugin-cross-port.marketplace.yaml # repository marketplace state
+marketplace_state: .plugin-cross-port.marketplace.json # repository marketplace state
 default_source_of_truth: claude-code              # fallback when no decision file exists
 ```
 
@@ -37,7 +37,7 @@ from staged paths.
 plugins_dir: packages
 codex_marketplace: dist/codex/plugins.json
 cc_marketplace: dist/claude/marketplace.json
-marketplace_state: .plugin-cross-port.marketplace.yaml
+marketplace_state: .plugin-cross-port.marketplace.json
 default_source_of_truth: claude-code
 ```
 
@@ -45,4 +45,4 @@ default_source_of_truth: claude-code
 
 Config -> marketplace state -> plugin state -> CLI flags.
 
-Per-plugin `.plugin-cross-port.yaml` wins for plugin `source_of_truth`.
+Per-plugin `.plugin-cross-port.json` wins for plugin `source_of_truth`.

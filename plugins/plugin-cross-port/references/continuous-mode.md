@@ -4,7 +4,7 @@
 
 - **Marketplace source of truth** is selected by `marketplace attach`. It owns
   marketplace root metadata, active plugin ordering, and removals.
-- **Plugin source of truth** is stored per plugin in `.plugin-cross-port.yaml`.
+- **Plugin source of truth** is stored per plugin in `.plugin-cross-port.json`.
   One plugin can be Claude Code-first while another is Codex-first.
 - **Generated files are regenerated** by `marketplace sync`; manual edits on
   generated sides are rejected unless listed in `manually_maintained`.
@@ -81,7 +81,7 @@ adaptations. It only:
 After customizing a generated skill beyond what the converter produces:
 
 ```yaml
-# plugins/my-plugin/.plugin-cross-port.yaml
+# plugins/my-plugin/.plugin-cross-port.json
 manually_maintained:
   - skills/generated-from-commands/my-command/SKILL.md
 ```

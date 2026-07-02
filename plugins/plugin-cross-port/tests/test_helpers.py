@@ -60,7 +60,7 @@ class HelpersTest(unittest.TestCase):
                 / "plugins"
                 / "demo"
                 / ".plugin-cross-port"
-                / "adaptation-state.yaml"
+                / "adaptation-state.json"
             )
             self.assertEqual(
                 json.loads(path.read_text(encoding="utf-8")),

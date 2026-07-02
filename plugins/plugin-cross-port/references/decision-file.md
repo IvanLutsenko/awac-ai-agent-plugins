@@ -1,9 +1,9 @@
-# Decision File Format: `.plugin-cross-port.yaml`
+# Decision File Format: `.plugin-cross-port.json`
 
-Each attached plugin gets a `.plugin-cross-port.yaml` at its root. This file
+Each attached plugin gets a `.plugin-cross-port.json` at its root. This file
 records the plugin-level source of truth and generated files that have been
 manually customized. Repository-level marketplace state lives in
-`.plugin-cross-port.marketplace.yaml`.
+`.plugin-cross-port.marketplace.json`.
 
 ## Schema
 
@@ -61,7 +61,7 @@ plugin directory removal. Plugin state owns conversion direction.
 Semantic adaptation state lives at:
 
 ```text
-plugins/<name>/.plugin-cross-port/adaptation-state.yaml
+plugins/<name>/.plugin-cross-port/adaptation-state.json
 ```
 
 The file is JSON-compatible YAML:

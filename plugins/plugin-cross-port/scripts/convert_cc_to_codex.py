@@ -93,7 +93,7 @@ DEFAULT_CONFIG: dict = {
     'plugins_dir': 'plugins',
     'codex_marketplace': '.agents/plugins/marketplace.json',
     'cc_marketplace': '.claude-plugin/marketplace.json',
-    'marketplace_state': '.plugin-cross-port.marketplace.yaml',
+    'marketplace_state': '.plugin-cross-port.marketplace.json',
     'default_source_of_truth': 'claude-code',
 }
 
@@ -214,7 +214,7 @@ class Converter:
 
     def load_decision_file(self) -> dict:
         return load_state(
-            self.plugin_path / '.plugin-cross-port.yaml',
+            self.plugin_path / '.plugin-cross-port.json',
             default={},
         )
 
@@ -358,7 +358,7 @@ class Converter:
         # Guard: refuse to override source_of_truth without --force
         existing_sot = decision.get('source_of_truth', '')
         if existing_sot == 'codex' and not self.force:
-            print(f"ERROR: {plugin_name} has source_of_truth=codex in .plugin-cross-port.yaml")
+            print(f"ERROR: {plugin_name} has source_of_truth=codex in .plugin-cross-port.json")
             print("This plugin was set up with Codex as source of truth.")
             print("Running CC→Codex would silently flip that. Use --force to override.")
             return 1
@@ -493,10 +493,10 @@ class Converter:
             print("\nSTRICT MODE: unresolved hooks detected:")
             for w in hook_warnings:
                 print(f"  ✗ {w}")
-            print("\nUpdate .plugin-cross-port.yaml decisions.hooks_converted before proceeding.")
+            print("\nUpdate .plugin-cross-port.json decisions.hooks_converted before proceeding.")
             return 1
 
-        # --- .plugin-cross-port.yaml ---
+        # --- .plugin-cross-port.json ---
         decision_data = {
             'version': 1,
             'plugin': plugin_name,
@@ -511,7 +511,7 @@ class Converter:
             'warnings': self.warnings,
             'manually_maintained': manually_maintained,
         }
-        decision_path = self.plugin_path / '.plugin-cross-port.yaml'
+        decision_path = self.plugin_path / '.plugin-cross-port.json'
         # JSON (via plugin_state) so the file round-trips: load_decision_file
         # reads it back with the same module. dump_yaml emitted nested YAML that
         # the loader's legacy fallback rejected, crashing every re-run.

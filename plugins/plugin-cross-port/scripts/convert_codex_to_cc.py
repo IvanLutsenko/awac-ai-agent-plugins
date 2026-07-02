@@ -89,7 +89,7 @@ DEFAULT_CONFIG: dict = {
     'plugins_dir': 'plugins',
     'codex_marketplace': '.agents/plugins/marketplace.json',
     'cc_marketplace': '.claude-plugin/marketplace.json',
-    'marketplace_state': '.plugin-cross-port.marketplace.yaml',
+    'marketplace_state': '.plugin-cross-port.marketplace.json',
     'default_source_of_truth': 'claude-code',
 }
 
@@ -212,7 +212,7 @@ class ReverseConverter:
 
     def load_decision_file(self) -> dict:
         return load_state(
-            self.plugin_path / '.plugin-cross-port.yaml',
+            self.plugin_path / '.plugin-cross-port.json',
             default={},
         )
 
@@ -307,7 +307,7 @@ class ReverseConverter:
         # Guard: refuse to override source_of_truth without --force
         existing_sot = decision.get('source_of_truth', '')
         if existing_sot == 'claude-code' and not self.force:
-            print(f"ERROR: {plugin_name} has source_of_truth=claude-code in .plugin-cross-port.yaml")
+            print(f"ERROR: {plugin_name} has source_of_truth=claude-code in .plugin-cross-port.json")
             print("This plugin was set up with Claude Code as source of truth.")
             print("Running Codex→CC would silently flip that. Use --force to override.")
             return 1
@@ -380,7 +380,7 @@ class ReverseConverter:
                     continue
                 self._remove(command_path)
 
-        # --- .plugin-cross-port.yaml ---
+        # --- .plugin-cross-port.json ---
         decision_data = {
             'version': 1,
             'plugin': plugin_name,
@@ -394,7 +394,7 @@ class ReverseConverter:
             'warnings': self.warnings,
             'manually_maintained': manually_maintained,
         }
-        decision_path = self.plugin_path / '.plugin-cross-port.yaml'
+        decision_path = self.plugin_path / '.plugin-cross-port.json'
         # JSON (via plugin_state) so the file round-trips with load_decision_file.
         self._write(decision_path, dump_state(decision_data), overwrite=True)
 

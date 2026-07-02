@@ -37,11 +37,11 @@ Read the following files from the target plugin (skip if absent):
 2. `<plugin-path>/skills/` directory listing — list all SKILL.md files
 3. `<plugin-path>/.mcp.json` — optional
 4. `<plugin-path>/README.md` — optional
-5. `<plugin-path>/.plugin-cross-port.yaml` — optional (check source_of_truth)
+5. `<plugin-path>/.plugin-cross-port.json` — optional (check source_of_truth)
 
 If `.codex-plugin/plugin.json` is missing, stop and report: "Not a Codex plugin: no .codex-plugin/plugin.json found."
 
-If `.plugin-cross-port.yaml` exists with `source_of_truth: claude-code`, warn:
+If `.plugin-cross-port.json` exists with `source_of_truth: claude-code`, warn:
 > "This plugin was originally created in Claude Code. Reverse conversion may produce redundant files. Proceed?"
 
 ### Step 2 — Check for existing CC manifest
@@ -119,9 +119,9 @@ CC supports hooks (`SessionStart`, `PostToolUse`, `PreCompact`, `Stop`, etc.). C
 Emit notice:
 > "Hooks are not auto-generated. If this plugin needs event-driven behavior (session tracking, auto-commit, etc.), add hooks manually to `.claude-plugin/plugin.json`."
 
-If `--strict` and `.plugin-cross-port.yaml` doesn't have `decisions.hooks_converted: true`, fail with this message.
+If `--strict` and `.plugin-cross-port.json` doesn't have `decisions.hooks_converted: true`, fail with this message.
 
-### Step 7 — Create/update `.plugin-cross-port.yaml`
+### Step 7 — Create/update `.plugin-cross-port.json`
 
 ```yaml
 version: 1
@@ -161,7 +161,7 @@ Plugin Cross-Port (Codex → CC): <plugin-name>
 Generated:
   ✅ .claude-plugin/plugin.json
   ✅ commands/generated-from-codex-<N> commands
-  ✅ .plugin-cross-port.yaml
+  ✅ .plugin-cross-port.json
 
 Shared (no action):
   skills/ — <N skills>

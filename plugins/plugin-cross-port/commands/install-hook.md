@@ -89,7 +89,7 @@ if [ -z "$CHANGED_PLUGINS" ]; then exit 0; fi
 
 get_source_of_truth() {
   local plugin="$1"; local sot=""
-  local df="$REPO_ROOT/$plugin/.plugin-cross-port.yaml"
+  local df="$REPO_ROOT/$plugin/.plugin-cross-port.json"
   [ -f "$df" ] && sot=$(grep '^source_of_truth:' "$df" | awk '{print $2}' | tr -d "'\"")
   if [ -z "$sot" ]; then
     local hc="$REPO_ROOT/$plugin/.claude-plugin/plugin.json"
@@ -105,14 +105,14 @@ run_cc_to_codex() {
   local plugin="$1"
   echo "plugin-cross-port: CC→Codex syncing $plugin"
   python3 "$CC_TO_CODEX" "$plugin" --repo-root "$REPO_ROOT" --force || { echo "❌ CC→Codex failed for $plugin. Commit aborted."; exit 1; }
-  git add "$REPO_ROOT/$plugin/.codex-plugin/" "$REPO_ROOT/$plugin/skills/generated-from-commands/" "$REPO_ROOT/$plugin/.plugin-cross-port.yaml" "$REPO_ROOT/$CODEX_MARKETPLACE" 2>/dev/null || true
+  git add "$REPO_ROOT/$plugin/.codex-plugin/" "$REPO_ROOT/$plugin/skills/generated-from-commands/" "$REPO_ROOT/$plugin/.plugin-cross-port.json" "$REPO_ROOT/$CODEX_MARKETPLACE" 2>/dev/null || true
 }
 
 run_codex_to_cc() {
   local plugin="$1"
   echo "plugin-cross-port: Codex→CC syncing $plugin"
   python3 "$CODEX_TO_CC" "$plugin" --repo-root "$REPO_ROOT" --force || { echo "❌ Codex→CC failed for $plugin. Commit aborted."; exit 1; }
-  git add "$REPO_ROOT/$plugin/.claude-plugin/" "$REPO_ROOT/$plugin/commands/generated-from-codex-"*.md "$REPO_ROOT/$plugin/.plugin-cross-port.yaml" 2>/dev/null || true
+  git add "$REPO_ROOT/$plugin/.claude-plugin/" "$REPO_ROOT/$plugin/commands/generated-from-codex-"*.md "$REPO_ROOT/$plugin/.plugin-cross-port.json" 2>/dev/null || true
 }
 
 SYNCED=0

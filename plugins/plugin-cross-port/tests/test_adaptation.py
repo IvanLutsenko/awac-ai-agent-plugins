@@ -52,7 +52,7 @@ class AdaptationTest(unittest.TestCase):
         self.assertEqual(report.exit_code, 0)
         self.assertEqual(report.status, "planned")
         self.assertTrue((plugin / ".plugin-cross-port/adaptation-plan.md").exists())
-        self.assertTrue((plugin / ".plugin-cross-port/adaptation-state.yaml").exists())
+        self.assertTrue((plugin / ".plugin-cross-port/adaptation-state.json").exists())
         self.assertFalse(target.exists())
 
     def test_rendered_plan_contains_parseable_machine_block_for_hook(self):
@@ -168,7 +168,7 @@ class AdaptationTest(unittest.TestCase):
         plugin = make_cc_plugin(self.repo, "one")
         add_cc_hook(self.repo, "one")
         target = plugin / "skills/generated-from-hooks/sessionstart/SKILL.md"
-        state_path = plugin / ".plugin-cross-port/adaptation-state.yaml"
+        state_path = plugin / ".plugin-cross-port/adaptation-state.json"
         adaptation.analyze(self.repo, plugin)
 
         report = adaptation.apply_plan(self.repo, plugin)
@@ -242,7 +242,7 @@ class AdaptationTest(unittest.TestCase):
     def test_analyze_rejects_codex_source(self):
         plugin = make_cc_plugin(self.repo, "one")
         write_json(
-            plugin / ".plugin-cross-port.yaml",
+            plugin / ".plugin-cross-port.json",
             {
                 "version": 2,
                 "plugin": "one",

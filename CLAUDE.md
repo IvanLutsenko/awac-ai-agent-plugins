@@ -8,7 +8,7 @@
 - **combined-review** (v1.3.0) — Multi-agent code review + CodeRabbit CLI
 - **clip-maker** (v1.3.0) — Automated vertical clip creator (whisper + Claude + ffmpeg)
 - **drawbridge** (v0.1.0) — Bridge briefs to image-gen web UIs (Gemini/ChatGPT/Grok/Midjourney), per-target prompt tuning
-- **plugin-cross-port** (v0.9.0) — Bidirectional CC ↔ Codex plugin conversion (agents → standalone Codex skills)
+- **plugin-cross-port** (v0.10.0) — Bidirectional CC ↔ Codex plugin conversion (agents → standalone Codex skills)
 - **auto-theme** (v1.1.0) — Syncs Claude Code + Codex themes with macOS light/dark; bundles gruvbox-light / sunset-drive
 
 ## Plugin Structure
@@ -75,8 +75,8 @@ python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/exa
 python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/example --apply
 ```
 
-For attached plugins, `.plugin-cross-port.marketplace.yaml` owns marketplace
-state and each plugin `.plugin-cross-port.yaml` owns plugin source-of-truth.
+For attached plugins, `.plugin-cross-port.marketplace.json` owns marketplace
+state and each plugin `.plugin-cross-port.json` owns plugin source-of-truth.
 Keep manual marketplace updates only for plugins that are not attached to
 cross-port.
 

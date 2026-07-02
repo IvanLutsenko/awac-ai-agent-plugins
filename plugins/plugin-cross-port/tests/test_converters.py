@@ -82,7 +82,7 @@ class ConverterTest(unittest.TestCase):
         generated = plugin / "skills" / "generated-from-commands" / "kept" / "SKILL.md"
         generated.parent.mkdir(parents=True)
         generated.write_text("manual body", encoding="utf-8")
-        (plugin / ".plugin-cross-port.yaml").write_text(
+        (plugin / ".plugin-cross-port.json").write_text(
             "manually_maintained:\n"
             "  - skills/generated-from-commands/kept/SKILL.md\n",
             encoding="utf-8",
@@ -158,7 +158,7 @@ class ConverterTest(unittest.TestCase):
         self.assertIn("Run plugins/combined-review/x.sh", skill)
         self.assertNotIn("${CLAUDE_PLUGIN_ROOT}", skill)
 
-        decision = read_json(plugin / ".plugin-cross-port.yaml")
+        decision = read_json(plugin / ".plugin-cross-port.json")
         self.assertTrue(decision["decisions"]["agents_converted"])
 
     def test_cc_to_codex_decision_file_round_trips_across_reruns(self):
@@ -171,7 +171,7 @@ class ConverterTest(unittest.TestCase):
             cc_to_codex.Converter(plugin, self.repo_root, False, False, False).run(), 0
         )
         # Written file must be valid JSON (round-trips with plugin_state.load).
-        read_json(plugin / ".plugin-cross-port.yaml")
+        read_json(plugin / ".plugin-cross-port.json")
         # Second run loads the file it just wrote — no crash, idempotent.
         self.assertEqual(
             cc_to_codex.Converter(plugin, self.repo_root, False, False, False).run(), 0

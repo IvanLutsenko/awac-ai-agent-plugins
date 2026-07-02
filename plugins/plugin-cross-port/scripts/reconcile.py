@@ -91,7 +91,7 @@ class Reconciler:
             name = entry["name"]
             plugin_path = self._entry_plugin_path(source, entry)
             plugin_state = new_plugin_state(name, source)
-            save_state(plugin_path / ".plugin-cross-port.yaml", plugin_state)
+            save_state(plugin_path / ".plugin-cross-port.json", plugin_state)
             state["plugins"][name] = {
                 "path": self._rel(plugin_path),
                 "source_of_truth": source,
@@ -185,7 +185,7 @@ class Reconciler:
             name = entry["name"]
             plugin_path = self._entry_plugin_path(source, entry)
             plugin_state = load_state(
-                plugin_path / ".plugin-cross-port.yaml",
+                plugin_path / ".plugin-cross-port.json",
                 default=new_plugin_state(name, source),
             )
             plugin_source = plugin_state.get("source_of_truth", source)
@@ -252,7 +252,7 @@ class Reconciler:
                     plugin_state["stale_adaptation"] = stale_adaptation
                 elif "stale_adaptation" in plugin_state:
                     del plugin_state["stale_adaptation"]
-                save_state(plugin_path / ".plugin-cross-port.yaml", plugin_state)
+                save_state(plugin_path / ".plugin-cross-port.json", plugin_state)
                 state["plugins"][name] = {
                     "path": self._rel(plugin_path),
                     "source_of_truth": plugin_source,
@@ -278,7 +278,7 @@ class Reconciler:
                 failed_state["status"] = status
                 failed_state["last_error"] = str(error)
                 if plugin_path.exists():
-                    save_state(plugin_path / ".plugin-cross-port.yaml", failed_state)
+                    save_state(plugin_path / ".plugin-cross-port.json", failed_state)
                 if target == "codex":
                     source_path = f"./plugins/{name}"
                     upsert_codex_entry(
@@ -318,7 +318,7 @@ class Reconciler:
     def _load_generated_plugin_state(
         self, plugin_path: Path, name: str, source: str
     ) -> dict[str, Any]:
-        path = plugin_path / ".plugin-cross-port.yaml"
+        path = plugin_path / ".plugin-cross-port.json"
         default = new_plugin_state(name, source)
         try:
             return load_state(path, default=default)
@@ -343,7 +343,7 @@ class Reconciler:
             artifact = plugin_path / sub
             if artifact.exists():
                 shutil.rmtree(artifact)
-        marker = plugin_path / ".plugin-cross-port.yaml"
+        marker = plugin_path / ".plugin-cross-port.json"
         if marker.exists():
             marker.unlink()
         state.get("plugins", {}).pop(name, None)
@@ -374,7 +374,7 @@ class Reconciler:
                 plugin_info = state.get("plugins", {}).get(name, {})
                 plugin_path = self.repo_root / plugin_info.get("path", f"plugins/{name}")
                 plugin_state = load_state(
-                    plugin_path / ".plugin-cross-port.yaml",
+                    plugin_path / ".plugin-cross-port.json",
                     default=new_plugin_state(name, plugin_info.get("source_of_truth", state["source_of_truth"])),
                 )
                 source = plugin_state.get("source_of_truth", state["source_of_truth"])
@@ -548,7 +548,7 @@ def _file_hashes(root: Path) -> dict[str, str]:
 
 
 def _stable_file_bytes(path: Path) -> bytes:
-    if path.name != ".plugin-cross-port.yaml":
+    if path.name != ".plugin-cross-port.json":
         return path.read_bytes()
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))

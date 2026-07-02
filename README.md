@@ -269,11 +269,14 @@ python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/exa
 python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/example --apply
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.9.0
+**Status:** 🔨 Beta | **Version:** 0.10.0
+
+**What's New in 0.10.0:**
+- **Breaking:** state files renamed to match their JSON content — `.plugin-cross-port.yaml` → `.plugin-cross-port.json`, `.plugin-cross-port.marketplace.yaml` → `.plugin-cross-port.marketplace.json`, `adaptation-state.yaml` → `adaptation-state.json`. Rename existing state files when upgrading.
 
 **What's New in 0.9.0:**
 - Agents auto-convert to standalone Codex skills (`agents/*.md` → `skills/generated-from-agents/<name>/SKILL.md`); CC `<example>` trigger blocks stripped from descriptions
-- Fixed decision-file round-trip — `.plugin-cross-port.yaml` is written as JSON so re-runs no longer crash
+- Fixed decision-file round-trip — `.plugin-cross-port.json` is written as JSON so re-runs no longer crash
 
 **What's New in 0.8.0:**
 - `skills_authored` marketplace flag — plugins whose Codex skills are hand-authored skip mechanical `commands/` → `skills/` generation (manifest + marketplace still synced)
@@ -287,7 +290,7 @@ python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/exa
 **Features:**
 - CC → Codex: manifest conversion, `commands/` → `skills/generated-from-commands/`
 - Codex → CC: manifest conversion, `skills/` → `commands/generated-from-codex-*/`
-- Repository marketplace state plus per-plugin `.plugin-cross-port.yaml` source-of-truth
+- Repository marketplace state plus per-plugin `.plugin-cross-port.json` source-of-truth
 - Semantic adaptation plans for behavior that cannot be mechanically derived
 - Generated output cleanup removes stale converted commands and skills
 - Plugin-relative manual maintenance rules are honored in both directions

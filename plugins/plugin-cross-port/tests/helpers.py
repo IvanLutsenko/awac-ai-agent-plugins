@@ -33,7 +33,7 @@ def write_adaptation_state(root: Path, side: str, name: str, state: dict) -> Pat
         plugin_side_root(root, side)
         / name
         / ".plugin-cross-port"
-        / "adaptation-state.yaml"
+        / "adaptation-state.json"
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(

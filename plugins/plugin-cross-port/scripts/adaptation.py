@@ -34,7 +34,7 @@ class AdaptationReport:
 def analyze(repo_root: Path, plugin_path: Path) -> AdaptationReport:
     plugin = plugin_path.resolve()
     state = load_plugin_state(
-        plugin / ".plugin-cross-port.yaml",
+        plugin / ".plugin-cross-port.json",
         default={
             "plugin": plugin.name,
             "source_of_truth": "claude-code",

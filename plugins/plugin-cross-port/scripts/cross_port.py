@@ -142,7 +142,7 @@ def plugin_attach(args: argparse.Namespace, repo_root: Path) -> ReconcileReport:
     manifest = read_manifest(plugin_path, args.source)
     name = manifest.get("name", name)
     plugin_state = new_plugin_state(name, args.source)
-    save_state(plugin_path / ".plugin-cross-port.yaml", plugin_state)
+    save_state(plugin_path / ".plugin-cross-port.json", plugin_state)
     state.setdefault("plugins", {})[name] = {
         "path": str(plugin_path.relative_to(repo_root)),
         "source_of_truth": args.source,
@@ -161,7 +161,7 @@ def plugin_switch_source(args: argparse.Namespace, repo_root: Path) -> Reconcile
     plugin_path = resolve_plugin_path(repo_root, args.path)
     manifest_path(args.to_source, plugin_path)
     name = plugin_path.name
-    state_path = plugin_path / ".plugin-cross-port.yaml"
+    state_path = plugin_path / ".plugin-cross-port.json"
     state = load_state(state_path, default=new_plugin_state(name, args.to_source))
     state["source_of_truth"] = args.to_source
     save_state(state_path, state)

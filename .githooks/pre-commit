@@ -4,7 +4,7 @@ export PYTHONDONTWRITEBYTECODE=1
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 SCRIPT="$REPO_ROOT/plugins/plugin-cross-port/scripts/cross_port.py"
-STATE="$REPO_ROOT/.plugin-cross-port.marketplace.yaml"
+STATE="$REPO_ROOT/.plugin-cross-port.marketplace.json"
 
 [ -f "$SCRIPT" ] || exit 0
 [ -f "$STATE" ] || exit 0

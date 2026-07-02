@@ -134,9 +134,9 @@ Skip files already in `skills/generated-from-agents/` if they are newer than the
 For hooks in `plugin.json`:
 - **WARNING**: Hooks (`SessionStart`, `PostToolUse`, etc.) have no Codex equivalent. Review and implement as skill side-effects or GitHub Actions if needed.
 
-### Step 7 — Create `.plugin-cross-port.yaml`
+### Step 7 — Create `.plugin-cross-port.json`
 
-Write `<plugin-path>/.plugin-cross-port.yaml`:
+Write `<plugin-path>/.plugin-cross-port.json`:
 
 Write it as JSON (the loader reads it back JSON-first; nested YAML breaks re-runs):
 
@@ -200,7 +200,7 @@ Generated:
   ✅ .codex-plugin/plugin.json
   ✅ skills/generated-from-commands/<N> skills
   ✅ skills/generated-from-agents/<N> skills
-  ✅ .plugin-cross-port.yaml
+  ✅ .plugin-cross-port.json
   ✅ .agents/plugins/marketplace.json updated
 
 Shared (no action):

@@ -6,7 +6,7 @@ Converts individual plugins in either direction and reconciles dual-target
 Claude Code and Codex marketplaces. A repository chooses one canonical
 marketplace, while each plugin keeps its own `source_of_truth`.
 
-**Version:** 0.9.0
+**Version:** 0.10.0
 
 ---
 
@@ -74,7 +74,7 @@ plugins/obsidian-tracker/
     generated-from-agents/
       <agent-name>/SKILL.md              <- converted from agents/<agent-name>.md
       ... (one per agent)
-  .plugin-cross-port.yaml                <- decision file (JSON)
+  .plugin-cross-port.json                <- decision file (JSON)
 
 .agents/plugins/marketplace.json         <- Codex marketplace entry added in standalone script mode
 ```
@@ -111,7 +111,7 @@ plugins/my-codex-plugin/
     plugin.json                          <- CC manifest
   commands/
     generated-from-codex-<skill>.md      <- one per Codex skill
-  .plugin-cross-port.yaml                <- source_of_truth: codex
+  .plugin-cross-port.json                <- source_of_truth: codex
 ```
 
 ---
@@ -135,7 +135,7 @@ python3 plugins/plugin-cross-port/scripts/cross_port.py \
 ```
 
 `marketplace attach` records repository-level state in
-`.plugin-cross-port.marketplace.yaml`. The selected marketplace owns root
+`.plugin-cross-port.marketplace.json`. The selected marketplace owns root
 metadata, active plugin ordering, and deletion. Each plugin state file owns its
 own `source_of_truth`, so mixed repositories are supported.
 
@@ -168,7 +168,7 @@ python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/exa
 `plugin adapt` writes:
 
 - `plugins/example/.plugin-cross-port/adaptation-plan.md`
-- `plugins/example/.plugin-cross-port/adaptation-state.yaml`
+- `plugins/example/.plugin-cross-port/adaptation-state.json`
 
 The analyze command does not modify target files. `--apply` applies the whole
 reviewed plan atomically and rejects stale source snapshots. During
@@ -194,16 +194,19 @@ available and emit a warning.
 ## Reference
 
 - `references/mapping.md` — CC -> Codex field mapping table
-- `references/decision-file.md` — `.plugin-cross-port.yaml` schema
+- `references/decision-file.md` — `.plugin-cross-port.json` schema
 - `references/continuous-mode.md` — CI and pre-commit examples
 
 ---
 
 ## Changelog
 
+### 0.10.0
+- **Breaking:** state files renamed to match their JSON content: `.plugin-cross-port.yaml` → `.plugin-cross-port.json`, `.plugin-cross-port.marketplace.yaml` → `.plugin-cross-port.marketplace.json`, `.plugin-cross-port/adaptation-state.yaml` → `adaptation-state.json`. When upgrading, rename existing state files (`git mv`) and update the installed pre-commit hook (`/plugin-cross-port:install-hook`). `.plugin-cross-port.config.yaml` is real YAML and keeps its name.
+
 ### 0.9.0
 - Auto-convert `agents/*.md` → `skills/generated-from-agents/<name>/SKILL.md` (CC → Codex). The `<example>` trigger blocks CC packs into agent descriptions are stripped; `${CLAUDE_PLUGIN_ROOT}` is rewritten. `decisions.agents_converted` now reflects reality; `--strict` only gates on hooks.
-- Fix decision-file round-trip: `.plugin-cross-port.yaml` is written as JSON (via `plugin_state`) so it loads back on re-runs. It was previously written as nested YAML that the JSON-first loader rejected, crashing every second conversion.
+- Fix decision-file round-trip: `.plugin-cross-port.json` is written as JSON (via `plugin_state`) so it loads back on re-runs. It was previously written as nested YAML that the JSON-first loader rejected, crashing every second conversion.
 
 ### 0.8.0
 - Add `skills_authored` marketplace-state flag: plugins with hand-authored Codex skills skip mechanical `commands/` → `skills/generated-from-commands/` generation (manifest + marketplace entry are still synced); existing mechanical output is removed
@@ -240,7 +243,7 @@ available and emit a warning.
 - Added Codex → CC direction: `convert_codex_to_cc.py` script + `codex-to-cc` skill
 - Capabilities → allowed-tools mapping (Read/Write/Execute/Network)
 - Round-trip recovery: strips "Converted from Claude Code command" headers on reverse pass
-- `source_of_truth` field in `.plugin-cross-port.yaml`
+- `source_of_truth` field in `.plugin-cross-port.json`
 
 ### 0.1.0
 - Initial release: one-shot conversion script, cc-to-codex skill, maintain-dual-target skill

@@ -68,7 +68,7 @@ class ReconcileAdaptationTest(unittest.TestCase):
         report = self.reconciler().sync()
 
         entry = read_json(self.repo / ".agents/plugins/marketplace.json")["plugins"][0]
-        plugin_state = read_json(self.plugin() / ".plugin-cross-port.yaml")
+        plugin_state = read_json(self.plugin() / ".plugin-cross-port.json")
         self.assertEqual(report.exit_code, 1)
         self.assertEqual(report.results[0].status, "needs-review")
         self.assertEqual(entry["policy"]["installation"], "NOT_AVAILABLE")
@@ -93,8 +93,8 @@ class ReconcileAdaptationTest(unittest.TestCase):
         report = self.reconciler().sync()
 
         entry = read_json(self.repo / ".agents/plugins/marketplace.json")["plugins"][0]
-        marketplace_state = read_json(self.repo / ".plugin-cross-port.marketplace.yaml")
-        plugin_state = read_json(self.plugin() / ".plugin-cross-port.yaml")
+        marketplace_state = read_json(self.repo / ".plugin-cross-port.marketplace.json")
+        plugin_state = read_json(self.plugin() / ".plugin-cross-port.json")
         self.assertEqual(report.exit_code, 0)
         self.assertEqual(report.results[0].status, "synced")
         self.assertIn("stale non-critical adaptation", report.results[0].error)
@@ -108,7 +108,7 @@ class ReconcileAdaptationTest(unittest.TestCase):
         add_cc_command(self.repo, "one", "main", "Body")
         self.reconciler().sync()
         target = self.plugin() / "skills/generated-from-commands/main/SKILL.md"
-        state_path = self.plugin() / ".plugin-cross-port/adaptation-state.yaml"
+        state_path = self.plugin() / ".plugin-cross-port/adaptation-state.json"
         state_path.parent.mkdir(parents=True)
         state_path.write_text(
             json.dumps(

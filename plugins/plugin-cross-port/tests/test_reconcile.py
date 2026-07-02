@@ -91,7 +91,7 @@ class ReconcileTest(unittest.TestCase):
         one_payload["version"] = "2.0.0"
         write_json(one_cc, one_payload)
 
-        two_state = self.repo / "plugins/two/.plugin-cross-port.yaml"
+        two_state = self.repo / "plugins/two/.plugin-cross-port.json"
         two_state.write_text(
             json.dumps(
                 {
@@ -121,7 +121,7 @@ class ReconcileTest(unittest.TestCase):
         make_cc_marketplace(self.repo, ["two"])
         make_cc_plugin(self.repo, "two")
         self.reconciler().attach_marketplace("claude-code")
-        state = self.repo / "plugins/two/.plugin-cross-port.yaml"
+        state = self.repo / "plugins/two/.plugin-cross-port.json"
         state.write_text(
             json.dumps(
                 {
@@ -193,7 +193,7 @@ class ReconcileTest(unittest.TestCase):
         self.reconciler().attach_marketplace("claude-code")
         outside = self.repo / "outside-sentinel"
         outside.mkdir()
-        state_path = self.repo / ".plugin-cross-port.marketplace.yaml"
+        state_path = self.repo / ".plugin-cross-port.marketplace.json"
         state = json.loads(state_path.read_text(encoding="utf-8"))
         state["plugins"]["two"] = {
             "path": "../outside-sentinel",
@@ -229,7 +229,7 @@ class ReconcileTest(unittest.TestCase):
         make_cc_marketplace(self.repo, ["one"])
         make_cc_plugin(self.repo, "one")
         self.reconciler().attach_marketplace("claude-code")
-        state_path = self.repo / "plugins/one/.plugin-cross-port.yaml"
+        state_path = self.repo / "plugins/one/.plugin-cross-port.json"
         state = read_json(state_path)
         state["generated_at"] = "2000-01-01T00:00:00+00:00"
         write_json(state_path, state)
@@ -247,7 +247,7 @@ class ReconcileTest(unittest.TestCase):
         self.reconciler().attach_marketplace("claude-code")
         self.assertTrue((self.repo / "plugins/two/.codex-plugin/plugin.json").exists())
 
-        state_path = self.repo / ".plugin-cross-port.marketplace.yaml"
+        state_path = self.repo / ".plugin-cross-port.marketplace.json"
         state = read_json(state_path)
         state["codex_exclude"] = ["two"]
         write_json(state_path, state)
@@ -265,7 +265,7 @@ class ReconcileTest(unittest.TestCase):
         self.assertTrue((self.repo / "plugins/one/.codex-plugin/plugin.json").exists())
         # CC side of the excluded plugin is left intact; cross-port marker removed
         self.assertTrue((self.repo / "plugins/two/.claude-plugin/plugin.json").exists())
-        self.assertFalse((self.repo / "plugins/two/.plugin-cross-port.yaml").exists())
+        self.assertFalse((self.repo / "plugins/two/.plugin-cross-port.json").exists())
 
     def test_skills_authored_skips_command_generation(self):
         make_cc_marketplace(self.repo, ["one"])
@@ -277,7 +277,7 @@ class ReconcileTest(unittest.TestCase):
         generated = self.repo / "plugins/one/skills/generated-from-commands/do/SKILL.md"
         self.assertTrue(generated.exists())
 
-        state_path = self.repo / ".plugin-cross-port.marketplace.yaml"
+        state_path = self.repo / ".plugin-cross-port.marketplace.json"
         state = read_json(state_path)
         state["skills_authored"] = ["one"]
         write_json(state_path, state)

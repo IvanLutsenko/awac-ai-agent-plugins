@@ -8,7 +8,7 @@ from typing import Any, Iterable
 
 
 STATE_DIR = ".plugin-cross-port"
-STATE_FILE = "adaptation-state.yaml"
+STATE_FILE = "adaptation-state.json"
 PLAN_FILE = "adaptation-plan.md"
 HASH_PREFIX = "sha256:"
 _MISSING_MARKER = b"<plugin-cross-port:missing-source>"

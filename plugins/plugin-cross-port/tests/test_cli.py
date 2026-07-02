@@ -158,7 +158,7 @@ class CliTest(unittest.TestCase):
         result = self.run_cli("plugin", "switch-source", "plugins/one", "--to", "codex")
 
         self.assertEqual(result.returncode, 0)
-        state = json.loads((self.repo / "plugins/one/.plugin-cross-port.yaml").read_text())
+        state = json.loads((self.repo / "plugins/one/.plugin-cross-port.json").read_text())
         self.assertEqual(state["source_of_truth"], "codex")
 
     def test_plugin_switch_source_rejects_stale_output(self):
@@ -171,7 +171,7 @@ class CliTest(unittest.TestCase):
         result = self.run_cli("plugin", "switch-source", "plugins/one", "--to", "codex")
 
         self.assertEqual(result.returncode, 1)
-        state = json.loads((self.repo / "plugins/one/.plugin-cross-port.yaml").read_text())
+        state = json.loads((self.repo / "plugins/one/.plugin-cross-port.json").read_text())
         self.assertEqual(state["source_of_truth"], "claude-code")
 
 
