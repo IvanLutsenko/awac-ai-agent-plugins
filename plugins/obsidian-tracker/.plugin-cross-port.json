@@ -1,7 +1,7 @@
 {
   "version": 1,
   "plugin": "obsidian-tracker",
-  "generated_at": "2026-07-02T16:25:58+00:00",
+  "generated_at": "2026-07-02T16:26:39+00:00",
   "source_of_truth": "claude-code",
   "decisions": {
     "skills_shared": false,

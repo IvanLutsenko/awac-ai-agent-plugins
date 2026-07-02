@@ -151,7 +151,7 @@ async function scanProject(projectPath: string, name: string, archived: boolean,
 // --- Server ---
 
 const server = new Server(
-  { name: "obsidian-tracker", version: "4.3.1" },
+  { name: "obsidian-tracker", version: "4.3.3" },
   { capabilities: { tools: {} } }
 );
 
