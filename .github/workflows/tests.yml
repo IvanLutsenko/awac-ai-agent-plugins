@@ -1,0 +1,36 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install bats
+        run: sudo apt-get update -q && sudo apt-get install -y -q bats
+
+      - name: plugin-cross-port + repo scripts (pytest)
+        run: pip install pytest && pytest plugins/plugin-cross-port/tests tests/ -q
+
+      - name: crashlytics report validator (fixtures)
+        run: bash plugins/crashlytics/scripts/tests/run-tests.sh
+
+      - name: obsidian-tracker plugin structure + hooks (bats)
+        run: bats plugins/obsidian-tracker/tests/plugin_structure.bats plugins/obsidian-tracker/tests/hooks/*.bats
+
+      - name: obsidian-tracker MCP server (vitest)
+        working-directory: plugins/obsidian-tracker/mcp
+        run: npm ci && npx vitest run
