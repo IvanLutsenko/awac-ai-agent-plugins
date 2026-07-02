@@ -7,6 +7,9 @@ import {
   parseMarkdownContent,
   parseBoardContent,
   renderBoard,
+  renderBoardContent,
+  sanitizeTitle,
+  walkMarkdownFiles,
   BOARD_COLUMNS,
   getNextTaskId,
   getNextDecisionId,
@@ -14,6 +17,195 @@ import {
   validateVaultPath,
   getProjectPath,
 } from "./helpers.js";
+
+// --- sanitizeTitle ---
+
+describe("sanitizeTitle", () => {
+  it("replaces Obsidian-forbidden characters with spaces", () => {
+    expect(sanitizeTitle("Fitbod: calories editing")).toBe("Fitbod calories editing");
+    expect(sanitizeTitle('App label = "unnamed" on Android')).toBe("App label = unnamed on Android");
+    expect(sanitizeTitle("guard (>100 files)")).toBe("guard ( 100 files)");
+  });
+
+  it("removes wiki-link breaking characters", () => {
+    expect(sanitizeTitle("a | b [c] #d ^e")).toBe("a b c d e");
+  });
+
+  it("strips trailing dots and spaces", () => {
+    expect(sanitizeTitle("ends with dots...")).toBe("ends with dots");
+    expect(sanitizeTitle("  padded  ")).toBe("padded");
+  });
+
+  it("caps length", () => {
+    expect(sanitizeTitle("x".repeat(500)).length).toBeLessThanOrEqual(180);
+  });
+
+  it("falls back to 'untitled' when nothing survives", () => {
+    expect(sanitizeTitle(":::")).toBe("untitled");
+    expect(sanitizeTitle("...")).toBe("untitled");
+  });
+
+  it("keeps normal titles untouched", () => {
+    expect(sanitizeTitle("Обычный заголовок задачи (v2)")).toBe("Обычный заголовок задачи (v2)");
+  });
+});
+
+// --- renderBoardContent ---
+
+describe("renderBoardContent", () => {
+  const settingsBlock = `%% kanban:settings
+\`\`\`
+{"kanban-plugin":"basic","list-collapse":[false,false]}
+\`\`\`
+%%`;
+
+  it("preserves kanban settings block and frontmatter on rewrite", () => {
+    const original = `---
+kanban-plugin: basic
+---
+
+## Backlog
+- [ ] [[TASK-1 - First]]
+
+## In Progress
+
+## Review
+
+## Done
+
+${settingsBlock}
+`;
+    const columns = parseBoardContent(original);
+    columns.get("Backlog")!.push("- [ ] [[TASK-2 - Second]]");
+    const rendered = renderBoardContent(original, columns);
+
+    expect(rendered).toContain("kanban-plugin: basic");
+    expect(rendered).toContain('%% kanban:settings');
+    expect(rendered).toContain('"list-collapse"');
+    expect(rendered).toContain("- [ ] [[TASK-2 - Second]]");
+  });
+
+  it("preserves custom sections with their items", () => {
+    const original = `## Backlog
+- [ ] [[TASK-1 - Real]]
+
+## Random Section
+- [ ] custom item
+some note
+
+## Done
+`;
+    const columns = parseBoardContent(original);
+    const rendered = renderBoardContent(original, columns);
+
+    expect(rendered).toContain("## Random Section");
+    expect(rendered).toContain("- [ ] custom item");
+    expect(rendered).toContain("some note");
+    // not duplicated into Backlog
+    expect(rendered.indexOf("- [ ] custom item")).toBe(rendered.lastIndexOf("- [ ] custom item"));
+  });
+
+  it("moves items between columns", () => {
+    const original = `## Backlog
+- [ ] [[TASK-1 - Move me]]
+
+## In Progress
+
+## Review
+
+## Done
+`;
+    const columns = parseBoardContent(original);
+    const item = columns.get("Backlog")!.pop()!;
+    columns.get("Done")!.push(item.replace("- [ ]", "- [x]"));
+    const rendered = renderBoardContent(original, columns);
+    const reparsed = parseBoardContent(rendered);
+
+    expect(reparsed.get("Backlog")).toHaveLength(0);
+    expect(reparsed.get("Done")).toEqual(["- [x] [[TASK-1 - Move me]]"]);
+  });
+
+  it("appends known columns missing from the original", () => {
+    const original = `## Backlog
+- [ ] [[TASK-1 - Only column]]
+`;
+    const columns = parseBoardContent(original);
+    const rendered = renderBoardContent(original, columns);
+    for (const col of BOARD_COLUMNS) {
+      expect(rendered).toContain(`## ${col}`);
+    }
+  });
+
+  it("falls back to legacy render for empty original", () => {
+    const columns = parseBoardContent("");
+    columns.get("Backlog")!.push("- [ ] [[TASK-1 - New]]");
+    expect(renderBoardContent("", columns)).toBe(renderBoard(columns));
+  });
+
+  it("round-trips without duplication", () => {
+    const original = `---
+kanban-plugin: basic
+---
+
+## Backlog
+- [ ] [[TASK-1 - A]]
+
+## In Progress
+
+## Review
+
+## Done
+
+${settingsBlock}
+`;
+    const once = renderBoardContent(original, parseBoardContent(original));
+    const twice = renderBoardContent(once, parseBoardContent(once));
+    expect(twice).toBe(once);
+  });
+});
+
+// --- walkMarkdownFiles ---
+
+describe("walkMarkdownFiles", () => {
+  it("finds .md files recursively, skipping dot-dirs", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "walk-test-"));
+    try {
+      await fs.mkdir(path.join(root, "proj", "Sessions"), { recursive: true });
+      await fs.mkdir(path.join(root, "parent", "nested"), { recursive: true });
+      await fs.mkdir(path.join(root, ".obsidian"), { recursive: true });
+      await fs.writeFile(path.join(root, "proj", "Board.md"), "x");
+      await fs.writeFile(path.join(root, "proj", "Sessions", "Session - 2026-01-01.md"), "x");
+      await fs.writeFile(path.join(root, "parent", "nested", "note.md"), "x");
+      await fs.writeFile(path.join(root, "proj", "data.json"), "x");
+      await fs.writeFile(path.join(root, ".obsidian", "hidden.md"), "x");
+
+      const files = (await walkMarkdownFiles(root)).map(f => path.relative(root, f)).sort();
+      expect(files).toEqual([
+        "parent/nested/note.md",
+        "proj/Board.md",
+        "proj/Sessions/Session - 2026-01-01.md",
+      ]);
+    } finally {
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+// --- frontmatter: dashed keys ---
+
+describe("parseMarkdownContent dashed keys", () => {
+  it("parses keys with dashes (linked-tasks, superseded-by)", () => {
+    const md = `---
+linked-tasks: ["TASK-5"]
+superseded-by: DEC-002
+---
+body
+`;
+    const result = parseMarkdownContent(md);
+    expect(result.frontmatter["linked-tasks"]).toBe('["TASK-5"]');
+    expect(result.frontmatter["superseded-by"]).toBe("DEC-002");
+  });
+});
 
 // --- parseMarkdownContent ---
 
@@ -127,19 +319,19 @@ kanban-plugin: basic
     }
   });
 
-  it("non-board headers don't switch column context", () => {
-    // "## Random Section" is not a valid board column, so items below it
-    // stay under the previous valid column (Backlog)
+  it("items under non-board headers belong to the custom section, not a column", () => {
+    // "## Random Section" is not a valid board column; its items must not be
+    // claimed by Backlog — renderBoardContent preserves them verbatim instead.
     const content = `## Backlog
 - [ ] [[TASK-1 - Real task]]
 
 ## Random Section
-- [ ] This stays under Backlog
+- [ ] This belongs to Random Section
 
 ## Done
 `;
     const columns = parseBoardContent(content);
-    expect(columns.get("Backlog")).toHaveLength(2);
+    expect(columns.get("Backlog")).toHaveLength(1);
     expect(columns.get("Done")).toHaveLength(0);
   });
 

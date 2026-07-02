@@ -55,6 +55,25 @@ export async function validateVaultPath(vaultPath: string): Promise<boolean> {
   }
 }
 
+// --- Filename helpers ---
+
+/**
+ * Make a title safe for use as an Obsidian note name and inside [[wiki-links]].
+ * Obsidian forbids * " \ / < > : | ? in note names (mobile/Sync reject them);
+ * # ^ [ ] | break wiki-links. Forbidden chars become spaces, whitespace is
+ * collapsed, trailing dots/spaces are stripped (Windows/Sync), length capped.
+ */
+export function sanitizeTitle(title: string, maxLength = 180): string {
+  const cleaned = title
+    .replace(/[*"\\/<>:|?#^\[\]]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[. ]+$/, "")
+    .slice(0, maxLength)
+    .trim();
+  return cleaned || "untitled";
+}
+
 // --- Markdown helpers ---
 
 export async function parseMarkdown(filePath: string) {
@@ -67,7 +86,7 @@ export async function parseMarkdown(filePath: string) {
     const fm = frontmatterMatch[1];
     body = content.slice(frontmatterMatch[0].length);
     for (const line of fm.split("\n")) {
-      const match = line.match(/^(\w+):\s*(.+)$/);
+      const match = line.match(/^([\w-]+):\s*(.+)$/);
       if (match) {
         const [, key, value] = match;
         frontmatter[key] = value.replace(/^["']|["']$/g, "");
@@ -91,7 +110,7 @@ export function parseMarkdownContent(content: string) {
     const fm = frontmatterMatch[1];
     body = content.slice(frontmatterMatch[0].length);
     for (const line of fm.split("\n")) {
-      const match = line.match(/^(\w+):\s*(.+)$/);
+      const match = line.match(/^([\w-]+):\s*(.+)$/);
       if (match) {
         const [, key, value] = match;
         frontmatter[key] = value.replace(/^["']|["']$/g, "");
@@ -129,7 +148,9 @@ export function parseBoardContent(content: string): Map<string, string[]> {
     const headerMatch = line.match(/^## (.+)$/);
     if (headerMatch) {
       const colName = headerMatch[1].trim();
-      if (BOARD_COLUMNS.includes(colName)) currentColumn = colName;
+      // Unknown headers end the current column — their items belong to the
+      // custom section and are preserved verbatim by renderBoardContent.
+      currentColumn = BOARD_COLUMNS.includes(colName) ? colName : null;
       continue;
     }
     if (currentColumn && line.match(/^- \[[ x]\] /)) {
@@ -141,14 +162,67 @@ export function parseBoardContent(content: string): Map<string, string[]> {
 }
 
 export async function writeBoard(boardPath: string, columns: Map<string, string[]>): Promise<void> {
-  let content = "---\nkanban-plugin: basic\n---\n";
-  for (const col of BOARD_COLUMNS) {
-    content += `\n## ${col}\n`;
-    for (const item of columns.get(col) || []) {
-      content += `${item}\n`;
+  let original = "";
+  try {
+    original = await fs.readFile(boardPath, "utf-8");
+  } catch {}
+  await fs.writeFile(boardPath, renderBoardContent(original, columns));
+}
+
+/**
+ * Re-render known kanban columns into an existing board, preserving everything
+ * else verbatim: frontmatter, unknown columns, notes, and the
+ * `%% kanban:settings %%` block written by the Obsidian Kanban plugin.
+ */
+export function renderBoardContent(original: string, columns: Map<string, string[]>): string {
+  if (!original.trim()) return renderBoard(columns);
+
+  const out: string[] = [];
+  const seen = new Set<string>();
+  let currentColumn: string | null = null;
+  let extras: string[] = [];
+
+  const flushColumn = () => {
+    if (!currentColumn) return;
+    out.push(`## ${currentColumn}`);
+    for (const item of columns.get(currentColumn) || []) out.push(item);
+    out.push(...extras);
+    out.push("");
+    currentColumn = null;
+    extras = [];
+  };
+
+  for (const line of original.split("\n")) {
+    const header = line.match(/^## (.+)$/);
+    if (header && BOARD_COLUMNS.includes(header[1].trim())) {
+      flushColumn();
+      currentColumn = header[1].trim();
+      seen.add(currentColumn);
+      continue;
     }
+    if (header || line.startsWith("%% kanban:")) {
+      flushColumn();
+      out.push(line);
+      continue;
+    }
+    if (currentColumn) {
+      // Checkbox items are replaced by the Map; keep any other non-blank lines
+      if (/^- \[[ x]\] /.test(line) || line.trim() === "") continue;
+      extras.push(line);
+      continue;
+    }
+    out.push(line);
   }
-  await fs.writeFile(boardPath, content);
+  flushColumn();
+
+  for (const col of BOARD_COLUMNS) {
+    if (seen.has(col)) continue;
+    out.push(`## ${col}`);
+    for (const item of columns.get(col) || []) out.push(item);
+    out.push("");
+  }
+
+  return out.join("\n");
 }
 
 export function renderBoard(columns: Map<string, string[]>): string {
@@ -206,6 +280,30 @@ export async function updateTaskFrontmatter(taskPath: string, updates: Record<st
     content = `---\n${fm}\n---` + content.slice(fmMatch[0].length);
     await fs.writeFile(taskPath, content);
   }
+}
+
+/**
+ * Recursively list all .md files under root (absolute paths).
+ * Skips dot-directories (.obsidian, .trash, …).
+ */
+export async function walkMarkdownFiles(root: string): Promise<string[]> {
+  const results: string[] = [];
+  let entries;
+  try {
+    entries = await fs.readdir(root, { withFileTypes: true });
+  } catch {
+    return results;
+  }
+  for (const entry of entries) {
+    if (entry.name.startsWith(".")) continue;
+    const entryPath = path.join(root, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...(await walkMarkdownFiles(entryPath)));
+    } else if (entry.name.endsWith(".md")) {
+      results.push(entryPath);
+    }
+  }
+  return results;
 }
 
 // --- Path helpers ---

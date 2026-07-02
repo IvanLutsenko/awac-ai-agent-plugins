@@ -86,3 +86,36 @@ teardown() { teardown_tracking_dir; }
   commit_count=$(jq '.linkedCommits | length' "$TRACKING_FILE")
   [ "$commit_count" -eq 1 ]
 }
+
+@test "compound command (cd x && git commit) → tracked" {
+  create_tracking_file
+  tool_input_bash "$TEST_DIR" "cd /some/path && git commit -m 'fix'" "[main abc1234] fix" | "$HOOKS_DIR/track-commit.sh" >/dev/null
+
+  commit=$(jq -r '.linkedCommits[0]' "$TRACKING_FILE")
+  [ "$commit" = "abc1234" ]
+}
+
+@test "git -C path commit → tracked" {
+  create_tracking_file
+  tool_input_bash "$TEST_DIR" "git -C /repo commit -m 'fix'" "[main abc1234] fix" | "$HOOKS_DIR/track-commit.sh" >/dev/null
+
+  commit=$(jq -r '.linkedCommits[0]' "$TRACKING_FILE")
+  [ "$commit" = "abc1234" ]
+}
+
+@test "git -c key=val commit → tracked" {
+  create_tracking_file
+  tool_input_bash "$TEST_DIR" "git -c user.name=x commit -m 'fix'" "[main abc1234] fix" | "$HOOKS_DIR/track-commit.sh" >/dev/null
+
+  commit=$(jq -r '.linkedCommits[0]' "$TRACKING_FILE")
+  [ "$commit" = "abc1234" ]
+}
+
+@test "git log | grep commit → skip (not a commit)" {
+  create_tracking_file
+  result=$(tool_input_bash "$TEST_DIR" "git log --oneline | grep commit" "abc1234 some commit" | "$HOOKS_DIR/track-commit.sh")
+  [ "$result" = "{}" ]
+
+  count=$(jq '.actions | length' "$TRACKING_FILE")
+  [ "$count" -eq 0 ]
+}

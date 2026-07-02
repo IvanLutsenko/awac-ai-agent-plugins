@@ -10,10 +10,13 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ListToolsRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
 import fs from "fs/promises";
 import path from "path";
-import { CONFIG_FILE, loadConfig, saveConfig, getVaultPath, validateVaultPath, parseMarkdown, parseBoard, writeBoard, getNextTaskId, getNextDecisionId, updateTaskFrontmatter, getProjectPath, requireVault, } from "./helpers.js";
+import { BOARD_COLUMNS, CONFIG_FILE, loadConfig, saveConfig, getVaultPath, validateVaultPath, parseMarkdown, parseBoard, writeBoard, getNextTaskId, getNextDecisionId, updateTaskFrontmatter, getProjectPath, requireVault, sanitizeTitle, walkMarkdownFiles, } from "./helpers.js";
 async function resolveProjectPath(vaultPath, name) {
     // 1. Exact path (handles "project" and "parent/subproject")
     const exactPath = path.join(vaultPath, name);
+    if (!path.resolve(exactPath).startsWith(path.resolve(vaultPath) + path.sep)) {
+        throw new Error(`Project name "${name}" escapes the vault`);
+    }
     if (await validateVaultPath(exactPath))
         return exactPath;
     // 2. Recursive search by short name
@@ -113,7 +116,7 @@ async function scanProject(projectPath, name, archived, isSubproject = false) {
     };
 }
 // --- Server ---
-const server = new Server({ name: "obsidian-tracker", version: "4.3.1" }, { capabilities: { tools: {} } });
+const server = new Server({ name: "obsidian-tracker", version: "4.4.0" }, { capabilities: { tools: {} } });
 server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
         tools: [
@@ -643,7 +646,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 const vaultPath = await requireVault();
                 if (!args)
                     throw new Error("Missing arguments");
-                const projectName = args.name;
+                const projectName = sanitizeTitle(args.name);
                 const parentName = args.parent;
                 let projectPath;
                 if (parentName) {
@@ -704,7 +707,7 @@ tags: [project, ${projectTag}]
                 if (!args)
                     throw new Error("Missing arguments");
                 const projectPath = await resolveProjectPath(vaultPath, args.project);
-                const title = args.title;
+                const title = sanitizeTitle(args.title);
                 const priority = args.priority ?? "medium";
                 const description = args.description;
                 const date = new Date().toISOString().split("T")[0];
@@ -795,45 +798,38 @@ ${args.nextSteps ?? "TBD"}
                 if (!args)
                     throw new Error("Missing arguments");
                 const query = args.query;
-                const entries = await fs.readdir(vaultPath, { withFileTypes: true });
                 const results = [];
                 const isTagSearch = query.startsWith("tag:");
                 const searchTerm = isTagSearch ? query.slice(4).trim() : query.toLowerCase();
-                for (const entry of entries) {
-                    if (entry.isDirectory()) {
-                        const projectPath = path.join(vaultPath, entry.name);
-                        let files;
-                        try {
-                            files = await fs.readdir(projectPath);
-                        }
-                        catch {
-                            continue;
-                        }
-                        for (const file of files) {
-                            if (file.endsWith(".md")) {
-                                try {
-                                    const content = await fs.readFile(path.join(projectPath, file), "utf-8");
-                                    if (isTagSearch) {
-                                        const tagRegex = new RegExp(`#${searchTerm}(?:\\s|$|\\])`, "i");
-                                        if (tagRegex.test(content)) {
-                                            results.push({ project: entry.name, file, match: `tag:#${searchTerm}` });
-                                        }
-                                    }
-                                    else {
-                                        if (content.toLowerCase().includes(searchTerm)) {
-                                            results.push({ project: entry.name, file, match: "content" });
-                                        }
-                                    }
-                                }
-                                catch { }
-                            }
-                        }
+                const tagRegex = isTagSearch ? new RegExp(`#${searchTerm}(?:\\s|$|\\])`, "i") : null;
+                const MAX_RESULTS = 100;
+                // Recursive: covers nested projects, Sessions/ and Decisions/ subdirs
+                const files = await walkMarkdownFiles(vaultPath);
+                for (const filePath of files) {
+                    if (results.length >= MAX_RESULTS)
+                        break;
+                    let content;
+                    try {
+                        content = await fs.readFile(filePath, "utf-8");
+                    }
+                    catch {
+                        continue;
+                    }
+                    const matched = tagRegex
+                        ? tagRegex.test(content)
+                        : content.toLowerCase().includes(searchTerm);
+                    if (matched) {
+                        results.push({
+                            project: path.relative(vaultPath, path.dirname(filePath)) || ".",
+                            file: path.basename(filePath),
+                            match: isTagSearch ? `tag:#${searchTerm}` : "content",
+                        });
                     }
                 }
                 return {
                     content: [{
                             type: "text",
-                            text: JSON.stringify({ query, results, count: results.length }, null, 2),
+                            text: JSON.stringify({ query, results, count: results.length, truncated: results.length >= MAX_RESULTS }, null, 2),
                         }],
                 };
             }
@@ -967,7 +963,7 @@ ${args.nextSteps ?? "TBD"}
                 if (!args)
                     throw new Error("Missing arguments");
                 const projectPath = await resolveProjectPath(vaultPath, args.project);
-                const title = args.title;
+                const title = sanitizeTitle(args.title);
                 const priority = args.priority ?? "medium";
                 const effort = args.effort ?? "";
                 const assignee = args.assignee ?? "";
@@ -1021,6 +1017,9 @@ ${args.nextSteps ?? "TBD"}
                 const projectPath = await resolveProjectPath(vaultPath, args.project);
                 const taskId = args.taskId;
                 const targetStatus = args.status;
+                if (!BOARD_COLUMNS.includes(targetStatus)) {
+                    throw new Error(`Invalid status "${targetStatus}". Must be one of: ${BOARD_COLUMNS.join(", ")}`);
+                }
                 const actual = args.actual;
                 const boardPath = path.join(projectPath, "Board.md");
                 const columns = await parseBoard(boardPath);
@@ -1409,7 +1408,7 @@ ${args.nextSteps ?? "TBD"}
                 const id = await getNextDecisionId(projectPath);
                 const idStr = String(id).padStart(3, "0");
                 const date = new Date().toISOString().split("T")[0];
-                const title = args.title;
+                const title = sanitizeTitle(args.title);
                 const linkedTasks = args.linkedTasks || [];
                 const linkedBugs = args.linkedBugs || [];
                 const content = `---

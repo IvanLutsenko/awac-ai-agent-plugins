@@ -243,9 +243,19 @@ To disable auto-allow entirely, disable the plugin or remove the `PermissionRequ
 
 ## Version
 
-4.3.3
+4.4.0
 
 ## Changelog
+
+### 4.4.0
+- **Obsidian-safe filenames**: bug/task/decision titles and project names are sanitized before becoming filenames or `[[wiki-links]]` — characters Obsidian forbids (`* " \ / < > : | ?`) and link-breaking ones (`# ^ [ ]`) are replaced, trailing dots/spaces stripped, length capped. Fixes notes that mobile Obsidian / Sync refused to open.
+- **Vault normalizer**: `scripts/normalize-vault.mjs [--dry-run]` renames existing files/folders with unsafe names and rewrites wiki-links that pointed to them.
+- **Non-destructive board writes**: task operations no longer rebuild `Board.md` from scratch — frontmatter, custom sections with their items, and the Obsidian Kanban plugin's `%% kanban:settings %%` block are preserved.
+- **Recursive search**: `search` now covers nested projects and `Sessions`/`Decisions` subfolders (was: top-level project files only); results capped at 100.
+- **Fix**: frontmatter parser now reads dashed keys (`linked-tasks`, `superseded-by`) that the server itself writes.
+- **Fix**: `updateTask` validates the target column instead of crashing on an unknown status.
+- **Fix**: commit tracking hook now catches compound commands (`cd x && git commit`, `git -C path commit`).
+- Project names can no longer escape the vault via `..`; removed unused `mcp/run-server.sh`.
 
 ### 4.3.3
 - **Fix**: bundled MCP server `package.json`/`package-lock.json` version aligned with the plugin; `publish-plugin.py` now keeps them in sync automatically

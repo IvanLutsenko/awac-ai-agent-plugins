@@ -110,10 +110,11 @@ cd plugins/obsidian-tracker/mcp && npm install && npm run build
 /track-stop                 # Save session to Obsidian
 ```
 
-**Status:** ✅ Production Ready | **Version:** 4.3.3
+**Status:** ✅ Production Ready | **Version:** 4.4.0
 
-**What's New in 4.3.3:**
-- Bundled MCP server package version aligned with the plugin; publish script keeps it in sync.
+**What's New in 4.4.0:**
+- Obsidian-safe filenames: titles are sanitized before becoming note names / wiki-links (mobile Obsidian and Sync no longer complain); `scripts/normalize-vault.mjs` renames existing offenders and fixes links.
+- Board writes preserve `%% kanban:settings %%`, frontmatter, and custom sections; recursive `search`; several hook and parser fixes.
 
 **Features:**
 - Auto-tracking via hooks (PreCompact, SessionStart, PostToolUse)

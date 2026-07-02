@@ -13,12 +13,15 @@ if [ ! -f "$TRACKING_FILE" ]; then
   exit 0
 fi
 
-# Check if the bash command was a git commit
+# Check if the bash command was a git commit.
+# Matches "git commit" with optional flags between git and commit, anywhere in
+# a compound command: "cd x && git commit", "git -C path commit", "git -c k=v commit".
+# Word-boundary anchors avoid false positives like "git log | grep commit".
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""')
-case "$COMMAND" in
-  git\ commit*|git\ -c\ *commit*) ;;
-  *) echo '{}'; exit 0 ;;
-esac
+if ! echo "$COMMAND" | grep -qE '(^|[;&|[:space:]])git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+commit([[:space:]]|$)'; then
+  echo '{}'
+  exit 0
+fi
 
 # Extract commit hash from output (short hash from "1234567 commit message" or "[branch 1234567]")
 OUTPUT=$(echo "$INPUT" | jq -r '.tool_output.stdout // .tool_output // ""' 2>/dev/null)
