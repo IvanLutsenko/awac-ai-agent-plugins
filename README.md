@@ -110,10 +110,10 @@ cd plugins/obsidian-tracker/mcp && npm install && npm run build
 /track-stop                 # Save session to Obsidian
 ```
 
-**Status:** ✅ Production Ready | **Version:** 4.3.2
+**Status:** ✅ Production Ready | **Version:** 4.3.3
 
-**What's New in 4.3.2:**
-- Examples now use the renamed `awac-ai-agent-plugins` project slug.
+**What's New in 4.3.3:**
+- Bundled MCP server package version aligned with the plugin; publish script keeps it in sync.
 
 **Features:**
 - Auto-tracking via hooks (PreCompact, SessionStart, PostToolUse)

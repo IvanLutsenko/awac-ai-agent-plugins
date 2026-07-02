@@ -1,14 +1,26 @@
 {
   "name": "obsidian-tracker",
   "description": "Project tracking, task management with kanban boards, bug logging, decision records (ADR), session management, and engineering traceability via Obsidian. Auto-tracks sessions, actions, bugs, and commits via hooks.",
-  "version": "4.3.2",
+  "version": "4.3.3",
   "mcpServers": "./.mcp.json",
   "author": {
     "name": "Ivan Lutsenko",
     "email": "ivan@lutsenko.com",
     "url": "https://github.com/IvanLutsenko"
   },
-  "keywords": ["obsidian", "projects", "tracking", "tasks", "kanban", "bugs", "decisions", "adr", "traceability", "hooks", "auto-sync"],
+  "keywords": [
+    "obsidian",
+    "projects",
+    "tracking",
+    "tasks",
+    "kanban",
+    "bugs",
+    "decisions",
+    "adr",
+    "traceability",
+    "hooks",
+    "auto-sync"
+  ],
   "license": "MIT",
   "commands": [
     "./commands/projects.md",

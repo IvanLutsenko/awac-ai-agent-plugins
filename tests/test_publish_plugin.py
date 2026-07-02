@@ -78,6 +78,32 @@ class PublishPluginTest(unittest.TestCase):
         )
         self.assertEqual(manifest["version"], "1.2.4")
 
+    def test_publish_syncs_bundled_mcp_package_versions(self):
+        mcp = self.plugin / "mcp"
+        mcp.mkdir()
+        (mcp / "package.json").write_text(
+            json.dumps({"name": "sample-mcp", "version": "1.2.2"}),
+            encoding="utf-8",
+        )
+        (mcp / "package-lock.json").write_text(
+            json.dumps(
+                {
+                    "name": "sample-mcp",
+                    "version": "1.2.2",
+                    "packages": {"": {"name": "sample-mcp", "version": "1.2.2"}},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        self.run_publish()
+
+        pkg = json.loads((mcp / "package.json").read_text(encoding="utf-8"))
+        self.assertEqual(pkg["version"], "1.2.4")
+        lock = json.loads((mcp / "package-lock.json").read_text(encoding="utf-8"))
+        self.assertEqual(lock["version"], "1.2.4")
+        self.assertEqual(lock["packages"][""]["version"], "1.2.4")
+
     def test_publish_preserves_historical_plugin_changelog_versions(self):
         self.run_publish()
 

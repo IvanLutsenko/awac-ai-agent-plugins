@@ -90,6 +90,28 @@ def update_json_version(filepath, plugin_name, new_version):
     return changed
 
 
+def update_npm_version(filepath, new_version):
+    """Set the root package version in package.json / package-lock.json."""
+    with open(filepath) as f:
+        data = json.load(f)
+
+    changed = False
+    if data.get('version') != new_version:
+        data['version'] = new_version
+        changed = True
+
+    root_pkg = data.get('packages', {}).get('')  # package-lock v2/v3
+    if root_pkg is not None and root_pkg.get('version') != new_version:
+        root_pkg['version'] = new_version
+        changed = True
+
+    if changed:
+        with open(filepath, 'w') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+            f.write('\n')
+    return changed
+
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: publish-plugin.py <plugin_name> [patch|minor|major]", file=sys.stderr)
@@ -150,6 +172,12 @@ def main():
     codex_manifest = os.path.join(plugin_dir, '.codex-plugin', 'plugin.json')
     if os.path.isfile(codex_manifest) and update_json_version(codex_manifest, plugin_name, new_version):
         updated.append(f"plugins/{plugin_name}/.codex-plugin/plugin.json")
+
+    # 7. Keep bundled MCP server package version in sync
+    for lock in ('package.json', 'package-lock.json'):
+        pkg = os.path.join(plugin_dir, 'mcp', lock)
+        if os.path.isfile(pkg) and update_npm_version(pkg, new_version):
+            updated.append(f"plugins/{plugin_name}/mcp/{lock}")
 
     # Output summary
     print("publish:")

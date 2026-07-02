@@ -243,9 +243,12 @@ To disable auto-allow entirely, disable the plugin or remove the `PermissionRequ
 
 ## Version
 
-4.3.2
+4.3.3
 
 ## Changelog
+
+### 4.3.3
+- **Fix**: bundled MCP server `package.json`/`package-lock.json` version aligned with the plugin; `publish-plugin.py` now keeps them in sync automatically
 
 ### 4.3.2
 - **Docs**: examples now use the renamed `awac-ai-agent-plugins` project slug
