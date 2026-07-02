@@ -7,8 +7,7 @@ Project tracking, task management with kanban boards, bug logging, decision reco
 **Claude Code:**
 ```bash
 /plugin marketplace add https://github.com/IvanLutsenko/awac-ai-agent-plugins
-/plugin install obsidian-tracker
-cd plugins/obsidian-tracker/mcp && npm install && npm run build   # build the MCP server
+/plugin install obsidian-tracker   # MCP server auto-builds on first run
 ```
 
 **Codex CLI:**
@@ -243,9 +242,16 @@ To disable auto-allow entirely, disable the plugin or remove the `PermissionRequ
 
 ## Version
 
-4.4.0
+4.5.0
 
 ## Changelog
+
+### 4.5.0
+- **Refactor**: MCP server split — 24 tool handlers extracted from the 1900-line `index.ts` into `handlers.ts` with an injectable vault path; covered end-to-end by 40+ new vitest tests on a temp vault (83 vitest + 86 bats total)
+- **Auto-build**: `.mcp.json` now launches `mcp/run-server.sh`, which builds `dist/` on first run — fresh installs work without a manual `npm install && npm run build`
+- **Task ids zero-padded** to 3 digits (`TASK-007 - …`, like `DEC-007`) so files sort correctly; all lookups accept legacy unpadded names; `normalize-vault.mjs` pads existing files and rewrites board links
+- **Race-safe creation**: task/decision id allocation and file writes run under a per-project lock + exclusive-create flag — concurrent calls can't collide or lose board entries
+- **Session format contract**: entry rendering extracted to `renderSessionEntry()`; TS golden test + bats structure test pin the TS and bash formats together
 
 ### 4.4.0
 - **Obsidian-safe filenames**: bug/task/decision titles and project names are sanitized before becoming filenames or `[[wiki-links]]` — characters Obsidian forbids (`* " \ / < > : | ?`) and link-breaking ones (`# ^ [ ]`) are replaced, trailing dots/spaces stripped, length capped. Fixes notes that mobile Obsidian / Sync refused to open.

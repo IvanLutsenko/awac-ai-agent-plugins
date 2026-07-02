@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "obsidian": {
-      "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/dist/index.js"],
+      "command": "sh",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/run-server.sh"],
       "env": {
         "OBSIDIAN_VAULT": "${OBSIDIAN_VAULT:-$HOME/Documents/ObsidianVault/Projects}"
       }

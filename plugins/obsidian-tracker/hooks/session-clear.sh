@@ -70,7 +70,9 @@ if [ -n "$STARTED_AT" ]; then
   fi
 fi
 
-# Append session entry (same format as MCP addSession)
+# Append session entry.
+# CONTRACT: must match mcp/helpers.ts renderSessionEntry() exactly —
+# pinned by the vitest golden test and the bats "format contract" test.
 cat >> "$SESSION_FILE" << ENTRY
 
 

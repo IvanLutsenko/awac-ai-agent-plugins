@@ -93,3 +93,21 @@ setup_vault_project() {
   has_hso=$(echo "$result" | jq 'has("hookSpecificOutput")')
   [ "$has_hso" = "false" ]
 }
+
+@test "format contract: entry structure matches mcp renderSessionEntry golden" {
+  # CONTRACT: mirrors mcp/helpers.ts renderSessionEntry() (vitest golden test).
+  # Section headers, their order, and the trailing --- must stay identical.
+  create_tracking_file "test-project" "fix bugs"
+  setup_vault_project "test-project"
+  hook_input "$TEST_DIR" | "$HOOKS_DIR/session-clear.sh" >/dev/null
+  session_file=$(ls "$VAULT_DIR/test-project/Sessions/Session - "*.md 2>/dev/null | head -1)
+
+  structure=$(grep -E '^(## |### |---)' "$session_file" | head -6)
+  expected='## Session - '
+  echo "$structure" | head -1 | grep -qE '^## Session - [0-9]{2}:[0-9]{2} UTC \(' 
+  [ "$(echo "$structure" | sed -n 2p)" = "### Goal" ]
+  [ "$(echo "$structure" | sed -n 3p)" = "### Actions" ]
+  [ "$(echo "$structure" | sed -n 4p)" = "### Results" ]
+  [ "$(echo "$structure" | sed -n 5p)" = "### Next Time" ]
+  [ "$(echo "$structure" | sed -n 6p)" = "---" ]
+}

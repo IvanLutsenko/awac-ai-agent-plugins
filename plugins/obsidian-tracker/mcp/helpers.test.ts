@@ -8,6 +8,7 @@ import {
   parseBoardContent,
   renderBoard,
   renderBoardContent,
+  renderSessionEntry,
   sanitizeTitle,
   walkMarkdownFiles,
   BOARD_COLUMNS,
@@ -47,6 +48,51 @@ describe("sanitizeTitle", () => {
 
   it("keeps normal titles untouched", () => {
     expect(sanitizeTitle("Обычный заголовок задачи (v2)")).toBe("Обычный заголовок задачи (v2)");
+  });
+});
+
+// --- renderSessionEntry ---
+
+describe("renderSessionEntry", () => {
+  it("matches the golden format shared with hooks/session-clear.sh", () => {
+    // CONTRACT: session-clear.sh writes this exact structure in bash.
+    // If this golden changes, update the heredoc there and its bats test.
+    const entry = renderSessionEntry({
+      time: "12:34",
+      duration: "1h 5m",
+      goal: "Fix bugs",
+      actions: ["did X", "did Y"],
+      results: "done",
+      nextSteps: "more",
+    });
+    expect(entry).toBe(`
+
+## Session - 12:34 UTC (1h 5m)
+
+### Goal
+Fix bugs
+
+### Actions
+- did X
+- did Y
+
+### Results
+done
+
+### Next Time
+more
+
+---
+`);
+  });
+
+  it("uses placeholders when fields are missing", () => {
+    const entry = renderSessionEntry({ time: "00:00" });
+    expect(entry).toContain("## Session - 00:00 UTC\n");
+    expect(entry).toContain("No goal specified");
+    expect(entry).toContain("- No actions recorded");
+    expect(entry).toContain("In progress...");
+    expect(entry).toContain("TBD");
   });
 });
 

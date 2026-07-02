@@ -101,6 +101,37 @@ export function parseMarkdownContent(content) {
     }
     return { frontmatter, body };
 }
+// --- Session helpers ---
+/**
+ * Render one session entry appended to `Sessions/Session - <date>.md`.
+ * CONTRACT: hooks/session-clear.sh writes the same structure in bash
+ * (tested by tests/hooks/session_clear.bats "format contract" test) —
+ * change both together or the vault gets mixed session formats.
+ */
+export function renderSessionEntry(opts) {
+    const actionsText = opts.actions && opts.actions.length > 0
+        ? opts.actions.map(a => `- ${a}`).join("\n")
+        : "- No actions recorded";
+    const heading = `## Session - ${opts.time} UTC${opts.duration ? ` (${opts.duration})` : ""}`;
+    return `
+
+${heading}
+
+### Goal
+${opts.goal || "No goal specified"}
+
+### Actions
+${actionsText}
+
+### Results
+${opts.results || "In progress..."}
+
+### Next Time
+${opts.nextSteps || "TBD"}
+
+---
+`;
+}
 // --- Board (kanban) helpers ---
 export async function parseBoard(boardPath) {
     const columns = new Map();
@@ -210,6 +241,32 @@ export function renderBoard(columns) {
         }
     }
     return content;
+}
+// --- Concurrency ---
+const projectLocks = new Map();
+/**
+ * Serialize id-allocation + file creation per project within this process.
+ * ponytail: cross-process races (two MCP servers on one vault) are only
+ * guarded by the wx write flag — same id with different titles can still
+ * collide there; add file-based locking if that ever becomes real.
+ */
+export async function withProjectLock(key, fn) {
+    const prev = projectLocks.get(key) ?? Promise.resolve();
+    const next = prev.then(fn, fn);
+    projectLocks.set(key, next.then(() => undefined, () => undefined));
+    return next;
+}
+/** Task ids are zero-padded to 3 digits in filenames/links (like DEC-NNN). */
+export function formatTaskId(id) {
+    return String(id).padStart(3, "0");
+}
+/** Matches a task file for the id in both padded and legacy unpadded form. */
+export function taskFileRegex(id) {
+    return new RegExp(`^TASK-0*${id} `);
+}
+/** Matches a board wiki-link for the id in both padded and legacy unpadded form. */
+export function taskLinkRegex(id) {
+    return new RegExp(`\\[\\[TASK-0*${id}\\s*-`);
 }
 export async function getNextTaskId(projectPath) {
     try {

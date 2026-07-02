@@ -95,8 +95,7 @@ Project tracking, task management with kanban boards, bug logging, decision reco
 
 **Installation:**
 ```bash
-/plugin install obsidian-tracker
-cd plugins/obsidian-tracker/mcp && npm install && npm run build
+/plugin install obsidian-tracker   # MCP server builds itself on first run
 ```
 
 **Quick Start:**
@@ -110,7 +109,11 @@ cd plugins/obsidian-tracker/mcp && npm install && npm run build
 /track-stop                 # Save session to Obsidian
 ```
 
-**Status:** ✅ Production Ready | **Version:** 4.4.0
+**Status:** ✅ Production Ready | **Version:** 4.5.0
+
+**What's New in 4.5.0:**
+- MCP server split into testable handler modules (83 vitest + 86 bats tests); auto-builds on first run — no manual `npm install && npm run build`.
+- Task ids zero-padded (`TASK-007`, legacy unpadded still resolve); race-safe id allocation; session entry format shared between TS and bash via contract tests.
 
 **What's New in 4.4.0:**
 - Obsidian-safe filenames: titles are sanitized before becoming note names / wiki-links (mobile Obsidian and Sync no longer complain); `scripts/normalize-vault.mjs` renames existing offenders and fixes links.

@@ -40,9 +40,15 @@ async function resolveVault() {
   process.exit(1);
 }
 
+// TASK ids are zero-padded to 3 digits (like DEC-NNN) so files sort correctly.
+function padTaskId(stem) {
+  const m = stem.match(/^TASK-(\d{1,2})(\D.*|$)/);
+  return m ? `TASK-${m[1].padStart(3, "0")}${m[2]}` : stem;
+}
+
 function safeName(basename, isMarkdown) {
   if (isMarkdown) {
-    const sanitized = sanitizeTitle(basename.slice(0, -3));
+    const sanitized = padTaskId(sanitizeTitle(basename.slice(0, -3)));
     return `${sanitized}.md`;
   }
   return sanitizeTitle(basename);
