@@ -43,7 +43,7 @@
     },
     {
       "name": "auto-theme",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "description": "Syncs Claude Code and Codex themes with macOS system appearance (light/dark) on every prompt. Bundles custom gruvbox-light / sunset-drive themes and installs them on first run.",
       "source": "./plugins/auto-theme",
       "author": {

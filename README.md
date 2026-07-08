@@ -171,7 +171,10 @@ Syncs Claude Code **and Codex** themes with macOS system appearance (light/dark)
 /plugin install auto-theme
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.1.0
+**Status:** ✅ Production Ready | **Version:** 1.1.1
+
+**What's New in 1.1.1:**
+- `sync-theme` skill: explicit execution rules — macOS-only guard, stderr capture, write-protection and malformed-config errors, fixed 2-line response format
 
 **What's New in 1.1.0:**
 - Also themes Codex (`~/.codex/config.toml` `[tui] theme`), not just Claude Code

@@ -18,6 +18,13 @@ Run the bundled script. It detects the macOS appearance and sets both editors:
 It also installs the bundled themes on first run (`~/.claude/themes/`,
 `~/.codex/themes/`) if absent.
 
+### Execution & Communication Rules:
+1. First, check if the host OS is Darwin (macOS). If not, refuse to run and output: `Error: Host environment is not macOS.`
+2. Run the bash command. Ensure you capture stderr.
+3. If the script fails with exit code non-zero, check if files are write-protected. If so, output: `Error: Settings file is write-protected.`
+4. Before modifying, verify target settings files are valid JSON/TOML. If malformed, output: `Error: Target configuration file is malformed.`
+5. Response Format: Output a 2-line bulleted summary detailing: Line 1: Detected OS appearance, Line 2: The exact themes written to both files. Do not include conversational filler.
+
 ```bash
 bash "${CODEX_PLUGIN_ROOT}/sync-theme.sh"
 ```
