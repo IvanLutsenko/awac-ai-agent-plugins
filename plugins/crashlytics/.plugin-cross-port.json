@@ -1,7 +1,7 @@
 {
   "version": 1,
   "plugin": "crashlytics",
-  "generated_at": "2026-07-09T09:43:15+00:00",
+  "generated_at": "2026-07-09T10:45:48+00:00",
   "source_of_truth": "claude-code",
   "decisions": {
     "skills_shared": false,

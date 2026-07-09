@@ -2,7 +2,7 @@
 
 Crash log analysis with root cause identification, code-level fixes, and developer assignment via git blame.
 
-**Version:** 4.4.3 — Android & iOS
+**Version:** 4.4.4 — Android & iOS
 
 ---
 
@@ -22,6 +22,8 @@ codex plugin add crashlytics@awac-ai-agent-plugins
 
 See [Prerequisites](#prerequisites) below for the runtime dependencies the
 plugin checks on first run (Node.js, Firebase access, etc.).
+
+After updating to 4.4.4, restart the Claude Code session once so the pinned MCP launcher in `.mcp.json` is reloaded.
 
 ---
 
@@ -123,7 +125,7 @@ The plugin tries paths in order: MCP fast-path → MCP via fetcher → REST fall
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      crashlytics v4.4.3                         │
+│                      crashlytics v4.4.4                         │
 └─────────────────────────────────────────────────────────────────┘
                               │
               ┌───────────────┴───────────────┐
@@ -255,7 +257,7 @@ Compact format for copy-paste into a ticket, including stack trace, fix (before/
      "mcpServers": {
        "firebase": {
          "command": "sh",
-         "args": ["-c", "NODE_OPTIONS='--max-old-space-size=4096' npx -y firebase-tools@latest mcp"]
+         "args": ["-c", "NODE_OPTIONS='--max-old-space-size=4096' npx -y firebase-tools@15 mcp"]
        }
      }
    }
@@ -308,6 +310,10 @@ MCP is also used for **project/app discovery** (`firebase_get_environment`, `fir
 ---
 
 ## Changelog
+
+### 4.4.4
+- **Fixed:** `.mcp.json` now launches Firebase MCP via `firebase-tools@15` instead of `@latest`, so session startup no longer depends on whatever major npm serves that day.
+- **Doc:** added an explicit note that changing `.mcp.json` requires a Claude Code session restart before the new MCP command is used.
 
 ### 4.4.3
 - **Changed:** forensics-agents теперь пишут section headers всегда на английском, body content — на target language. Validator больше не зависит от языка отчёта (Language Policy block в обоих forensics-android.md / forensics-ios.md).

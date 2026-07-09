@@ -2,7 +2,7 @@
   "mcpServers": {
     "firebase": {
       "command": "sh",
-      "args": ["-c", "NODE_OPTIONS='--max-old-space-size=4096' npx -y firebase-tools@latest mcp"]
+      "args": ["-c", "NODE_OPTIONS='--max-old-space-size=4096' npx -y firebase-tools@15 mcp"]
     }
   }
 }

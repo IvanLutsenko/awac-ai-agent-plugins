@@ -69,13 +69,11 @@ Multi-platform crash analysis for Android & iOS with git blame forensics, code-l
 /crashlytics:install-permissions    # Add read-only allowlist to settings.json
 ```
 
-**Status:** ✅ Production Ready | **Version:** 4.4.3
+**Status:** ✅ Production Ready | **Version:** 4.4.4
 
-**What's New in 4.4.3:**
-- Language-aware validator: `SECTION_ALIASES` для en/ru/es/de/fr/pt/it (фикс false 6/14 на не-английских отчётах). Forensics-агенты пишут headers всегда на английском, body — на target language.
-- `BRANCH_REF` (= `origin/<default_branch>`) вместо хардкода `master` + обязательный `git fetch origin --quiet` перед blame/log/show. STEP 4.0 sanity-check «is the fix already merged in BRANCH_REF».
-- `/crashlytics:install-permissions` — мерджит read-only allowlist в settings.json (user или project уровень на выбор).
-- 7 smoke-tests фикстур (en/ru/es/de/fr/pt/it) в `scripts/tests/`.
+**What's New in 4.4.4:**
+- Firebase MCP launcher pinned to `firebase-tools@15` instead of `@latest`, so plugin startup no longer drifts on silent major updates and works better offline once cached.
+- After updating, restart the Claude Code session once so the new `.mcp.json` command is picked up.
 
 **Features:**
 - 4-step multi-agent pipeline: classifier → fetcher → forensics → validate-report.py

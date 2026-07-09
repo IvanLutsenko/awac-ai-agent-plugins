@@ -10,8 +10,8 @@
   "plugins": [
     {
       "name": "crashlytics",
-      "version": "4.4.3",
-      "description": "Multi-platform crash analysis for Android & iOS with git blame forensics and code-level fixes. Language-aware validator (en/ru/es/de/fr/pt/it), origin/<branch> forensics. MCP-primary fetch with REST API fallback.",
+      "version": "4.4.4",
+      "description": "Multi-platform crash analysis for Android & iOS with git blame forensics, code-level fixes, and a major-pinned Firebase MCP launcher. Language-aware validator (en/ru/es/de/fr/pt/it), origin/<branch> forensics. MCP-primary fetch with REST API fallback.",
       "source": "./plugins/crashlytics",
       "author": {
         "name": "Ivan Lutsenko",
