@@ -1,5 +1,5 @@
 ---
-name: auto-theme-sync
+name: sync-theme
 description: Manually sync the editor theme to the current macOS appearance (light/dark). Use when the user switched macOS appearance and wants Claude Code and/or Codex themes refreshed now, or asks to fix/resync the theme. Light → gruvbox-light, dark → sunset-drive.
 version: 0.1.0
 ---
@@ -21,12 +21,12 @@ It also installs the bundled themes on first run (`~/.claude/themes/`,
 ### Execution & Communication Rules:
 1. First, check if the host OS is Darwin (macOS). If not, refuse to run and output: `Error: Host environment is not macOS.`
 2. Run the bash command. Ensure you capture stderr.
-3. If the script fails with exit code non-zero, check if files are write-protected. If so, output: `Error: Settings file is write-protected.`
-4. Before modifying, verify target settings files are valid JSON/TOML. If malformed, output: `Error: Target configuration file is malformed.`
+3. Run the script and surface any `WARN:` lines from stderr exactly as emitted.
+4. Treat `WARN: <path> malformed, skipped` and `WARN: <path> not writable` as script-reported configuration problems; do not invent different error text.
 5. Response Format: Output a 2-line bulleted summary detailing: Line 1: Detected OS appearance, Line 2: The exact themes written to both files. Do not include conversational filler.
 
 ```bash
-bash "${CODEX_PLUGIN_ROOT}/sync-theme.sh"
+bash "${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT}}/sync-theme.sh"
 ```
 
 ## Automatic switching (one-time setup)

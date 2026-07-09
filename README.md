@@ -171,7 +171,12 @@ Syncs Claude Code **and Codex** themes with macOS system appearance (light/dark)
 /plugin install auto-theme
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.1.1
+**Status:** ✅ Production Ready | **Version:** 1.1.2
+
+**What's New in 1.1.2:**
+- `sync-theme` skill now resolves the script path correctly in both Claude Code and Codex
+- malformed config files and non-writable targets now emit `WARN:` instead of being skipped silently
+- unknown `custom:*` themes without a light/dark pair are preserved instead of being overwritten
 
 **What's New in 1.1.1:**
 - `sync-theme` skill: explicit execution rules — macOS-only guard, stderr capture, write-protection and malformed-config errors, fixed 2-line response format

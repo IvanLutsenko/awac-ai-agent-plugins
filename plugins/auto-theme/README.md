@@ -59,8 +59,15 @@ in `~/.codex/hooks.json`, then trust it (`~/.codex/config.toml` `[hooks.state]`)
 ```
 
 On Codex, `[tui] theme` controls **syntax-highlighting** themes; `sunset-drive`
-is shipped as a `.tmTheme`, `gruvbox-light` is built in. The `auto-theme-sync`
+is shipped as a `.tmTheme`, `gruvbox-light` is built in. The `sync-theme`
 skill runs the same sync on demand.
+
+## Changelog
+
+### 1.1.2
+- `sync-theme` skill now resolves the script path in both Claude Code and Codex environments
+- `sync-theme.sh` now emits `WARN:` messages for malformed JSON and non-writable config files instead of failing silently
+- unknown `custom:*` themes without a `-light`/`-dark` pair are preserved and skipped with a warning
 
 ## Notes
 

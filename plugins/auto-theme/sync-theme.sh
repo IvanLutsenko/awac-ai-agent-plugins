@@ -37,7 +37,7 @@ install_themes "$ROOT/themes" "$HOME/.claude/themes" "*.json"
 install_themes "$ROOT/codex-themes" "$HOME/.codex/themes" "*.tmTheme"
 
 # --- Claude Code: settings.json (authoritative) + claude.json mirror ---
-python3 - "$MODE" "$HOME/.claude/settings.json" "$HOME/.claude.json" <<'PY' 2>/dev/null
+python3 - "$MODE" "$HOME/.claude/settings.json" "$HOME/.claude.json" <<'PY'
 import json, os, sys
 
 mode, *paths = sys.argv[1], *sys.argv[2:]
@@ -45,21 +45,32 @@ mode, *paths = sys.argv[1], *sys.argv[2:]
 # Explicit light<->dark pairing. {} disables it (pure family-swap).
 PAIR = {"light": "custom:gruvbox-light", "dark": "custom:sunset-drive"}
 
-def read_theme(p):
+def warn(path, message):
+    print(f"WARN: {path} {message}", file=sys.stderr)
+
+def load_json(path):
     try:
-        with open(p) as f:
-            return json.load(f).get("theme") or ""
-    except Exception:
-        return ""
+        with open(path) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return None
+    except json.JSONDecodeError:
+        warn(path, "malformed, skipped")
+        return None
+
+payloads = {path: load_json(path) for path in paths}
 
 # settings.json wins; fall back to claude.json for the current value.
-current = read_theme(paths[0]) or read_theme(paths[1])
+current = (payloads[paths[0]] or {}).get("theme") or (payloads[paths[1]] or {}).get("theme") or ""
 
 def target_for(cur):
     if cur in PAIR.values():
         return PAIR[mode]
     if cur.startswith("custom:") and cur.endswith(("-light", "-dark")):
         return f"{cur.rsplit('-', 1)[0]}-{mode}"
+    if cur.startswith("custom:"):
+        warn(cur, f"has no {mode} pair, skipped")
+        return cur
     for suffix in ("-ansi", "-daltonized"):
         if cur.endswith(suffix):
             return mode + suffix
@@ -68,26 +79,25 @@ def target_for(cur):
 target = target_for(current)
 
 for p in paths:
-    if not os.path.exists(p):
-        continue
-    try:
-        with open(p) as f:
-            d = json.load(f)
-    except Exception:
+    d = payloads[p]
+    if d is None:
         continue
     if d.get("theme") == target:
         continue
     d["theme"] = target
     pretty = p.endswith("settings.json")
-    with open(p, "w") as f:
-        if pretty:
-            json.dump(d, f, indent=2)
-        else:
-            json.dump(d, f, separators=(",", ":"))
+    try:
+        with open(p, "w") as f:
+            if pretty:
+                json.dump(d, f, indent=2)
+            else:
+                json.dump(d, f, separators=(",", ":"))
+    except OSError:
+        warn(p, "not writable")
 PY
 
 # --- Codex: ~/.codex/config.toml [tui] theme ---
-python3 - "$MODE" "$HOME/.codex/config.toml" <<'PY' 2>/dev/null
+python3 - "$MODE" "$HOME/.codex/config.toml" <<'PY'
 import os, sys
 
 mode, toml_path = sys.argv[1], sys.argv[2]
@@ -130,8 +140,11 @@ content = "".join(out)
 with open(toml_path) as f:
     if f.read() == content:                      # idempotent
         sys.exit(0)
-with open(toml_path, "w") as f:
-    f.write(content)
+try:
+    with open(toml_path, "w") as f:
+        f.write(content)
+except OSError:
+    print(f"WARN: {toml_path} not writable", file=sys.stderr)
 PY
 
 exit 0
