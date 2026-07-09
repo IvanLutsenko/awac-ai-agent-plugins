@@ -1,5 +1,5 @@
 ---
-name: clip-maker:moment-finder
+name: moment-finder
 description: Analyzes whisper transcript to find the most engaging moments for vertical clips. Looks for strong quotes, complete thoughts, practical advice, and provocative statements.
 tools: Read, Bash
 model: opus

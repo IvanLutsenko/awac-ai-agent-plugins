@@ -324,7 +324,7 @@ Automated vertical clip creator for talks and presentations. Whisper + Claude + 
 /find-moments ~/Downloads/transcript.json      # Only find moments
 ```
 
-**Status:** 🔨 Beta | **Version:** 1.3.0
+**Status:** 🔨 Beta | **Version:** 1.3.1
 
 **Features:**
 - Whisper transcription (local or API)
@@ -333,6 +333,10 @@ Automated vertical clip creator for talks and presentations. Whisper + Claude + 
 - ffmpeg vertical clip cutting (9:16)
 - Auto-subtitles from transcript
 - Social media copy generation (Shorts/Reels/TikTok)
+
+**What's New in 1.3.1:**
+- Fixed dual-target agent naming for Claude Code pipeline calls
+- Hardened script argument quoting, path handling, and ffmpeg/Whisper error surfacing
 
 ---
 

@@ -6,7 +6,7 @@
 - **obsidian-tracker** (v4.5.0) — Project tracking, task management, session logging via Obsidian
 - **locale-notifications** (v2.0.0) — macOS notifications in system language
 - **combined-review** (v1.3.0) — Multi-agent code review + CodeRabbit CLI
-- **clip-maker** (v1.3.0) — Automated vertical clip creator (whisper + Claude + ffmpeg)
+- **clip-maker** (v1.3.1) — Automated vertical clip creator (whisper + Claude + ffmpeg)
 - **drawbridge** (v0.1.0) — Bridge briefs to image-gen web UIs (Gemini/ChatGPT/Grok/Midjourney), per-target prompt tuning
 - **plugin-cross-port** (v0.10.0) — Bidirectional CC ↔ Codex plugin conversion (agents → standalone Codex skills)
 - **auto-theme** (v1.1.1) — Syncs Claude Code + Codex themes with macOS light/dark; bundles gruvbox-light / sunset-drive

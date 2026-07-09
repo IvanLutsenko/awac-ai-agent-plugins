@@ -6,8 +6,8 @@
 set -euo pipefail
 
 if ! python3 -c "from PIL import ImageFont" 2>/dev/null; then
-  echo "Installing Pillow..."
-  pip3 install Pillow 2>/dev/null
+  echo "Pillow missing, run install-deps.sh" >&2
+  exit 1
 fi
 
 export MOMENTS_JSON="$1"
@@ -67,12 +67,27 @@ for i, moment in enumerate(moments):
         print(f'Clip {moment_id}: no segments, skipping')
         continue
 
-    # Get fps
-    probe = subprocess.run(
-        ['ffprobe', '-v', 'quiet', '-show_entries', 'stream=r_frame_rate', '-of', 'csv=p=0', clip_path],
-        capture_output=True, text=True)
-    fps_str = probe.stdout.strip().split(chr(10))[0]
+    probe = subprocess.run([
+        'ffprobe', '-v', 'quiet',
+        '-show_entries', 'stream=width,height,r_frame_rate',
+        '-of', 'json',
+        clip_path
+    ], capture_output=True, text=True, check=True)
+    probe_data = json.loads(probe.stdout)
+    streams = probe_data.get('streams', [])
+    if not streams:
+        raise SystemExit(f'Clip {moment_id}: ffprobe returned no stream info')
+    stream = streams[0]
+    width = stream.get('width')
+    height = stream.get('height')
+    if width != W or height != H:
+        raise SystemExit(f'Clip {moment_id}: expected {W}x{H}, got {width}x{height}')
+    fps_str = stream.get('r_frame_rate', '')
+    if fps_str in ('', '0/0'):
+        raise SystemExit(f'Clip {moment_id}: invalid frame rate {fps_str or "<empty>"}')
     fps_num, fps_den = map(int, fps_str.split('/'))
+    if fps_den == 0 or fps_num == 0:
+        raise SystemExit(f'Clip {moment_id}: invalid frame rate {fps_str}')
     fps = fps_num / fps_den
 
     # Save original for audio

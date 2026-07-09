@@ -66,8 +66,8 @@
     },
     {
       "name": "clip-maker",
-      "version": "1.3.0",
-      "description": "Automated vertical clip creator for talks: whisper + Claude (moments + smart crop) + ffmpeg",
+      "version": "1.3.1",
+      "description": "Automated vertical clip creator for talks: whisper + Claude (moments + smart crop) + ffmpeg, with safer script argument handling and error reporting",
       "source": "./plugins/clip-maker",
       "author": {
         "name": "Ivan Lutsenko",

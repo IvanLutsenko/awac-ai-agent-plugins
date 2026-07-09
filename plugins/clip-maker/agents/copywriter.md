@@ -1,5 +1,5 @@
 ---
-name: clip-maker:copywriter
+name: copywriter
 description: Generates platform-specific social media descriptions for video clips. Creates copy for YouTube Shorts, Instagram Reels, and TikTok.
 tools: Read, Write
 model: sonnet

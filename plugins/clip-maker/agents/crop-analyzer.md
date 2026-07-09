@@ -1,5 +1,5 @@
 ---
-name: clip-maker:crop-analyzer
+name: crop-analyzer
 description: Analyzes video frames to determine optimal crop position for vertical (9:16) clips. Uses vision to locate the speaker and calculate crop coordinates.
 tools: Read, Bash
 model: sonnet

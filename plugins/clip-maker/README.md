@@ -18,7 +18,7 @@ codex plugin add clip-maker@awac-ai-agent-plugins
 
 Dependencies (auto-installed on first run):
 - `ffmpeg` (via brew)
-- `openai-whisper` (via pip)
+- `openai-whisper` (via `uv pip`, fallback: `pip3`)
 
 ## Quick Start
 
@@ -33,7 +33,13 @@ Dependencies (auto-installed on first run):
 
 ## Status
 
-**Version:** 1.3.0 | **Status:** Beta
+**Version:** 1.3.1 | **Status:** Beta
+
+**What's New in 1.3.1:**
+- Fixed Claude agent names so `/clip-maker` resolves the expected agent types
+- Fixed quoting and path handling in `transcribe.sh`, `cut-clip.sh`, and `extract-frames.sh`
+- Added explicit error reporting for Whisper API / ffmpeg failures and subtitle input guards
+- Switched Python dependency installs to `uv` first and removed silent Pillow auto-install from subtitle burn
 
 **What's New in 1.3.0:**
 - YouTube URL support via yt-dlp (pass URL instead of file path)

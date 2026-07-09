@@ -37,12 +37,12 @@ if ! $check_api; then
     echo -e "${GREEN}✓${NC} whisper Python module found"
   else
     echo -e "${YELLOW}⟳${NC} Installing openai-whisper..."
-    if command -v pip3 &>/dev/null; then
-      pip3 install openai-whisper
-    elif command -v uv &>/dev/null; then
+    if command -v uv &>/dev/null; then
       uv pip install openai-whisper
+    elif command -v pip3 &>/dev/null; then
+      pip3 install openai-whisper
     else
-      echo -e "${RED}✗${NC} pip3/uv not found. Install whisper manually: pip install openai-whisper"
+      echo -e "${RED}✗${NC} uv/pip3 not found. Install whisper manually: uv pip install openai-whisper"
       errors=$((errors + 1))
     fi
   fi
@@ -55,6 +55,8 @@ else
   echo -e "${YELLOW}⟳${NC} Installing yt-dlp..."
   if command -v brew &>/dev/null; then
     brew install yt-dlp
+  elif command -v uv &>/dev/null; then
+    uv pip install yt-dlp
   elif command -v pip3 &>/dev/null; then
     pip3 install yt-dlp
   else
@@ -68,10 +70,20 @@ if python3 -c "from PIL import ImageFont" 2>/dev/null; then
   echo -e "${GREEN}✓${NC} Pillow found"
 else
   echo -e "${YELLOW}⟳${NC} Installing Pillow..."
-  pip3 install Pillow 2>/dev/null || {
-    echo -e "${RED}✗${NC} Failed to install Pillow. Install manually: pip install Pillow"
+  if command -v uv &>/dev/null; then
+    uv pip install Pillow || {
+      echo -e "${RED}✗${NC} Failed to install Pillow. Install manually: uv pip install Pillow"
+      errors=$((errors + 1))
+    }
+  elif command -v pip3 &>/dev/null; then
+    pip3 install Pillow || {
+      echo -e "${RED}✗${NC} Failed to install Pillow. Install manually: pip3 install Pillow"
+      errors=$((errors + 1))
+    }
+  else
+    echo -e "${RED}✗${NC} uv/pip3 not found. Install Pillow manually: uv pip install Pillow"
     errors=$((errors + 1))
-  }
+  fi
 fi
 
 # API mode — check OPENAI_API_KEY

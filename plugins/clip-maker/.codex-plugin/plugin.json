@@ -1,6 +1,6 @@
 {
   "name": "clip-maker",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Automated vertical clip creator for talks and presentations. Whisper transcription + Claude analysis (moments + smart crop) + ffmpeg processing. Full pipeline: video → transcribe → find moments → crop analysis → cut clips → subtitles → social media copy.",
   "author": {
     "name": "Ivan Lutsenko"

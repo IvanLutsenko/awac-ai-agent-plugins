@@ -44,25 +44,36 @@ if $USE_API; then
     UPLOAD_PATH="$AUDIO_PATH"
   fi
 
-  PROMPT_API_ARG=""
+  PROMPT_ARGS=()
   if [[ -n "$PROMPT" ]]; then
-    PROMPT_API_ARG="-F prompt=$PROMPT"
+    PROMPT_ARGS=(-F "prompt=$PROMPT")
   fi
 
-  RESPONSE=$(curl -s https://api.openai.com/v1/audio/transcriptions \
+  RESPONSE=$(curl -sS https://api.openai.com/v1/audio/transcriptions \
     -H "Authorization: Bearer ${OPENAI_API_KEY}" \
     -F file="@${UPLOAD_PATH}" \
     -F model="whisper-1" \
     -F response_format="verbose_json" \
     -F timestamp_granularities[]="segment" \
     -F language="$LANGUAGE" \
-    $PROMPT_API_ARG)
+    "${PROMPT_ARGS[@]}")
 
   # Convert API response to our format: [{start, end, text}, ...]
   echo "$RESPONSE" | python3 -c "
 import json, sys
 data = json.load(sys.stdin)
+if data.get('error'):
+    error = data['error']
+    if isinstance(error, dict):
+        message = error.get('message', json.dumps(error, ensure_ascii=False))
+    else:
+        message = str(error)
+    print(f'Whisper API error: {message}', file=sys.stderr)
+    sys.exit(1)
 segments = [{'start': s['start'], 'end': s['end'], 'text': s['text'].strip()} for s in data.get('segments', [])]
+if not segments:
+    print('Whisper API returned no segments', file=sys.stderr)
+    sys.exit(1)
 json.dump(segments, sys.stdout, ensure_ascii=False, indent=2)
 " > "$TRANSCRIPT_PATH"
 
@@ -70,9 +81,9 @@ else
   echo "Transcribing locally with whisper (model: large-v3)..."
 
   # Use whisper CLI
-  PROMPT_ARG=""
+  PROMPT_ARGS=()
   if [[ -n "$PROMPT" ]]; then
-    PROMPT_ARG="--initial_prompt $PROMPT"
+    PROMPT_ARGS=(--initial_prompt "$PROMPT")
   fi
 
   if command -v whisper &>/dev/null; then
@@ -81,28 +92,34 @@ else
       --language "$LANGUAGE" \
       --output_format json \
       --output_dir "$OUTPUT_DIR" \
-      $PROMPT_ARG \
+      "${PROMPT_ARGS[@]}" \
       2>/dev/null
 
     # Whisper CLI outputs audio.json, convert to our format
     WHISPER_JSON="${OUTPUT_DIR}/audio.json"
-    python3 -c "
+    WHISPER_JSON="$WHISPER_JSON" TRANSCRIPT_PATH="$TRANSCRIPT_PATH" python3 -c "
 import json
-with open('$WHISPER_JSON') as f:
+import os
+with open(os.environ['WHISPER_JSON']) as f:
     data = json.load(f)
 segments = [{'start': s['start'], 'end': s['end'], 'text': s['text'].strip()} for s in data.get('segments', [])]
-with open('$TRANSCRIPT_PATH', 'w') as f:
+with open(os.environ['TRANSCRIPT_PATH'], 'w') as f:
     json.dump(segments, f, ensure_ascii=False, indent=2)
 "
   else
     # Fallback: use Python module directly
-    python3 -c "
+    AUDIO_PATH="$AUDIO_PATH" LANGUAGE="$LANGUAGE" PROMPT="$PROMPT" TRANSCRIPT_PATH="$TRANSCRIPT_PATH" python3 -c "
 import whisper, json
+import os
 model = whisper.load_model('large-v3')
-prompt = '$PROMPT' if '$PROMPT' else None
-result = model.transcribe('$AUDIO_PATH', language='$LANGUAGE', initial_prompt=prompt)
+prompt = os.environ['PROMPT'] or None
+result = model.transcribe(
+    os.environ['AUDIO_PATH'],
+    language=os.environ['LANGUAGE'],
+    initial_prompt=prompt,
+)
 segments = [{'start': s['start'], 'end': s['end'], 'text': s['text'].strip()} for s in result['segments']]
-with open('$TRANSCRIPT_PATH', 'w') as f:
+with open(os.environ['TRANSCRIPT_PATH'], 'w') as f:
     json.dump(segments, f, ensure_ascii=False, indent=2)
 "
   fi
@@ -111,5 +128,5 @@ fi
 # Cleanup intermediate files
 rm -f "$AUDIO_PATH" "${OUTPUT_DIR}/audio.mp3" "${OUTPUT_DIR}/audio.json"
 
-SEGMENT_COUNT=$(python3 -c "import json; print(len(json.load(open('$TRANSCRIPT_PATH'))))")
+SEGMENT_COUNT=$(TRANSCRIPT_PATH="$TRANSCRIPT_PATH" python3 -c "import json, os; print(len(json.load(open(os.environ['TRANSCRIPT_PATH']))))")
 echo "Transcription complete: $SEGMENT_COUNT segments → $TRANSCRIPT_PATH"

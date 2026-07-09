@@ -18,4 +18,4 @@ yt-dlp \
   -o "${OUTPUT_DIR}/%(title)s.%(ext)s" \
   --no-playlist \
   --print after_move:filepath \
-  "$URL" 2>&2
+  "$URL"
