@@ -1,7 +1,7 @@
 {
   "name": "locale-notifications",
   "description": "macOS notifications in your system language. Auto-translates via Google Translate with local caching. Supports custom messages.",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "author": {
     "name": "Ivan Lutsenko",
     "email": "ivan@lutsenko.com",
@@ -16,7 +16,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/notify.sh"
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/notify.sh",
+            "timeout": 10
           }
         ]
       }

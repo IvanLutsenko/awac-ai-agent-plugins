@@ -1,14 +1,22 @@
 #!/bin/bash
 
+INPUT=$(cat)
+CWD=$(printf '%s' "$INPUT" | jq -r '.cwd // "."' 2>/dev/null)
+[ -z "$CWD" ] && CWD="."
+
 # 1. Check user-configured custom message
-CONFIG=".claude/locale-notifications.local.md"
+CONFIG="$CWD/.claude/locale-notifications.local.md"
 if [ -f "$CONFIG" ]; then
     custom=$(python3 -c "
-import re
-text = open('$CONFIG').read()
+import re, sys
+text = open(sys.argv[1]).read()
 m = re.search(r'^message:\s*(.+)$', text, re.MULTILINE)
-if m: print(m.group(1).strip().strip('\"').strip(\"'\"))
-" 2>/dev/null)
+if m:
+    value = m.group(1).strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ('\"', \"'\"):
+        value = value[1:-1]
+    print(value)
+" "$CONFIG" 2>/dev/null)
     [ -n "$custom" ] && msg="$custom"
 fi
 
@@ -44,4 +52,6 @@ if [ -z "$msg" ]; then
     fi
 fi
 
-osascript -e "display notification \"$msg\" with title \"Claude Code\""
+osascript -e 'on run argv' \
+    -e 'display notification (item 1 of argv) with title "Claude Code"' \
+    -e 'end run' -- "$msg"

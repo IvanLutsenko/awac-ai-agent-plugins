@@ -207,7 +207,12 @@ macOS notifications for Claude Code in your system language.
 /plugin install locale-notifications
 ```
 
-**Status:** ✅ Production Ready | **Version:** 2.0.0
+**Status:** ✅ Production Ready | **Version:** 2.0.1
+
+**What's New in 2.0.1:**
+- Quoted custom messages no longer break the macOS notification call
+- Project-local config now resolves from the hook `cwd`
+- Notification hook manifest now includes `timeout: 10`
 
 **What's New in 2.0.0:**
 - Auto-translation via Google Translate API — any language supported

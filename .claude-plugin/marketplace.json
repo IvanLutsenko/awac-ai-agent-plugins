@@ -32,8 +32,8 @@
     },
     {
       "name": "locale-notifications",
-      "version": "2.0.0",
-      "description": "Локалізовані macOS сповіщення для Claude Code (uk/ru/kk/en)",
+      "version": "2.0.1",
+      "description": "Localized macOS notifications for Claude Code with safe quoted messages, cwd-based config lookup, and cached auto-translation",
       "source": "./plugins/locale-notifications",
       "author": {
         "name": "Ivan Lutsenko",

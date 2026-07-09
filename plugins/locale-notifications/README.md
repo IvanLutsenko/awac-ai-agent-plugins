@@ -49,9 +49,14 @@ rm -rf ~/.cache/locale-notifications
 
 ## Version
 
-2.0.0
+2.0.1
 
 ## Changelog
+
+### 2.0.1
+- Fixed quoted custom messages by passing the notification text to `osascript` as an argument
+- Fixed config lookup to use hook `cwd`, so project-local `.claude/locale-notifications.local.md` works reliably
+- Added hook timeout metadata in the plugin manifest
 
 ### 2.0.0
 - Auto-translation via Google Translate API — any language supported
