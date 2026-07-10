@@ -2,6 +2,12 @@
 
 Bridge between a short brief and image-gen web UIs (Gemini Imagen 3, ChatGPT DALL-E 3, Grok Aurora, Midjourney). No API keys, no payments — uses your existing browser sessions.
 
+Version: 0.1.1
+
+## What's New in 0.1.1
+
+- Fixed `drawbridge.local.md` frontmatter parsing so a markdown `---` in the body cannot reopen config parsing and override settings.
+
 ## Installation
 
 **Claude Code:**

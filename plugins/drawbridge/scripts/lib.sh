@@ -28,8 +28,17 @@ db_config_get() {
   local key="$2"
   [[ -z "$file" || ! -f "$file" ]] && return 0
   awk -v k="$key" '
-    /^---[[:space:]]*$/ { fm = !fm; next }
-    fm {
+    BEGIN { state = 0 }
+    /^---[[:space:]]*$/ {
+      if (state == 0) {
+        state = 1
+        next
+      }
+      if (state == 1) {
+        exit
+      }
+    }
+    state == 1 {
       line = $0
       idx = index(line, ":")
       if (idx > 0) {

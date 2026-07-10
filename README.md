@@ -229,6 +229,8 @@ macOS notifications for Claude Code in your system language.
 
 Bridge between a short brief and image-gen web UIs (Gemini Imagen 3, ChatGPT DALL-E 3, Grok Aurora, Midjourney). Crafts a target-tuned prompt, copies it to clipboard, opens the target — no API keys, no payments.
 
+**What's New in 0.1.1:** frontmatter parsing no longer reopens on markdown `---` lines in the config body.
+
 📚 **[Full Documentation](plugins/drawbridge/README.md)**
 
 **Installation:**
@@ -246,14 +248,14 @@ Bridge between a short brief and image-gen web UIs (Gemini Imagen 3, ChatGPT DAL
 /draw-config set default_target chatgpt          # change default
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.1.0
+**Status:** 🔨 Beta | **Version:** 0.1.1
 
 **Features:**
 - Per-target prompt fine-tuning (Imagen prose / DALL-E structure / Aurora density / MJ tag syntax)
 - Auto-translate brief to English (configurable)
 - Settings via `~/.claude/drawbridge.local.md` with project-local override
 - History of last 200 prompts for `/redraw`
-- macOS only in 0.1.0
+- macOS only in 0.1.1
 
 ---
 

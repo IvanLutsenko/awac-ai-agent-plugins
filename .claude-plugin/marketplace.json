@@ -77,8 +77,8 @@
     },
     {
       "name": "drawbridge",
-      "version": "0.1.0",
-      "description": "Bridge between a short brief and image-gen web UIs (Gemini/ChatGPT/Grok/Midjourney). Crafts target-tuned prompt, copies to clipboard, opens the UI — no API keys.",
+      "version": "0.1.1",
+      "description": "Bridge between a short brief and image-gen web UIs (Gemini/ChatGPT/Grok/Midjourney). Crafts target-tuned prompt, copies to clipboard, opens the UI — no API keys; frontmatter parsing no longer reopens from markdown hr lines.",
       "source": "./plugins/drawbridge",
       "author": {
         "name": "Ivan Lutsenko",
