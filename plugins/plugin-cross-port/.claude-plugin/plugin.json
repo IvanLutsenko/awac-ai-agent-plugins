@@ -1,7 +1,7 @@
 {
   "name": "plugin-cross-port",
   "description": "Bidirectional conversion between Claude Code and Codex plugin formats. CC → Codex and Codex → CC, one-shot or continuous. Auto-converts agents to standalone Codex skills.",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "author": {
     "name": "Ivan Lutsenko",
     "email": "ivan@lutsenko.com",

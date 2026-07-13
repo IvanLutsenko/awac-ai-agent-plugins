@@ -1,5 +1,5 @@
 ---
-name: Convert Claude Code Plugin to Codex
+name: cc-to-codex
 description: One-shot conversion of a Claude Code plugin to Codex format. Use when asked to convert, port, or add Codex support for a plugin in this repository.
 version: 0.1.0
 ---

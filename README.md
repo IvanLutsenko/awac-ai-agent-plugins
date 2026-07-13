@@ -286,7 +286,10 @@ python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/exa
 python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/example --apply
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.10.0
+**Status:** 🔨 Beta | **Version:** 0.10.1
+
+**What's New in 0.10.1:**
+- Fixed hand-authored `plugin-cross-port` skill frontmatter names to use kebab-case identifiers matching their directories
 
 **What's New in 0.10.0:**
 - **Breaking:** state files renamed to match their JSON content — `.plugin-cross-port.yaml` → `.plugin-cross-port.json`, `.plugin-cross-port.marketplace.yaml` → `.plugin-cross-port.marketplace.json`, `adaptation-state.yaml` → `adaptation-state.json`. Rename existing state files when upgrading.

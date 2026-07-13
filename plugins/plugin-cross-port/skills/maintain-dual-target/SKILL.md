@@ -1,5 +1,5 @@
 ---
-name: Maintain Dual-Target Plugin
+name: maintain-dual-target
 description: Continuous maintenance workflow for plugins that target both Claude Code and Codex. Use when a plugin's commands, skills, or agents have changed and the Codex target needs updating.
 version: 0.1.0
 ---

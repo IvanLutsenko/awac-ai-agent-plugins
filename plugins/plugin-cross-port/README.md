@@ -6,7 +6,7 @@ Converts individual plugins in either direction and reconciles dual-target
 Claude Code and Codex marketplaces. A repository chooses one canonical
 marketplace, while each plugin keeps its own `source_of_truth`.
 
-**Version:** 0.10.0
+**Version:** 0.10.1
 
 ---
 
@@ -200,6 +200,9 @@ available and emit a warning.
 ---
 
 ## Changelog
+
+### 0.10.1
+- Fix skill frontmatter `name:` values for hand-authored skills so they match directory kebab-case identifiers (`cc-to-codex`, `codex-to-cc`, `maintain-dual-target`)
 
 ### 0.10.0
 - **Breaking:** state files renamed to match their JSON content: `.plugin-cross-port.yaml` → `.plugin-cross-port.json`, `.plugin-cross-port.marketplace.yaml` → `.plugin-cross-port.marketplace.json`, `.plugin-cross-port/adaptation-state.yaml` → `adaptation-state.json`. When upgrading, rename existing state files (`git mv`) and update the installed pre-commit hook (`/plugin-cross-port:install-hook`). `.plugin-cross-port.config.yaml` is real YAML and keeps its name.

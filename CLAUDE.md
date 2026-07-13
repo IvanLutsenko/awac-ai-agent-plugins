@@ -8,7 +8,7 @@
 - **combined-review** (v1.3.0) — Multi-agent code review + CodeRabbit CLI
 - **clip-maker** (v1.3.1) — Automated vertical clip creator (whisper + Claude + ffmpeg)
 - **drawbridge** (v0.1.1) — Bridge briefs to image-gen web UIs (Gemini/ChatGPT/Grok/Midjourney), per-target prompt tuning
-- **plugin-cross-port** (v0.10.0) — Bidirectional CC ↔ Codex plugin conversion (agents → standalone Codex skills)
+- **plugin-cross-port** (v0.10.1) — Bidirectional CC ↔ Codex plugin conversion (agents → standalone Codex skills)
 - **auto-theme** (v1.1.2) — Syncs Claude Code + Codex themes with macOS light/dark; bundles gruvbox-light / sunset-drive
 
 ## Plugin Structure
