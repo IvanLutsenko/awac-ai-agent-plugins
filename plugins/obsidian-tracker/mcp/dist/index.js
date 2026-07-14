@@ -12,7 +12,7 @@ import fs from "fs/promises";
 import { CONFIG_FILE, loadConfig, saveConfig, getVaultPath, validateVaultPath, requireVault, } from "./helpers.js";
 import { handlers } from "./handlers.js";
 // --- Server ---
-const server = new Server({ name: "obsidian-tracker", version: "4.5.0" }, { capabilities: { tools: {} } });
+const server = new Server({ name: "obsidian-tracker", version: "4.5.1" }, { capabilities: { tools: {} } });
 server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
         tools: [

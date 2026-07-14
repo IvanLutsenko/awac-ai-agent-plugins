@@ -29,7 +29,7 @@ import { handlers } from "./handlers.js";
 // --- Server ---
 
 const server = new Server(
-  { name: "obsidian-tracker", version: "4.5.0" },
+  { name: "obsidian-tracker", version: "4.5.1" },
   { capabilities: { tools: {} } }
 );
 
