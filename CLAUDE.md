@@ -3,7 +3,7 @@
 ## Active Plugins
 
 - **crashlytics** (v4.4.4) — Multi-platform crash analysis with git blame forensics
-- **obsidian-tracker** (v4.5.0) — Project tracking, task management, session logging via Obsidian
+- **obsidian-tracker** (v4.5.1) — Project tracking, task management, session logging via Obsidian
 - **locale-notifications** (v2.0.1) — macOS notifications in system language
 - **combined-review** (v1.3.0) — Multi-agent code review + CodeRabbit CLI
 - **clip-maker** (v1.3.1) — Automated vertical clip creator (whisper + Claude + ffmpeg)

@@ -107,7 +107,10 @@ Project tracking, task management with kanban boards, bug logging, decision reco
 /track-stop                 # Save session to Obsidian
 ```
 
-**Status:** ✅ Production Ready | **Version:** 4.5.0
+**Status:** ✅ Production Ready | **Version:** 4.5.1
+
+**What's New in 4.5.1:**
+- Fix: MCP launcher installs deps when `dist/` ships prebuilt but `node_modules` is missing (was crashing the MCP server with -32000 / `ERR_MODULE_NOT_FOUND`).
 
 **What's New in 4.5.0:**
 - MCP server split into testable handler modules (83 vitest + 86 bats tests); auto-builds on first run — no manual `npm install && npm run build`.

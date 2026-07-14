@@ -242,9 +242,12 @@ To disable auto-allow entirely, disable the plugin or remove the `PermissionRequ
 
 ## Version
 
-4.5.0
+4.5.1
 
 ## Changelog
+
+### 4.5.1
+- **Fix**: `mcp/run-server.sh` installs `node_modules` whenever it's missing, not only when `dist/` is absent. A prebuilt-dist install (dist committed, deps not) skipped `npm install` and crashed the MCP server with `ERR_MODULE_NOT_FOUND` (`@modelcontextprotocol/sdk`) — surfaced to the client as MCP error -32000. Deps and build are now checked independently.
 
 ### 4.5.0
 - **Refactor**: MCP server split — 24 tool handlers extracted from the 1900-line `index.ts` into `handlers.ts` with an injectable vault path; covered end-to-end by 40+ new vitest tests on a temp vault (83 vitest + 86 bats total)
