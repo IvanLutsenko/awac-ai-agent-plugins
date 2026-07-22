@@ -55,8 +55,8 @@
     },
     {
       "name": "combined-review",
-      "version": "1.3.0",
-      "description": "Combined code review: multi-agent analysis (code-reviewer, git-historian, silent-failure-hunter, test-analyzer) + CodeRabbit CLI",
+      "version": "1.4.0",
+      "description": "Combined code review: multi-agent analysis (code-reviewer, git-historian, silent-failure-hunter, test-analyzer) + CodeRabbit CLI. GitHub PR + GitLab MR (inline threads).",
       "source": "./plugins/combined-review",
       "author": {
         "name": "Ivan Lutsenko",

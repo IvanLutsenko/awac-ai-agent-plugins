@@ -1,6 +1,6 @@
 ---
 name: combined-review-review
-description: Combined code review: multi-agent analysis + CodeRabbit. Supports PR, branch diff, uncommitted changes. Use when the user invokes /review.
+description: Combined code review: multi-agent analysis + CodeRabbit. Supports GitHub PR, GitLab MR, branch diff, uncommitted changes. Use when the user invokes /review.
 version: 0.1.0
 ---
 
@@ -42,7 +42,10 @@ Split `$ARGUMENTS` into **mode** and **options**:
 **Mode** (first argument or pair):
 - Empty → current changes (uncommitted + staged)
 - `--base <branch>` → current branch vs specified
-- Number (`123`) → PR number
+- Number (`123`) → **PR/MR number**. Detect the forge from `git remote get-url origin`:
+  - host contains `github` → GitHub PR (use `gh`)
+  - host contains `gitlab` → GitLab MR (use `glab`)
+- `!123` or a `.../-/merge_requests/123` URL → **GitLab MR** explicitly (use `glab`, repo = the MR's project)
 - Two branch-like arguments → diff of first relative to second (target is second)
   - `feature/X feature/Y`
   - `feature/X to feature/Y`
@@ -50,21 +53,33 @@ Split `$ARGUMENTS` into **mode** and **options**:
 
 Branch-like: contains `/`, or starts with `feature/`, `fix/`, `release/`, `hotfix/`, `master`, `main`, `develop`.
 
+> `!N` is zsh-escaped as `\!N` when typed — the literal mode value is `!N`. If `gh`/`glab` returns 404 for a bare number, you likely picked the wrong forge — re-check the origin host.
+
 **Options** (after mode):
 - `+comments` — add comment analysis
 - `+types` — add type design analysis
 - `+simplify` — add code simplification
+- `+threads` — after the report, post findings as inline resolvable threads on the MR/PR (GitLab MR only; see Step 7). Opt-in — never post without this flag or an explicit request.
 - `all` — run all agents including optional
 
 ## Step 2 — Gather diff and context
 
 Based on mode:
 
-**PR:**
+**GitHub PR:**
 ```bash
 gh pr view <number>
 gh pr diff <number>
 ```
+
+**GitLab MR** (repo path from origin, e.g. `group/project`; the MR may live on a different project — pass `-R <group/project>`):
+```bash
+glab mr view <iid> -R <group/project>                 # title, source→target, pipeline
+git fetch origin <source> <target> 2>/dev/null
+git diff origin/<target>...origin/<source> > /tmp/mr<iid>.diff   # save the diff
+git log origin/<target>..origin/<source> --oneline
+```
+Read `source`/`target` from the `glab mr view` output (`<source> -> <target>`). The working tree is usually on a *different* branch than the MR — do not read file context from cwd; create a detached worktree at the MR source (see Step 5) and read context from there.
 
 **Branch diff:**
 Try with `origin/` first, then local:
@@ -95,6 +110,8 @@ Before launching agents, check CodeRabbit availability:
 ```bash
 which coderabbit 2>/dev/null
 ```
+
+> **CLI ≥ 0.7:** `--plain` was removed (plain text is the default) — passing it errors out. Do **not** use `--plain`. Free plan caps a review at **150 changed files**; for larger diffs split by directory (see Agent 5).
 
 **If not installed:**
 Ask the user: "CodeRabbit CLI not installed. Install it? (Y/n)"
@@ -182,7 +199,7 @@ Substitute `<source>` and `<target>` with the resolved branch names from Step 1.
 ```bash
 WORKTREE=$(mktemp -d -t coderabbit-XXXXXX)
 if git worktree add --detach "$WORKTREE" "origin/<source>" 2>&1; then
-  ( cd "$WORKTREE" && coderabbit review --plain --base "origin/<target>" 2>&1 | tail -200 )
+  ( cd "$WORKTREE" && coderabbit review --base "origin/<target>" 2>&1 | tail -200 )
   git worktree remove --force "$WORKTREE" 2>/dev/null || true
 else
   echo "CodeRabbit skipped: worktree creation failed for origin/<source>"
@@ -192,15 +209,25 @@ fi
 **In-cwd path (when current branch is the source):**
 
 ```bash
-coderabbit review --plain --base <target> 2>&1 | tail -200
+coderabbit review --base <target> 2>&1 | tail -200
 ```
 
 Or, in `current` mode:
 ```bash
-coderabbit review --plain 2>&1 | tail -200
+coderabbit review 2>&1 | tail -200
 ```
 
-**If `git worktree add` fails or CodeRabbit aborts**, do not fail the review — log the skip reason and continue with the 4 agents' output.
+**Large diffs (> 150 changed files, free-plan limit).** A single `coderabbit review` aborts with `Too many files!`. Split by directory so each bucket is < 150 files and run once per bucket (in the same worktree/cwd), then merge findings:
+```bash
+# bucket the changed paths, e.g. by top-level dir:
+git diff origin/<target>...origin/<source> --name-only | awk -F/ '{print $1}' | sort | uniq -c
+# then, per bucket that keeps each run under 150 files:
+coderabbit review --base origin/<target> --dir core    2>&1 | tail -200
+coderabbit review --base origin/<target> --dir feature 2>&1 | tail -200
+```
+Pick bucket boundaries (a top-level dir, or a couple grouped together) so every run stays < 150. Note in the report which paths, if any, fell outside the buckets and were not CodeRabbit-reviewed.
+
+**If `git worktree add` fails or CodeRabbit aborts** (including a too-many-files error you chose not to split), do not fail the review — log the skip reason and continue with the 4 agents' output.
 
 ### Optional agents (by request)
 
@@ -278,4 +305,30 @@ If no findings after filtering:
 No issues found. Checked: CLAUDE.md, bugs, git history, error handling, tests.
 ```
 
-**Do NOT post a comment to the PR automatically.** Only output to the user.
+**Do NOT post to the PR/MR automatically.** Output to the user only — unless `+threads` was passed or the user explicitly asks to post threads (then do Step 7).
+
+## Step 7 — Post inline threads to a GitLab MR (opt-in only)
+
+Only when `+threads` was passed or the user explicitly asks. GitLab MR mode only.
+
+Build a threads JSON from the findings you're posting (blockers + correctness + the test findings worth a thread). Each entry:
+- `path` — repo-relative path, exactly as in the diff (`new_path`)
+- `line` — line number in the **new** (post-change) file; must be an added or in-hunk line of the diff, else GitLab rejects the position
+- `body` — the finding text (markdown; keep it in the resolved report language)
+
+Then post them all as inline, resolvable diff notes with the shipped helper:
+```bash
+cat > /tmp/threads.json <<'JSON'
+[
+  {"path": "core/.../Foo.kt", "line": 55, "body": "**Correctness.** ..."},
+  {"path": "feature/.../BarTest.kt", "line": 38, "body": "**Test.** ..."}
+]
+JSON
+python3 "plugins/combined-review/scripts/post-gitlab-mr-threads.py" \
+  --repo <group/project> --mr <iid> --threads /tmp/threads.json
+```
+The helper reads the MR's `diff_refs` itself and verifies each note came back as a `DiffNote` anchored to `line` (prints `OK`/`ERR` per thread).
+
+**Why the helper, not a raw `glab api` call:** an inline thread needs the position as a **nested JSON `position` object** sent via `glab api --input <file> -H "Content-Type: application/json"`. Passing `-f "position[new_line]=.."` sends flat keys that GitLab silently ignores — you get a plain, non-anchored comment (`type: DiscussionNote`, `position: null`) that looks fine in the API response but isn't attached to any line. The helper encodes the working mechanism so this isn't re-derived each time.
+
+After posting, tell the user how many threads landed and where; do not resolve them yourself.

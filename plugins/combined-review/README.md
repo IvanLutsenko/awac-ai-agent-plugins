@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.3.0
+**Version:** 1.4.0
 
 ---
 
@@ -37,7 +37,9 @@ coderabbit auth login
 
 ```bash
 /review                                    # Uncommitted changes
-/review 123                                # PR by number
+/review 123                                # GitHub PR / GitLab MR by number (forge auto-detected from origin)
+/review !22                                # GitLab MR explicitly
+/review !22 +threads                       # ...and post findings as inline resolvable MR threads
 /review feature/CPT-3617 feature/CPT-3600  # Branch diff
 /review feature/X to feature/Y            # Same (with "to")
 /review --base main                        # Current branch vs main
@@ -164,6 +166,12 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.4.0
+
+- **GitLab MR support**: `/review 123` auto-detects the forge from `origin`; `/review !22` (or an MR URL) targets a GitLab MR via `glab`. Step 2 fetches the MR diff and reads file context from a detached worktree at the MR source branch.
+- **`+threads`**: opt-in posting of findings as **inline, resolvable** GitLab MR threads (Step 7), via the shipped `scripts/post-gitlab-mr-threads.py` helper. The helper encodes the only mechanism that anchors a note to a line — a nested `position` JSON via `glab api --input` with `Content-Type: application/json`; `-f "position[...]"` silently produces a non-anchored comment.
+- **CodeRabbit CLI ≥ 0.7**: dropped `--plain` (removed upstream; plain is now default and passing it errors). Added a 150-file free-plan guard with a `--dir` bucket-split recipe for large diffs.
 
 ### 1.3.0
 

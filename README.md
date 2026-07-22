@@ -144,13 +144,14 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 **Quick Start:**
 ```bash
 /review                                    # Uncommitted changes
-/review 123                                # PR by number
+/review 123                                # GitHub PR / GitLab MR (forge auto-detected)
+/review !22 +threads                       # GitLab MR + inline resolvable threads
 /review feature/X feature/Y               # Branch diff
 /review --base main                        # Current branch vs main
 /review feature/X feature/Y +comments all # All agents
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.3.0
+**Status:** ✅ Production Ready | **Version:** 1.4.0
 
 **Features:**
 - 4 default agents: code-reviewer, git-historian, silent-failure-hunter, test-analyzer
