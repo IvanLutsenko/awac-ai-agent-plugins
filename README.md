@@ -156,7 +156,7 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 **Features:**
 - 4 default agents: code-reviewer, git-historian, silent-failure-hunter, test-analyzer
 - CodeRabbit CLI integration (auto-install)
-- Supports PR, branch diff, and uncommitted changes
+- Supports GitHub PR, GitLab MR (inline threads), branch diff, and uncommitted changes
 - Confidence scoring (0-100) with false positive filtering
 - Optional agents: +comments, +types, +simplify
 

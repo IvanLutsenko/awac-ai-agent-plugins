@@ -105,8 +105,8 @@ Agents work internally in English for accuracy; only the final report is output 
 
 ## How It Works
 
-1. **Parse arguments** — determine mode (PR / branch diff / uncommitted)
-2. **Gather diff** — via `gh pr diff`, `git diff`, or `git diff branch1...branch2`
+1. **Parse arguments** — determine mode (PR/MR / branch diff / uncommitted)
+2. **Gather diff** — via `gh pr diff`, `glab mr` (GitLab), `git diff`, or `git diff branch1...branch2`
 3. **Check CodeRabbit** — install if missing (with user consent), check auth
 4. **Launch agents in parallel** — 4 default + CodeRabbit + optional
 5. **Score and filter** — confidence 0-100, threshold >= 60, deduplicate
