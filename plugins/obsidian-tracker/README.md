@@ -79,17 +79,18 @@ Session + structured summary saved to Obsidian
 
 | Hook | Trigger | Type | Action |
 |------|---------|------|--------|
-| PreCompact | Before context compression | prompt | Preserves tracking info in summary |
-| SessionStart:clear | `/clear` | command + prompt | Bash saves raw session to vault; prompt enriches with semantic summary |
+| PreCompact | Before context compression | command | Feeds tracking state to the compaction summarizer so it survives compaction |
+| PermissionRequest | obsidian-tracker MCP tool call | command | Auto-allows non-destructive tools; `deleteProject`/`deleteTask`/`restoreProject` still prompt |
+| SessionStart:clear | `/clear` | command | Saves raw session to vault, then nudges Claude via `systemMessage` to enrich it with a semantic summary |
 | SessionStart:compact\|resume | Context compact, resume | command | Remind about active tracking |
 | SessionStart:startup | Fresh session | command | Orphan recovery + auto-detect project via `findProjectByLocalPath` |
 | PostToolUse:TodoWrite | TodoWrite | prompt | Records completed todos to tracking file |
 | PostToolUse:Edit | Edit | command | Records edited filenames to tracking file |
 | PostToolUse:Write | Write | command | Records created filenames to tracking file |
 | PostToolUse:Bash | Bash (git commit) | command | Captures commit hashes to tracking file |
-| Stop | Agent turn ends | prompt | Reviews turn; closes tasks, logs bugs/decisions if relevant |
+| Stop | Agent turn ends | command | Silent — mechanical tracking is done by the PostToolUse hooks, semantic review moved to `/track-stop` |
 
-> Command-type hooks are bash scripts in `hooks/` — they never error even if the MCP server is unavailable. Prompt-type hooks depend on Claude executing the instruction.
+> Command-type hooks are bash scripts in `hooks/` — they never error even if the MCP server is unavailable. Prompt-type hooks depend on Claude executing the instruction, and only run inside the interactive REPL (`Prompt stop hooks are not yet supported outside REPL`) — so anything that must not silently skip is a command hook.
 
 ### Orphan recovery
 
@@ -242,9 +243,14 @@ To disable auto-allow entirely, disable the plugin or remove the `PermissionRequ
 
 ## Version
 
-4.5.1
+4.5.2
 
 ## Changelog
+
+### 4.5.2
+- **Fix**: the `PreCompact` hook never ran. It was `type: "prompt"`, and prompt hooks are rejected outside the REPL (`Prompt stop hooks are not yet supported outside REPL`) — so tracking state silently failed to survive `/compact`. Replaced with `hooks/pre-compact.sh` (`type: "command"`).
+- PreCompact's output channel is **plain stdout**, not `hookSpecificOutput`: `PreCompact` is not a member of the `hookSpecificOutput` union and has no case in the output-mapping switch, so `additionalContext` would be dropped. Successful hooks' trimmed stdout is joined into the compaction summarizer's `customInstructions`. The script prints one plain-text line; no tracking file (or a malformed one) → prints nothing, exits 0, since even `{}` would land in the summarizer as a bogus instruction.
+- **Docs**: hook table corrected against `plugin.json` — `Stop` and `SessionStart:clear` are command hooks (were documented as prompt), and the `PermissionRequest` hook was missing from the table entirely.
 
 ### 4.5.1
 - **Fix**: `mcp/run-server.sh` installs `node_modules` whenever it's missing, not only when `dist/` is absent. A prebuilt-dist install (dist committed, deps not) skipped `npm install` and crashed the MCP server with `ERR_MODULE_NOT_FOUND` (`@modelcontextprotocol/sdk`) — surfaced to the client as MCP error -32000. Deps and build are now checked independently.

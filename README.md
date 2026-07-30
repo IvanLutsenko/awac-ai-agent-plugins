@@ -107,7 +107,11 @@ Project tracking, task management with kanban boards, bug logging, decision reco
 /track-stop                 # Save session to Obsidian
 ```
 
-**Status:** ✅ Production Ready | **Version:** 4.5.1
+**Status:** ✅ Production Ready | **Version:** 4.5.2
+
+**What's New in 4.5.2:**
+- Fix: the `PreCompact` hook never ran — it was a `prompt` hook, and those are rejected outside the REPL, so tracking state silently failed to survive `/compact`. Now a command hook that feeds the state to the compaction summarizer.
+- Docs: hook table corrected against `plugin.json` (`Stop` and `SessionStart:clear` are command hooks; `PermissionRequest` was undocumented).
 
 **What's New in 4.5.1:**
 - Fix: MCP launcher installs deps when `dist/` ships prebuilt but `node_modules` is missing (was crashing the MCP server with -32000 / `ERR_MODULE_NOT_FOUND`).

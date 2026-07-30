@@ -1,7 +1,7 @@
 {
   "name": "obsidian-tracker",
   "description": "Project tracking, task management with kanban boards, bug logging, decision records (ADR), session management, and engineering traceability via Obsidian. Auto-tracks sessions, actions, bugs, and commits via hooks.",
-  "version": "4.5.1",
+  "version": "4.5.2",
   "mcpServers": "./.mcp.json",
   "author": {
     "name": "Ivan Lutsenko",
@@ -59,8 +59,9 @@
       {
         "hooks": [
           {
-            "type": "prompt",
-            "prompt": "Check if .claude/obsidian-tracking.json exists. If it does, read it and include this info in your response so it survives compaction: 'OBSIDIAN TRACKING ACTIVE: Project={project}, Goal={goal}, Actions={actions.length}'. If file doesn't exist, do nothing."
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-compact.sh",
+            "timeout": 5
           }
         ]
       }
