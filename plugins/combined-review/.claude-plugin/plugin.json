@@ -1,7 +1,7 @@
 {
   "name": "combined-review",
   "description": "Combined code review: multi-agent analysis (code-reviewer, git-historian, silent-failure-hunter, test-analyzer) + CodeRabbit CLI. Supports GitHub PR, GitLab MR, branch diff, and uncommitted changes; /rereview verifies your MR threads were fixed.",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "author": {
     "name": "Ivan Lutsenko",
     "email": "ivan@lutsenko.com",

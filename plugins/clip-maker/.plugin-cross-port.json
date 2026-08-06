@@ -1,7 +1,7 @@
 {
   "version": 1,
   "plugin": "clip-maker",
-  "generated_at": "2026-08-06T06:20:08+00:00",
+  "generated_at": "2026-08-06T06:26:12+00:00",
   "source_of_truth": "claude-code",
   "decisions": {
     "skills_shared": false,

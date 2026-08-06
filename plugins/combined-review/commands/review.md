@@ -150,6 +150,13 @@ CLAUDE.md:
 ...
 ```
 
+### Evidence rule (applies to every agent)
+
+A finding that asserts anything about code **outside the diff** — a caller, an interface contract,
+an implementer, an existing mitigation — must carry that evidence inline: the actual snippet with
+its `file:line`, located with `grep`/`rg`. "This breaks callers of `X`" without one quoted caller is
+not a finding, it's a guess. Agents read for context anyway; this only demands they show the read.
+
 ### Agent 1 — Code Reviewer
 
 Launch the `code-reviewer` agent. It checks:
@@ -246,6 +253,13 @@ Collect findings from all agents:
 3. **Scope check** — for every finding, verify the cited `file:line` is in the diff (added or modified). Run `grep` on the saved diff file if unsure. If the line is not in the diff, drop the finding even if multiple agents reported it. Reading-for-context is fine; reporting-on-unchanged-code is not.
 4. **Race-condition sanity check** — if any finding flags an `init { launch { x = suspendRead() } }` + later sync read pattern as Critical or Warning, demand the time-window estimate. If the finding doesn't quantify producer-time (typically ms for DataStore/prefs) vs consumer-time (the realistic user steps before x is read), downgrade severity or drop. Pattern-based race claims without timing are false positives.
 5. **Parallel-conflict sanity check** — if a finding cites a parallel branch/commit as a conflict source, verify with `git merge-base --is-ancestor <commit> origin/<target>`. If the commit is already in target, drop the finding.
+6. **Falsifiability gate** — for every Critical, spend one pass trying to *invalidate* it instead of confirming it. Any one of these exits kills or downgrades the finding:
+   - **safe behavior** — the bad path isn't reachable (guard upstream, the type makes it impossible, the branch is dead);
+   - **intended behavior** — the diff, the MR description, or CLAUDE.md says this is the point;
+   - **existing mitigation** — a caller, wrapper, retry, or global handler already covers it — quote it;
+   - **weak evidence** — the claim rests on a recognized pattern, not on lines you actually read.
+
+   Checks 4 and 5 are special cases of this gate. A Critical that survives should name which exit you checked and why it didn't apply.
 
 **False positives (skip):**
 - Pre-existing issues (existed before this diff)
@@ -261,6 +275,8 @@ Collect findings from all agents:
 
 Before writing the report, do a last self-check on every Critical:
 - Is the `file:line` actually in the saved diff? (`grep` it if unsure)
+- Did it survive the falsifiability gate, and does the finding say which exit was checked?
+- Does every out-of-diff claim quote the caller/contract it depends on?
 - For race-condition findings: is the time-window quantified, and is producer << consumer? If not, downgrade or drop.
 - For parallel-work findings: did you confirm the referenced commit is NOT already in target?
 

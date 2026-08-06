@@ -156,7 +156,11 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 /rereview !22 +resolve +approve            # Were my threads fixed? → resolve → approve
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.6.0
+**Status:** ✅ Production Ready | **Version:** 1.7.0
+
+**What's New in 1.7.0:**
+- Falsifiability gate on every Critical (safe / intended / already-mitigated / weak evidence) — findings must survive an attempt to refute them, not just an attempt to confirm them.
+- Out-of-diff claims must quote the caller or contract they rest on.
 
 **What's New in 1.6.0:**
 - `/rereview +agents` — one agent per file (auto above ~8 files); agents see the asks and the code, not the author's replies, so a plausible-looking diff can't pass as a fix by association.

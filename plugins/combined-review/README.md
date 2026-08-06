@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.6.0
+**Version:** 1.7.0
 
 ---
 
@@ -183,6 +183,11 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.7.0
+
+- **Falsifiability gate** (Step 5.6): every Critical now gets one pass that tries to *invalidate* it — safe behavior, intended behavior, existing mitigation, weak evidence. The existing race-condition and parallel-conflict checks became special cases of it, and a surviving Critical must name which exit it was tested against. Idea borrowed from [pr-af](https://github.com/Agent-Field/pr-af).
+- **Evidence rule** (Step 4): any claim about code outside the diff — caller, contract, implementer, mitigation — must quote the snippet with `file:line`. Agents already read for context; now they have to show the read.
 
 ### 1.6.0
 
