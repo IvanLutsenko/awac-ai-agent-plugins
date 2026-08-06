@@ -1,0 +1,32 @@
+name: notify-site
+
+# После публикации релиза плагина дёргает синк на ivan.nullptr.party, чтобы страница
+# маркетплейса не ждала суточного расписания. Срабатывает только когда реально
+# двинулись манифесты — правка README или кода плагина сайт не касается.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.claude-plugin/marketplace.json'
+      - '.agents/plugins/marketplace.json'
+  workflow_dispatch:
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger the site sync
+        env:
+          GH_TOKEN: ${{ secrets.SITE_SYNC_TOKEN }}
+        run: |
+          # Без токена молча ничего не делаем: сайт всё равно подтянет версии
+          # по своему расписанию, ронять прогон релиза из-за этого незачем.
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::secrets.SITE_SYNC_TOKEN не задан — сайт обновится по расписанию (cron 06:17 UTC)"
+            exit 0
+          fi
+          gh workflow run sync-plugins.yml \
+            --repo nullptr-party/IvanLutsenko.github.io \
+            --ref master
+          echo "синк на сайте запущен"
