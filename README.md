@@ -153,14 +153,19 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 /review feature/X feature/Y               # Branch diff
 /review --base main                        # Current branch vs main
 /review feature/X feature/Y +comments all # All agents
+/rereview !22 +resolve +approve            # Were my threads fixed? → resolve → approve
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.4.0
+**Status:** ✅ Production Ready | **Version:** 1.5.0
+
+**What's New in 1.5.0:**
+- `/rereview` — verifies your unresolved GitLab MR threads against the code at the MR head, then (opt-in) resolves them and approves. Author replies and GitLab's "changed this line in version N" auto-note don't count as a fix.
 
 **Features:**
 - 4 default agents: code-reviewer, git-historian, silent-failure-hunter, test-analyzer
 - CodeRabbit CLI integration (auto-install)
 - Supports GitHub PR, GitLab MR (inline threads), branch diff, and uncommitted changes
+- `/rereview` follow-up: per-thread fixed/not-fixed verdicts, resolve + approve
 - Confidence scoring (0-100) with false positive filtering
 - Optional agents: +comments, +types, +simplify
 

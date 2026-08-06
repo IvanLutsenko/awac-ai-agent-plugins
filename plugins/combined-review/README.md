@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.4.0
+**Version:** 1.5.0
 
 ---
 
@@ -53,6 +53,22 @@ coderabbit auth login
 /review feature/X feature/Y +simplify     # Add code simplification
 /review feature/X feature/Y all           # Run all agents
 ```
+
+### Re-review: `/rereview`
+
+Follow-up to `/review !22 +threads` — checks whether **your own** unresolved MR threads were
+actually fixed in the new revision, then resolves them and approves. GitLab MR only.
+
+```bash
+/rereview !158                # report only: per-thread ✅ / ⚠️ / ❌ / 🕓 verdicts
+/rereview !158 +resolve       # ...and resolve the confirmed ones
+/rereview !158 +approve       # ...and approve the MR
+/rereview                     # MR of the current branch
+```
+
+Verdicts come from the code at the MR head, not from replies: GitLab's *"changed this line in
+version N of the diff"* auto-note fires on any line shift or file move, and "исправил" is a claim,
+not evidence.
 
 ---
 
@@ -166,6 +182,10 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.5.0
+
+- **`/rereview`**: closes the loop after `/review +threads`. Collects your unresolved threads on a GitLab MR, diffs each one's anchor revision (`position.head_sha`) against the current head with `-M` (files move between revisions), and verifies the fix in the code at head — GitLab's "changed this line in version N" auto-note and an author's "fixed" reply are explicitly not accepted as evidence. Reports ✅ / ⚠️ / ❌ / 🕓 per thread; resolving (`+resolve`) and approving (`+approve`) are opt-in, sequential (parallel `glab` calls kill the token).
 
 ### 1.4.0
 
