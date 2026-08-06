@@ -33,6 +33,7 @@ Same as `/review`: read `language` from `.claude/combined-review.local.md` front
   (`glab mr view` with no argument).
 - `+resolve` — resolve the threads you confirm as fixed, without asking again.
 - `+approve` — approve the MR after resolving. Implies `+resolve`.
+- `+agents` — force the per-file agent fan-out in Step 4 (it also kicks in on its own above ~8 files).
 
 Without those flags this command is read-only: it reports and asks.
 
@@ -93,6 +94,21 @@ git show <diff_refs.head_sha>:<new_path> | sed -n '<line-15>,<line+15>p'
 
 **Evidence:** the requested change is present in the file at `head_sha`, and it compiles as written
 (e.g. if you asked to drop `orZero()`, check the target field is actually nullable).
+
+### Inline or fan out
+
+Do it inline. The cost driver is **distinct files**, not thread count — five threads in one file is
+one read. Fan out one agent **per file** (not per thread) when the threads span more than ~8 files,
+or when `+agents` was passed.
+
+Each agent gets: the file path, `head_sha`, and the *asks* — your original thread bodies and their
+line numbers. **Do not pass the author's replies.** The agent answers, per thread, only
+`present` / `partial` / `absent` plus one line of evidence from the code. Keeping the "исправил"
+reply out of its context is the point: it removes the anchoring that makes a plausible-looking
+diff read as a fix.
+
+The main loop then maps those verdicts to the four below, using the replies it kept — a reply is
+what separates ❌ *not fixed* from 🕓 *deferred*, and it never turns `absent` into ✅.
 
 Verdict per thread:
 - ✅ **fixed** — change is in the code at head.

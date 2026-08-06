@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.5.0
+**Version:** 1.6.0
 
 ---
 
@@ -63,6 +63,7 @@ actually fixed in the new revision, then resolves them and approves. GitLab MR o
 /rereview !158                # report only: per-thread ✅ / ⚠️ / ❌ / 🕓 verdicts
 /rereview !158 +resolve       # ...and resolve the confirmed ones
 /rereview !158 +approve       # ...and approve the MR
+/rereview !158 +agents        # one agent per file instead of inline checking
 /rereview                     # MR of the current branch
 ```
 
@@ -182,6 +183,10 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.6.0
+
+- `/rereview` gains a per-**file** agent fan-out (`+agents`, automatic above ~8 files): the cost driver is distinct files, not thread count. Each agent gets the path, the head sha and your asks — **not** the author's replies — and answers `present`/`partial`/`absent` with one line of evidence. Withholding the "исправил" reply is the point: it removes the anchoring that makes a plausible diff read as a fix. The main loop re-attaches the replies, which is what separates ❌ not-fixed from 🕓 deferred.
 
 ### 1.5.0
 

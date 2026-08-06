@@ -156,7 +156,10 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 /rereview !22 +resolve +approve            # Were my threads fixed? → resolve → approve
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.5.0
+**Status:** ✅ Production Ready | **Version:** 1.6.0
+
+**What's New in 1.6.0:**
+- `/rereview +agents` — one agent per file (auto above ~8 files); agents see the asks and the code, not the author's replies, so a plausible-looking diff can't pass as a fix by association.
 
 **What's New in 1.5.0:**
 - `/rereview` — verifies your unresolved GitLab MR threads against the code at the MR head, then (opt-in) resolves them and approves. Author replies and GitLab's "changed this line in version N" auto-note don't count as a fix.
