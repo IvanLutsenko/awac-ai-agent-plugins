@@ -155,7 +155,9 @@ def main():
 
     # 3. Update root README.md
     root_readme = os.path.join(REPO_ROOT, 'README.md')
-    if os.path.isfile(root_readme) and update_file_version(root_readme, old_version, new_version):
+    # count=1: дальше по файлу идут исторические заголовки "What's New in <old>",
+    # и замена всех вхождений переподписывает прошлый changelog новой версией.
+    if os.path.isfile(root_readme) and update_file_version(root_readme, old_version, new_version, count=1):
         updated.append("README.md")
 
     # 4. Update CLAUDE.md

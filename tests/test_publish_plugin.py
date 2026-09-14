@@ -35,7 +35,10 @@ class PublishPluginTest(unittest.TestCase):
             json.dumps({"plugins": [{"name": "sample", "version": "1.2.3"}]}),
             encoding="utf-8",
         )
-        (self.repo_root / "README.md").write_text("sample 1.2.3\n", encoding="utf-8")
+        (self.repo_root / "README.md").write_text(
+            "**Version:** 1.2.3\n\n**What's New in 1.2.3:**\n- Initial release\n",
+            encoding="utf-8",
+        )
         (self.repo_root / "CLAUDE.md").write_text("sample 1.2.3\n", encoding="utf-8")
         (self.plugin / "README.md").write_text(
             "**Version:** 1.2.3\n\n## Changelog\n\n### 1.2.3\n- Initial release\n",
@@ -110,6 +113,13 @@ class PublishPluginTest(unittest.TestCase):
         readme = (self.plugin / "README.md").read_text(encoding="utf-8")
         self.assertIn("**Version:** 1.2.4", readme)
         self.assertIn("### 1.2.3", readme)
+
+    def test_publish_preserves_historical_root_readme_changelog_versions(self):
+        self.run_publish()
+
+        readme = (self.repo_root / "README.md").read_text(encoding="utf-8")
+        self.assertIn("**Version:** 1.2.4", readme)
+        self.assertIn("**What's New in 1.2.3:**", readme)
 
 
 if __name__ == "__main__":
