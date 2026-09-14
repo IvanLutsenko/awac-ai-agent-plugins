@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.7.0
+**Version:** 1.7.1
 
 ---
 

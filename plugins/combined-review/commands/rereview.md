@@ -45,7 +45,7 @@ glab api user                                                    # -> .username 
 glab api "projects/<group%2Fproject>/merge_requests/<iid>"       # title, state, source/target, diff_refs
 ```
 
-Project path = origin, URL-encoded (`bbusiness%2Fandroid-app`). If the MR lives in another
+Project path = origin, URL-encoded (`my-group%2Fmy-repo`). If the MR lives in another
 project, take the path from the URL argument.
 
 Keep `diff_refs.head_sha` — that's the current revision, the only thing that counts as evidence.

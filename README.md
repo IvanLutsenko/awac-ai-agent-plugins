@@ -156,7 +156,10 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 /rereview !22 +resolve +approve            # Were my threads fixed? → resolve → approve
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.7.0
+**Status:** ✅ Production Ready | **Version:** 1.7.1
+
+**What's New in 1.7.1:**
+- Docs: the GitLab project-path example no longer names a specific private project.
 
 **What's New in 1.7.0:**
 - Falsifiability gate on every Critical (safe / intended / already-mitigated / weak evidence) — findings must survive an attempt to refute them, not just an attempt to confirm them.
