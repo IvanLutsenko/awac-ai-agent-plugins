@@ -69,11 +69,10 @@ Multi-platform crash analysis for Android & iOS with git blame forensics, code-l
 /crashlytics:install-permissions    # Add read-only allowlist to settings.json
 ```
 
-**Status:** ✅ Production Ready | **Version:** 4.4.4
+**Status:** ✅ Production Ready | **Version:** 4.4.5
 
-**What's New in 4.4.4:**
-- Firebase MCP launcher pinned to `firebase-tools@15` instead of `@latest`, so plugin startup no longer drifts on silent major updates and works better offline once cached.
-- After updating, restart the Claude Code session once so the new `.mcp.json` command is picked up.
+**What's New in 4.4.5:**
+- Quality gate tightened: `git fetch` alone no longer counts as evidence that the agent inspected the code. Forensics agents run it as a mandatory pre-flight on every run, so it proved nothing — `chk_executed_commands` now requires `git blame`, `git log` or `git ls-tree`.
 
 **Features:**
 - 4-step multi-agent pipeline: classifier → fetcher → forensics → validate-report.py
