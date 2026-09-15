@@ -48,6 +48,24 @@ run_one "$HERE/sample-translated-fr.md"      "fr (translated headers — alias c
 run_one "$HERE/sample-translated-pt.md"      "pt (translated headers — alias check)"
 run_one "$HERE/sample-translated-it.md"      "it (translated headers — alias check)"
 
+# Negative case: `git fetch` alone is a pre-flight step, not evidence of inspection.
+printf '  %-45s ' "negative (fetch alone is not evidence)"
+if python3 - "$VALIDATOR" <<'PY'
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("v", sys.argv[1])
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+assert m.chk_executed_commands({'executed commands': 'git fetch origin --quiet'}) == 'MISSING'
+assert m.chk_executed_commands({'executed commands': 'git blame -L 200,220 -- a.kt'}) == 'OK'
+PY
+then
+    echo "OK"
+    RESULTS+=("OK")
+else
+    echo "FAIL"
+    RESULTS+=("FAIL")
+fi
+
 failed=0
 for r in "${RESULTS[@]}"; do
     [[ "$r" == "FAIL" ]] && failed=$((failed+1))

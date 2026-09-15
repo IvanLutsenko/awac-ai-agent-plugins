@@ -319,10 +319,14 @@ def chk_checked_files(sections):
 
 
 def chk_executed_commands(sections):
+    """Evidence check: the report must name a command that actually inspected code.
+
+    `git fetch` is deliberately NOT accepted — forensics agents run it as a
+    mandatory pre-flight before any blame, so it is present in every run and
+    proves nothing about the agent having looked at the code.
+    """
     s = find_section(sections, 'executed_commands')
-    if not s:
-        return 'MISSING'
-    return 'OK' if re.search(r'git\s+(?:blame|log|fetch|ls-tree)', s) else 'MISSING'
+    return 'OK' if s and re.search(r'git\s+(?:blame|log|ls-tree)', s) else 'MISSING'
 
 
 def chk_root_cause(sections):

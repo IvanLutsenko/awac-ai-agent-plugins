@@ -2,7 +2,7 @@
 
 Crash log analysis with root cause identification, code-level fixes, and developer assignment via git blame.
 
-**Version:** 4.4.4 — Android & iOS
+**Version:** 4.4.5 — Android & iOS
 
 ---
 
@@ -125,7 +125,7 @@ The plugin tries paths in order: MCP fast-path → MCP via fetcher → REST fall
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      crashlytics v4.4.4                         │
+│                      crashlytics v4.4.5                         │
 └─────────────────────────────────────────────────────────────────┘
                               │
               ┌───────────────┴───────────────┐
@@ -310,6 +310,10 @@ MCP is also used for **project/app discovery** (`firebase_get_environment`, `fir
 ---
 
 ## Changelog
+
+### 4.4.5
+- **Changed:** `chk_executed_commands` no longer accepts `git fetch` as proof that the agent inspected the code. Forensics agents run `git fetch origin --quiet` as a mandatory pre-flight before any blame, so it is present in every run and carries no signal — the check now requires `git blame`, `git log` or `git ls-tree`.
+- **Tests:** `scripts/tests/run-tests.sh` gained a negative case — a report whose only command is `git fetch` must fail the check.
 
 ### 4.4.4
 - **Fixed:** `.mcp.json` now launches Firebase MCP via `firebase-tools@15` instead of `@latest`, so session startup no longer depends on whatever major npm serves that day.
