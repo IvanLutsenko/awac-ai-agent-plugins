@@ -90,20 +90,23 @@ gh pr diff <number>
 
 **GitLab MR** (repo path from origin, e.g. `group/project`; the MR may live on a different project — pass `-R <group/project>`):
 ```bash
-glab mr view <iid> -R <group/project>                 # title, source→target, pipeline
-git fetch origin <source> <target> 2>/dev/null
-git diff origin/<target>...origin/<source> > /tmp/mr<iid>.diff   # save the diff
-git log origin/<target>..origin/<source> --oneline
-git rev-parse origin/<source>                         # the revision under review; keep it for Step 7
+glab mr view "<iid>" -R "<group/project>"              # title, source→target, pipeline
+git fetch "<repo>" "refs/merge-requests/<iid>/head:refs/remotes/mr/<iid>"
+git fetch origin "<target>"
+git diff "origin/<target>...mr/<iid>" > "/tmp/mr<iid>.diff"   # save the diff
+git log "origin/<target>..mr/<iid>" --oneline
+git rev-parse "mr/<iid>"                              # the revision under review; keep it for Step 7
 ```
-Read `source`/`target` from the `glab mr view` output (`<source> -> <target>`). The working tree is usually on a *different* branch than the MR — do not read file context from cwd; create a detached worktree at the MR source (see Step 5) and read context from there.
+> This form works for an MR from a fork or another project, where `git fetch origin "<source>"` silently fails — the branch doesn't exist on `origin`. `<repo>` is the MR project's remote name or URL: `origin` for a normal MR, the project path or URL when `-R <group/project>` was used. The MR head is then `mr/<iid>`.
+
+Read `source`/`target` from the `glab mr view` output (`<source> -> <target>`). The working tree is usually on a *different* branch than the MR — do not read file context from cwd; a detached worktree at the MR head (`mr/<iid>`) is created before agents launch (see Step 4, "Repository root for agents") and agents read context from there.
 
 **Branch diff:**
 Try with `origin/` first, then local:
 ```bash
-git fetch origin <branch1> <branch2> 2>/dev/null
-git log origin/<target>..origin/<source> --oneline
-git diff origin/<target>...origin/<source>
+git fetch origin "<branch1>" "<branch2>" 2>/dev/null
+git log "origin/<target>..origin/<source>" --oneline
+git diff "origin/<target>...origin/<source>"
 ```
 Source = first argument, target = second.
 
@@ -172,11 +175,37 @@ the optional agents if requested.
 Run every agent on the model resolved in Step 0 — pass it as the subagent model, except for `inherit`,
 which means «leave each agent on its own declared model».
 
-Pass each agent a prompt whose **first line** is `Language: <resolved>` where `<resolved>` is the language from Step 0 (`en`, `ru`, or `uk` — never literal `system`; resolve `system` to one of the three before launching). After that line, pass: full diff, file list, CLAUDE.md content from the target revision (Step 2), and the trust-boundary note below.
+**Repository root for agents.** Before launching any agent, decide whether the revision under review
+is already checked out in cwd:
+- `current` mode and `--base <X>` mode — the current branch IS the revision under review; no worktree,
+  repository root is cwd.
+- GitLab MR mode — the revision is `mr/<iid>` (fetched in Step 2); create a detached worktree.
+- GitHub PR mode and branch-diff mode — if `git branch --show-current` differs from the source branch,
+  create a detached worktree at `origin/<source>`; otherwise repository root is cwd.
+
+When a worktree is needed:
+```bash
+WORKTREE=$(mktemp -d -t combined-review-XXXXXX)
+if git worktree add --detach "$WORKTREE" "<source-ref>" 2>&1; then
+  :
+else
+  WORKTREE=""
+  echo "Worktree creation failed for \"<source-ref>\" — agents will read from cwd instead; note this in the report."
+fi
+```
+`<source-ref>` is `mr/<iid>` for a GitLab MR, `origin/<source>` for a GitHub PR or branch diff. Keep
+`$WORKTREE` alive until every agent launched in this step — including CodeRabbit (Agent 5) — has
+finished, then remove it unconditionally, even if an agent errored:
+```bash
+[ -n "$WORKTREE" ] && git worktree remove --force "$WORKTREE" 2>/dev/null
+```
+
+Pass each agent a prompt whose **first line** is `Language: <resolved>` where `<resolved>` is the language from Step 0 (`en`, `ru`, or `uk` — never literal `system`; resolve `system` to one of the three before launching). Right after it, pass `Repository root: <path>` — the worktree path from "Repository root for agents" above, or the cwd when no worktree was needed — so agents read files at the revision under review instead of whatever's checked out in cwd. After those two lines, pass: full diff, file list, CLAUDE.md content from the target revision (Step 2), and the trust-boundary note below.
 
 Example agent prompt skeleton:
 ```
 Language: ru
+Repository root: /path/to/worktree-or-cwd
 
 <diff>
 ...
@@ -245,31 +274,19 @@ severity/confidence pipeline in Step 5.
 
 ### Agent 5 — CodeRabbit (if `coderabbit: auto` and available)
 
-CodeRabbit reviews the working tree against `--base <target>`. If the working tree is on a branch other than the source we're reviewing (PR mode or branch-diff mode where current branch ≠ source), run CodeRabbit inside a temp git worktree checked out to the source branch.
+CodeRabbit reviews the revision under review against `--base <target>`, using the same repository root
+picked in "Repository root for agents" above — reuse `$WORKTREE` when one was created for the other
+agents; don't check out a second worktree just for CodeRabbit.
 
-**Determine which path to take:**
-- `current` mode (uncommitted changes) → run in cwd, no worktree, no `--base`.
-- `--base <X>` mode → run in cwd with `--base <X>`. Current branch IS source.
-- `pr` mode and `branch-diff` mode → if `git branch --show-current` differs from the source branch, use the worktree path. Otherwise run in cwd with `--base <target>`.
-
-**Worktree path (when needed):**
-
-Substitute `<source>` and `<target>` with the resolved branch names from Step 1.
-
+**In the shared worktree** (`$WORKTREE` is set):
 ```bash
-WORKTREE=$(mktemp -d -t coderabbit-XXXXXX)
-if git worktree add --detach "$WORKTREE" "origin/<source>" 2>&1; then
-  ( cd "$WORKTREE" && coderabbit review --base "origin/<target>" 2>&1 | tail -200 )
-  git worktree remove --force "$WORKTREE" 2>/dev/null || true
-else
-  echo "CodeRabbit skipped: worktree creation failed for origin/<source>"
-fi
+( cd "$WORKTREE" && coderabbit review --base "origin/<target>" 2>&1 | tail -200 )
 ```
 
-**In-cwd path (when current branch is the source):**
-
+**In cwd** (no `$WORKTREE` — `current` mode, `--base <X>` mode, or PR/branch-diff mode where cwd
+already IS the source):
 ```bash
-coderabbit review --base <target> 2>&1 | tail -200
+coderabbit review --base "<target>" 2>&1 | tail -200
 ```
 
 Or, in `current` mode:
@@ -280,14 +297,14 @@ coderabbit review 2>&1 | tail -200
 **Large diffs (> 150 changed files, free-plan limit).** A single `coderabbit review` aborts with `Too many files!`. Split by directory so each bucket is < 150 files and run once per bucket (in the same worktree/cwd), then merge findings:
 ```bash
 # bucket the changed paths, e.g. by top-level dir:
-git diff origin/<target>...origin/<source> --name-only | awk -F/ '{print $1}' | sort | uniq -c
+git diff "origin/<target>...origin/<source>" --name-only | awk -F/ '{print $1}' | sort | uniq -c
 # then, per bucket that keeps each run under 150 files:
-coderabbit review --base origin/<target> --dir core    2>&1 | tail -200
-coderabbit review --base origin/<target> --dir feature 2>&1 | tail -200
+coderabbit review --base "origin/<target>" --dir core    2>&1 | tail -200
+coderabbit review --base "origin/<target>" --dir feature 2>&1 | tail -200
 ```
 Pick bucket boundaries (a top-level dir, or a couple grouped together) so every run stays < 150. Note in the report which paths, if any, fell outside the buckets and were not CodeRabbit-reviewed.
 
-**If `git worktree add` fails or CodeRabbit aborts** (including a too-many-files error you chose not to split), do not fail the review — log the skip reason and continue with the 4 agents' output.
+**If the worktree failed to create (see "Repository root for agents" above) or CodeRabbit aborts** (including a too-many-files error you chose not to split), do not fail the review — log the skip reason and continue with the 4 agents' output.
 
 ### Optional agents (by request)
 
@@ -394,11 +411,11 @@ cat > /tmp/threads.json <<'JSON'
 ]
 JSON
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/post-gitlab-mr-threads.py" \
-  --repo <group/project> --mr <iid> --threads /tmp/threads.json \
-  --expected-head <head_sha>
+  --repo "<group/project>" --mr "<iid>" --threads "/tmp/threads.json" \
+  --expected-head "<head_sha>"
 ```
 `<head_sha>` is the SHA captured in Step 2, not a fresh `git rev-parse` — re-reading
-`origin/<source>` here would return whatever was fetched last and the guard would compare the new
+`mr/<iid>` here would return whatever was fetched last and the guard would compare the new
 head against itself. `--expected-head` guards against the author pushing between analysis and posting — without it, findings could land on code that's no longer at the revision we diffed. The helper reads the MR's `diff_refs` itself, checks `head_sha` against `--expected-head`, and verifies each note came back as a `DiffNote` anchored to `line`.
 
 **Lines that already have a thread.** Before posting anything the helper reads the MR's discussions

@@ -65,25 +65,48 @@ Filter `notes[0]` by:
   can't resolve at all; count them separately and say so, don't try to resolve them.
 
 For each thread keep: `id`, `position.new_path`, `position.new_line`, `position.head_sha`
-(the revision the comment was anchored to), your body, and all replies.
+(the revision the comment was anchored to), `original_position` (the fallback anchor when
+`head_sha` is unreachable — see Step 3), your body, and all replies.
 
 ## Step 3 — Diff what changed since each comment
 
 ```bash
-git fetch origin <source_branch>
-git diff -M <position.head_sha> <diff_refs.head_sha> -- <path>      # per thread (group by head_sha)
-git log --oneline <position.head_sha>..<diff_refs.head_sha>
+git fetch "<repo>" "refs/merge-requests/<iid>/head:refs/remotes/mr/<iid>"
+```
+
+This form works for an MR from a fork or another project, where `git fetch origin "<source>"`
+silently fails — the branch doesn't exist on `origin`. `<repo>` is the MR project's remote name
+or URL: `origin` for a normal MR, the project path or URL when `-R <group/project>` was used.
+The MR head is then `mr/<iid>`.
+
+```bash
+git diff -M "<position.head_sha>" "<diff_refs.head_sha>"           # no pathspec — group by head_sha
+git log --oneline "<position.head_sha>..<diff_refs.head_sha>"
 ```
 
 `-M` matters: files often move between revisions (package refactors), which shifts every line
-number and renames the path. Resolve the new path from `git diff --name-status -M` before reading.
+number and renames the path. Run it **without a pathspec** — with a single path on the command
+line rename detection doesn't fire, which is the whole reason `-M` is there. Resolve each
+thread's new path from the full `git diff --name-status -M` output, then filter to it. Quote
+every path and ref substitution (`"Login Flow/Foo.kt"` breaks unquoted).
+
+If `git diff` answers `bad object` for `<position.head_sha>`, that commit is gone — a rebase or
+force-push rewrote history after the comment was posted (the normal author reaction to a
+review). Fall back to `original_position.head_sha` and re-run the diff against that. If the
+thread has no `original_position` either, its anchor is unrecoverable: mark it **position
+lost**, drop it from Step 4's verdicts, and call it out separately in Step 5's report — don't
+let it just disappear from the count.
 
 ## Step 4 — Verify each thread against the current head
 
-Read the code as it is now, not the diff alone:
+Resolve the thread's line to `diff_refs.head_sha` first: take the new path from Step 3's
+`git diff --name-status -M` and map the line (from `position.new_line`, or from
+`original_position` if that's what Step 3 fell back to) through that diff's hunks to the
+matching line at head — not the raw number from the comment, which points at a revision that no
+longer matches. Only then read the code as it is now, not the diff alone:
 
 ```bash
-git show <diff_refs.head_sha>:<new_path> | sed -n '<line-15>,<line+15>p'
+git show "<diff_refs.head_sha>:<new_path>" | sed -n '<head_line-15>,<head_line+15>p'
 ```
 
 **Not evidence of a fix:**
@@ -122,6 +145,8 @@ Verdict per thread:
 
 Group by verdict, most actionable first. Cite `new_path:new_line` **at head**, not the stale
 position from the comment. One line of evidence per thread — the applied hunk or its absence.
+Threads marked **position lost** in Step 3 don't get a verdict — list them in their own group so
+they don't read as silently skipped.
 
 ```markdown
 ## Re-review: MR !<iid> — <title>
@@ -134,6 +159,10 @@ Revision <short head_sha> ("<last commit subject>"), <N> commits since my commen
 **Leave open — <n>:**
 1. `Foo.kt:213` — legacy `networkExecutor {}` still there, no TODO with a ticket.
    Reply: "будет в след. частях" 🕓
+
+**Position lost — <n>:**
+1. `Foo.kt` — anchor commit is gone (rebase/force-push), no `original_position` to fall back to.
+   Needs a manual look.
 
 <optional: one-line notes on side effects spotted in the new revision>
 ```
@@ -159,7 +188,7 @@ and say plainly in the summary which unfixed threads you closed, so the deferral
 Only with `+approve` or an explicit ask, and only after Step 6:
 
 ```bash
-VERIFIED_HEAD=<diff_refs.head_sha from Step 1>
+VERIFIED_HEAD="<diff_refs.head_sha from Step 1>"
 glab api -X POST "projects/<project>/merge_requests/<iid>/approve" -F "sha=$VERIFIED_HEAD"
 ```
 
