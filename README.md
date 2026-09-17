@@ -157,7 +157,11 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 /rereview !22 +resolve +approve            # Were my threads fixed? → resolve → approve
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.8.0
+**Status:** ✅ Production Ready | **Version:** 1.9.0
+
+**What's New in 1.9.0:**
+- GitLab MR review now fetches by ref (works for forks/cross-project MRs), reads the reviewed revision in a worktree instead of cwd, and dedupes/pins posted threads to that revision.
+- Dropped the Android-only assumptions (test convention, `gh` call, Kotlin-only examples); race findings now need a causal gate, not just a timing gap.
 
 **What's New in 1.8.0:**
 - `security-reviewer` agent — secrets, injection, authn/authz, insecure storage and transport, unsafe crypto; stack-agnostic, opt-in via `+security`.

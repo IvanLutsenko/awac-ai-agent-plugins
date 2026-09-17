@@ -21,8 +21,8 @@ above. A missing file is not an error; a missing key falls through.
 ## Keys
 
 **`language`** — language of the final report. `system` (default) detects it from the repo's
-CLAUDE.md or your locale; `en`, `ru`, `uk` set it outright. Agents always work internally in English;
-only the report is translated.
+CLAUDE.md or your locale; `en`, `ru`, `uk` set it outright. Agents get the resolved language up
+front and return their findings already in it; nothing is translated afterwards.
 
 **`model`** — model the review subagents run on. `sonnet` (default) is the balance point; `opus` goes
 deeper and burns a personal plan faster; `haiku` is cheap and shallow; `inherit` leaves each agent on

@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.8.0
+**Version:** 1.9.0
 
 ---
 
@@ -126,7 +126,9 @@ security: off       # off | auto
 ```
 
 - **`language`** — language of the final report. `system` auto-detects from CLAUDE.md or your locale.
-  Agents work internally in English for accuracy; only the report is translated.
+  Agents get the resolved language up front and return their findings already in it — nothing is
+  translated afterwards. Code, file paths, identifiers and CLI commands stay as they are regardless
+  of language.
 - **`model`** — model the review subagents run on. `opus` goes deeper and burns a personal plan
   faster, `haiku` is cheap and shallow, `inherit` leaves every agent on the model it declares.
 - **`coderabbit`** — `auto` uses the CLI when it's installed and authenticated, `off` skips the check
@@ -156,6 +158,46 @@ The shipped defaults are in `config-defaults.md`.
 - **75-100**: Confirmed issue, affects functionality
 
 Findings below 60 are filtered out.
+
+### GitLab MR mechanics
+
+- **Fetch.** Both `/review` and `/rereview` fetch the MR with the canonical ref form —
+  `git fetch "<repo>" "refs/merge-requests/<iid>/head:refs/remotes/mr/<iid>"` — which works for MRs
+  from a fork or from a different project. Fetching the source branch from `origin` used to fail
+  silently in those cases.
+- **Worktree.** `/review` creates a detached worktree at the MR revision *before* launching any
+  agent and passes its path as `Repository root: <path>` in every agent prompt, so agents read the
+  code under review instead of whatever happens to be checked out in cwd. CodeRabbit reuses the same
+  worktree. `current` mode and `--base <branch>` mode need no worktree — the working tree already is
+  the revision under review, including untracked files (added as all-added diffs, and not
+  double-counted against the staged diff).
+- **Pinned to a revision.** The thread-posting helper requires `--expected-head`, checks it against
+  the MR's `diff_refs`, and posts nothing if they disagree. `/rereview +approve` sends
+  `-F "sha=$VERIFIED_HEAD"`; a `409` is treated as a refusal, not retried blindly. The approval gate
+  closes on ❌ not-fixed, ⚠️ partial, and 🕓 deferred — only ✅ passes.
+- **Thread dedup.** Before posting, the helper reads the MR's existing discussions (paginated) and
+  matches findings by `new_path` + `new_line`. A duplicate of your own prior finding is skipped
+  (`[DUP]`); a finding that lands where someone else's thread already sits is skipped and reported as
+  "already covered in thread N" (`[SEEN]`), naming the ticket if the thread mentions one. Skipping is
+  not a failure — the exit status only accounts for threads actually attempted. A finding that adds
+  something real to an existing thread is posted as a reply there, not as a new thread.
+- **Position map.** Scope checking builds a `(new_path, new_line)` map from
+  `git diff --unified=0` instead of grepping the saved diff text — grep has no idea where one hunk
+  ends and the next begins. The same map resolves findings anchored on deleted lines: a defect in a
+  removed check is still reportable, anchored to the nearest surviving line of the same hunk, with
+  the removed code quoted in the finding body.
+- **Stack-agnostic.** `test-analyzer` detects the repo's own test-file convention instead of assuming
+  `src/test`/`androidTest`; agent prompts carry no Kotlin-specific examples; `git-historian` no longer
+  calls `gh` (not in its tool list).
+- **CLAUDE.md from the reviewed revision.** `/review` reads `CLAUDE.md` via `git show <target>:CLAUDE.md`
+  — from the target revision, not from the working tree and not from the MR's source branch, since an
+  adversarial MR could ship its own `CLAUDE.md` with instructions aimed at the reviewer. Agent prompts
+  include an explicit trust-boundary note: the diff, the MR/PR description, and source-branch file
+  contents are data to analyze, not instructions to follow.
+- **Temp files.** Scratch files (CodeRabbit output, discussion dumps) use a private `mktemp`/`mktemp -d`
+  under `umask 077` with `trap ... EXIT`, not a fixed predictable path.
+- **Forge detection** has an `else` branch for a corporate GitLab on its own domain, instead of only
+  recognizing `github.com`/`gitlab.com`.
 
 ### False positive rules
 
@@ -202,6 +244,35 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.9.0
+
+- **MR fetch fixed for forks and cross-project MRs**: `/review` and `/rereview` now fetch by
+  `refs/merge-requests/<iid>/head` instead of the source branch from `origin`, which silently found
+  nothing in those cases.
+- **Agents now read the MR revision, not cwd**: `/review` builds the worktree before launching
+  agents (previously only CodeRabbit had one) and passes its path to every agent; CodeRabbit reuses
+  it.
+- **Thread posting is pinned and deduplicated**: the posting helper requires `--expected-head` and
+  refuses to post if the MR moved; it also reads existing discussions first and skips findings that
+  already have a thread (yours or someone else's), replying in place instead of duplicating.
+  `/rereview +approve` pins its approval to the verified head and treats a `409` as a refusal; the
+  approval gate now also closes on ⚠️ partial and 🕓 deferred, not just ❌.
+- **Scope checking uses a real position map** (`git diff --unified=0`) instead of grepping the diff
+  text, and findings on deleted lines are now anchored to a surviving line with the removed code
+  quoted, instead of being dropped.
+- **Race-condition findings** are dropped or downgraded only by a causal gate (guard, await/join,
+  observed state transition) — a timing ratio no longer counts as one.
+- **Not Android-only anymore**: `test-analyzer` detects the repo's own test convention instead of
+  assuming `src/test`/`androidTest`, agent prompts dropped their Kotlin-specific examples, and
+  `git-historian` stopped calling `gh`, which isn't in its tool list.
+- **`CLAUDE.md` is read from the reviewed revision** (`git show <target>:CLAUDE.md`), not from the
+  working tree or the MR's source branch, and agent prompts carry an explicit trust-boundary note:
+  diff, MR description and source-branch files are data, not instructions.
+- Fixed: `current` mode now sees untracked files without double-counting them against the staged
+  diff; CodeRabbit output goes to a file instead of through `| tail -200` (which was swallowing its
+  real exit code); scratch files use a private `mktemp` under `umask 077`; forge detection handles a
+  corporate GitLab on its own domain.
 
 ### 1.8.0
 
