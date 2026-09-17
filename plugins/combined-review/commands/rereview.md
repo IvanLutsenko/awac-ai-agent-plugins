@@ -1,7 +1,7 @@
 ---
 description: "Re-review a GitLab MR: check whether your own unresolved threads were actually fixed in the new revision, then resolve and approve."
 argument-hint: "[!MR#|MR#|url] [+resolve] [+approve] [+agents]"
-allowed-tools: Bash(glab:*), Bash(git:*), Bash(python3:*), Bash(grep:*), Bash(rg:*), Bash(wc:*), Bash(head:*), Bash(tail:*), Agent, Read, Glob, Grep
+allowed-tools: Bash(glab:*), Bash(git:*), Bash(sed:*), Bash(python3:*), Bash(grep:*), Bash(rg:*), Bash(wc:*), Bash(head:*), Bash(tail:*), Agent, Read, Glob, Grep
 ---
 
 # Re-review: did they fix my threads?
@@ -53,7 +53,10 @@ Keep `diff_refs.head_sha` — that's the current revision, the only thing that c
 ## Step 2 — Collect my unresolved threads
 
 ```bash
-glab api --paginate "projects/<project>/merge_requests/<iid>/discussions?per_page=100" > /tmp/mr<iid>_disc.json
+umask 077
+DISC_FILE="$(mktemp)"
+trap 'rm -f "$DISC_FILE"' EXIT
+glab api --paginate "projects/<project>/merge_requests/<iid>/discussions?per_page=100" > "$DISC_FILE"
 ```
 
 `--paginate` matters: MRs with 100+ threads put your own unresolved ones on page 2+, and
