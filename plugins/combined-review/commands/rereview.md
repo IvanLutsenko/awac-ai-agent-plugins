@@ -53,8 +53,11 @@ Keep `diff_refs.head_sha` — that's the current revision, the only thing that c
 ## Step 2 — Collect my unresolved threads
 
 ```bash
-glab api "projects/<project>/merge_requests/<iid>/discussions?per_page=100" > /tmp/mr<iid>_disc.json
+glab api --paginate "projects/<project>/merge_requests/<iid>/discussions?per_page=100" > /tmp/mr<iid>_disc.json
 ```
+
+`--paginate` matters: MRs with 100+ threads put your own unresolved ones on page 2+, and
+without it the command silently reviews a partial set and walks right up to approval.
 
 Filter `notes[0]` by:
 - `author.username` == your username from Step 1,
@@ -156,8 +159,16 @@ and say plainly in the summary which unfixed threads you closed, so the deferral
 Only with `+approve` or an explicit ask, and only after Step 6:
 
 ```bash
-glab api -X POST "projects/<project>/merge_requests/<iid>/approve"
+VERIFIED_HEAD=<diff_refs.head_sha from Step 1>
+glab api -X POST "projects/<project>/merge_requests/<iid>/approve" -F "sha=$VERIFIED_HEAD"
 ```
 
-Report the resulting `approved_by` list. If anything is still ❌, don't approve on your own
-initiative — say what's open and ask.
+Pinning `sha` to the head you actually verified makes the server the guard, not your memory:
+if the branch moved since Step 1, GitLab answers 409 instead of approving the wrong revision.
+Treat 409 as a rejection, not a warning — don't approve, tell the user the branch moved since
+you checked, and suggest re-running `/rereview`.
+
+Report the resulting `approved_by` list. If anything is still ❌ *not fixed*, ⚠️ *partial*, or
+🕓 *deferred*, don't approve on your own initiative — say what's open and ask. Only proceed past
+an open ❌/⚠️/🕓 thread on the user's explicit go-ahead, same as "close everything" in Step 6 —
+and name which unfixed threads you approved over, so the gap doesn't get lost.

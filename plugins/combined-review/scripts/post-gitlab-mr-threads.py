@@ -10,13 +10,18 @@ as flat JSON keys, GitLab ignores them, and you silently get a plain
 (non-anchored) comment instead of an inline thread.
 
 Usage:
-    post-gitlab-mr-threads.py --repo <path-or-id> --mr <iid> --threads <file.json>
+    post-gitlab-mr-threads.py --repo <path-or-id> --mr <iid> --threads <file.json> \
+        --expected-head <sha>
 
-  --repo     "group/project" (URL-encoded automatically) or numeric project id
-  --mr       MR iid (the !N number)
-  --threads  JSON file: [{"path": "...", "line": 42, "body": "..."}, ...]
-             `line` is the line number in the NEW (post-change) file; it must be
-             an added or in-hunk line of the MR diff, or GitLab rejects it.
+  --repo           "group/project" (URL-encoded automatically) or numeric project id
+  --mr             MR iid (the !N number)
+  --threads        JSON file: [{"path": "...", "line": 42, "body": "..."}, ...]
+                    `line` is the line number in the NEW (post-change) file; it must be
+                    an added or in-hunk line of the MR diff, or GitLab rejects it.
+  --expected-head  SHA the findings were analyzed against. Required: compared against
+                    the MR's live diff_refs.head_sha before posting anything; if the
+                    branch moved since analysis, nothing is posted and the script exits
+                    non-zero.
 
 Reads diff_refs from the MR itself, so the caller only supplies findings.
 Exit code is non-zero if any thread failed to anchor.
@@ -85,11 +90,17 @@ def main():
     ap.add_argument("--repo", required=True)
     ap.add_argument("--mr", required=True)
     ap.add_argument("--threads", required=True)
+    ap.add_argument("--expected-head", required=True)
     a = ap.parse_args()
 
     proj = a.repo if a.repo.isdigit() else quote(a.repo, safe="")
     threads = json.load(open(a.threads))
     refs = get_diff_refs(proj, a.mr)
+
+    if refs["head_sha"] != a.expected_head:
+        sys.exit(
+            f"ветка уехала: анализировали {a.expected_head}, сейчас {refs['head_sha']}"
+        )
 
     ok = 0
     for t in threads:
