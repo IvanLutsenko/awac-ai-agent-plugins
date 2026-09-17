@@ -399,8 +399,33 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/post-gitlab-mr-threads.py" \
 ```
 `<head_sha>` is the SHA captured in Step 2, not a fresh `git rev-parse` — re-reading
 `origin/<source>` here would return whatever was fetched last and the guard would compare the new
-head against itself. `--expected-head` guards against the author pushing between analysis and posting — without it, findings could land on code that's no longer at the revision we diffed. The helper reads the MR's `diff_refs` itself, checks `head_sha` against `--expected-head`, and verifies each note came back as a `DiffNote` anchored to `line` (prints `OK`/`ERR` per thread).
+head against itself. `--expected-head` guards against the author pushing between analysis and posting — without it, findings could land on code that's no longer at the revision we diffed. The helper reads the MR's `diff_refs` itself, checks `head_sha` against `--expected-head`, and verifies each note came back as a `DiffNote` anchored to `line`.
+
+**Lines that already have a thread.** Before posting anything the helper reads the MR's discussions
+(paginated, so an MR with 100+ threads doesn't hide the older ones) and matches each finding on
+`new_path` + `new_line`; a thread with `position: null` is a plain MR comment, not anchored to a
+line, and never matches. Per finding it prints one of:
+- `[OK ] <file>:<line>` / `[ERR] <file>:<line>` — posted, or attempted and failed to anchor;
+- `[DUP] <file>:<line> -> own thread <id>` — your own thread from an earlier run is on that line;
+- `[SEEN] <file>:<line> -> thread <id>[ ticket=ABC-123]` — someone else's thread is on that line.
+
+Skipped findings are not failures: the exit code only covers threads the helper actually tried to post.
 
 **Why the helper, not a raw `glab api` call:** an inline thread needs the position as a **nested JSON `position` object** sent via `glab api --input <file> -H "Content-Type: application/json"`. Passing `-f "position[new_line]=.."` sends flat keys that GitLab silently ignores — you get a plain, non-anchored comment (`type: DiscussionNote`, `position: null`) that looks fine in the API response but isn't attached to any line. The helper encodes the working mechanism so this isn't re-derived each time.
 
 After posting, tell the user how many threads landed and where; do not resolve them yourself.
+
+Then report the skips:
+- `[DUP]` — one line, that the finding was already posted in an earlier run.
+- `[SEEN]` — say the line is **already covered in thread `<id>`**, and name the ticket if the helper
+  printed one. Do **not** retell or paraphrase the human's remark in your own words — the user reads
+  the thread, not your summary of it.
+
+If a `[SEEN]` finding adds something the existing thread misses — a different cause, a case it
+doesn't cover — offer to add a comment **to that same thread**, not a new one, and post it only on
+the user's go-ahead:
+```bash
+glab api -X POST "projects/<group%2Fproject>/merge_requests/<iid>/discussions/<discussion_id>/notes" \
+  -f body="..."
+```
+If the finding only restates what's already in the thread, drop it and say nothing.
