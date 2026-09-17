@@ -26,10 +26,16 @@ CURRENT_SHA = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 THREADS = [{"path": "foo.py", "line": 3, "body": "nit"}]
 
 
-def make_glab_api(head_sha):
-    """Fake glab_api: GET returns diff_refs with head_sha, POST 'succeeds'."""
+def make_discussion(disc_id, path, line, author, body="see MR", position=True):
+    note = {"author": {"username": author}, "body": body}
+    note["position"] = {"new_path": path, "new_line": line} if position else None
+    return {"id": disc_id, "notes": [note]}
 
-    def fake(path, method=None, headers=None, input_file=None):
+
+def make_glab_api(head_sha, discussions=()):
+    """Fake glab_api: GET returns diff_refs / user / discussions, POST 'succeeds'."""
+
+    def fake(path, method=None, headers=None, input_file=None, paginate=False):
         if method == "POST":
             return (
                 json.dumps(
@@ -42,6 +48,10 @@ def make_glab_api(head_sha):
                 ),
                 "",
             )
+        if path == "user":
+            return json.dumps({"username": "me"}), ""
+        if "/discussions" in path:
+            return json.dumps(list(discussions)), ""
         return (
             json.dumps(
                 {
@@ -128,6 +138,103 @@ class PostGitlabMrThreadsTest(unittest.TestCase):
             call for call in mock_api.call_args_list if call.kwargs.get("method") == "POST"
         ]
         self.assertEqual(len(post_calls), 1)
+
+    def test_own_thread_on_the_same_line_is_not_posted_again(self):
+        module = load_module()
+        existing = [make_discussion("d1", "foo.py", 3, "me")]
+        fake_glab_api = make_glab_api(ANALYZED_SHA, existing)
+
+        with patch.object(module, "glab_api", side_effect=fake_glab_api) as mock_api:
+            with patch(
+                "sys.argv",
+                [
+                    "post-gitlab-mr-threads.py",
+                    "--repo",
+                    "group/project",
+                    "--mr",
+                    "1",
+                    "--threads",
+                    str(self.threads_file),
+                    "--expected-head",
+                    ANALYZED_SHA,
+                ],
+            ):
+                with self.assertRaises(SystemExit) as cm:
+                    module.main()
+
+        # A dedup skip is not a failure.
+        self.assertEqual(cm.exception.code, 0)
+        post_calls = [
+            call for call in mock_api.call_args_list if call.kwargs.get("method") == "POST"
+        ]
+        self.assertEqual(post_calls, [])
+
+
+    def test_unreadable_discussions_abort_instead_of_posting(self):
+        module = load_module()
+        base = make_glab_api(ANALYZED_SHA)
+
+        def fake(path, method=None, headers=None, input_file=None, paginate=False):
+            if "/discussions" in path and method != "POST":
+                return "", "401 Unauthorized"       # glab failed: empty stdout
+            return base(path, method, headers, input_file, paginate)
+
+        with patch.object(module, "glab_api", side_effect=fake) as mock_api:
+            with patch(
+                "sys.argv",
+                [
+                    "post-gitlab-mr-threads.py",
+                    "--repo",
+                    "group/project",
+                    "--mr",
+                    "1",
+                    "--threads",
+                    str(self.threads_file),
+                    "--expected-head",
+                    ANALYZED_SHA,
+                ],
+            ):
+                with self.assertRaises(SystemExit) as cm:
+                    module.main()
+
+        # Can't tell own threads from new lines -> abort, never post blind duplicates.
+        self.assertNotEqual(cm.exception.code, 0)
+        post_calls = [
+            call for call in mock_api.call_args_list if call.kwargs.get("method") == "POST"
+        ]
+        self.assertEqual(post_calls, [])
+
+
+class MatchThreadTest(unittest.TestCase):
+    def match(self, discussions, path="foo.py", line=3):
+        return load_module().match_thread(discussions, path, line, "me")
+
+    def test_no_threads_at_all(self):
+        self.assertEqual(self.match([]), ("post", None, None))
+
+    def test_own_thread_on_the_line(self):
+        d = make_discussion("d1", "foo.py", 3, "me")
+        self.assertEqual(self.match([d]), ("mine", "d1", None))
+
+    def test_other_thread_on_the_line(self):
+        d = make_discussion("d1", "foo.py", 3, "reviewer")
+        self.assertEqual(self.match([d]), ("theirs", "d1", None))
+
+    def test_other_thread_names_a_ticket(self):
+        d = make_discussion("d1", "foo.py", 3, "reviewer", body="known, ABC-123 covers it")
+        self.assertEqual(self.match([d]), ("theirs", "d1", "ABC-123"))
+
+    def test_thread_without_position_never_matches(self):
+        d = make_discussion("d1", "foo.py", 3, "reviewer", position=False)
+        self.assertEqual(self.match([d]), ("post", None, None))
+
+    def test_same_line_other_path(self):
+        d = make_discussion("d1", "bar.py", 3, "me")
+        self.assertEqual(self.match([d]), ("post", None, None))
+
+    def test_same_path_other_line(self):
+        d = make_discussion("d1", "foo.py", 4, "me")
+        self.assertEqual(self.match([d]), ("post", None, None))
 
 
 if __name__ == "__main__":
