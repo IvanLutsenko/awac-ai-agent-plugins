@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.7.1
+**Version:** 1.8.0
 
 ---
 
@@ -51,8 +51,20 @@ coderabbit auth login
 /review feature/X feature/Y +comments     # Add comment analysis
 /review feature/X feature/Y +types        # Add type design analysis
 /review feature/X feature/Y +simplify     # Add code simplification
+/review feature/X feature/Y +security     # Add the security agent
 /review feature/X feature/Y all           # Run all agents
 ```
+
+### Setup: `/review-config`
+
+```bash
+/review-config            # interactive setup, writes ~/.claude/combined-review.md
+/review-config --project  # same, but writes .claude/combined-review.local.md in this repo
+/review-config --show     # print the resolved config and where each value came from
+```
+
+On the first `/review` with no config anywhere, the command offers this setup and takes defaults if
+you decline.
 
 ### Re-review: `/rereview`
 
@@ -90,33 +102,40 @@ not evidence.
 | Comment Analyzer | `+comments` | Comment accuracy vs code, stale TODOs |
 | Type Design Analyzer | `+types` | Encapsulation, invariants, enforcement |
 | Code Simplifier | `+simplify` | Simplification without losing functionality |
+| **security-reviewer** | `+security` or `security: auto` | Secrets, injection, authn/authz, insecure storage and transport, unsafe crypto |
 
 ---
 
 ## Configuration
 
-Create `.claude/combined-review.local.md` in your project to customize settings:
+Two files, neither inside the plugin — updating or reinstalling it never touches your settings:
 
-```bash
-cp $(claude plugin path combined-review)/config-defaults.md .claude/combined-review.local.md
-```
+- `~/.claude/combined-review.md` — user-level, applies in every repo
+- `.claude/combined-review.local.md` — project-level, overrides the user file key by key
 
-Or manually create with YAML frontmatter:
+Each key resolves separately: project file → user file → default. Write them with `/review-config`,
+or by hand as YAML frontmatter:
 
 ```yaml
 ---
-language: system
+language: system    # system | en | ru | uk
+model: sonnet       # sonnet | opus | haiku | inherit
+coderabbit: auto    # auto | off
+security: off       # off | auto
 ---
 ```
 
-**Language options:**
+- **`language`** — language of the final report. `system` auto-detects from CLAUDE.md or your locale.
+  Agents work internally in English for accuracy; only the report is translated.
+- **`model`** — model the review subagents run on. `opus` goes deeper and burns a personal plan
+  faster, `haiku` is cheap and shallow, `inherit` leaves every agent on the model it declares.
+- **`coderabbit`** — `auto` uses the CLI when it's installed and authenticated, `off` skips the check
+  entirely (no install prompt, no CodeRabbit section). Credentials stay with the CLI
+  (`coderabbit auth login` / `coderabbit auth status`); the plugin stores none.
+- **`security`** — `off` runs the security agent only on `+security`, `auto` on every review. It is a
+  fifth parallel agent, so `auto` costs time on every review and on every shard of a large diff.
 
-- `system` — auto-detect from CLAUDE.md or system locale (default)
-- `en` — English
-- `ru` — Russian
-- `uk` — Ukrainian
-
-Agents work internally in English for accuracy; only the final report is output in the configured language.
+The shipped defaults are in `config-defaults.md`.
 
 ---
 
@@ -183,6 +202,18 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.8.0
+
+- **`security-reviewer` agent** — secrets, injection sinks, broken authn/authz, insecure storage and
+  transport, unsafe crypto. Stack-agnostic: it derives the platform's idioms from the repo instead of
+  assuming one. Opt-in via `+security`, or always-on with `security: auto`.
+- **`/review-config`** — interactive setup for language, subagent model, CodeRabbit and the security
+  agent; `--project` writes the repo-level file, `--show` prints the resolved values and their source.
+  `/review` offers it on the first run with no config.
+- **Config now has a user-level file** (`~/.claude/combined-review.md`) alongside the project one, so
+  settings survive plugin updates and apply across repos. New keys: `model`, `coderabbit`, `security`.
+- Fixed: the install snippet referenced `claude plugin path`, which is not a real CLI command.
 
 ### 1.7.0
 

@@ -1,6 +1,6 @@
 ---
 description: "Combined code review: multi-agent analysis + CodeRabbit. Supports GitHub PR, GitLab MR, branch diff, uncommitted changes."
-argument-hint: "[PR#|!MR#] | [branch1 branch2] | [--base branch] | [+comments] [+types] [+simplify] [+threads] [all]"
+argument-hint: "[PR#|!MR#] | [branch1 branch2] | [--base branch] | [+comments] [+types] [+simplify] [+security] [+threads] [all]"
 allowed-tools: Bash(gh:*), Bash(glab:*), Bash(git:*), Bash(coderabbit:*), Bash(cr:*), Bash(curl:*), Bash(python3:*), Bash(which:*), Bash(wc:*), Bash(head:*), Bash(tail:*), Bash(cat:*), Bash(find:*), Bash(grep:*), Bash(rg:*), Bash(mktemp:*), Agent, Read, Glob, Grep
 ---
 
@@ -14,15 +14,33 @@ allowed-tools: Bash(gh:*), Bash(glab:*), Bash(git:*), Bash(coderabbit:*), Bash(c
 
 ## Step 0 — Read config
 
-Check if config exists at `.claude/combined-review.local.md`. If it exists, read the `language` setting from YAML frontmatter.
+Two config files, neither inside the plugin — an update or reinstall never touches them:
 
-If config doesn't exist, use default: `language: system`.
+```bash
+cat .claude/combined-review.local.md 2>/dev/null    # project-level, wins
+cat ~/.claude/combined-review.md 2>/dev/null        # user-level, applies everywhere
+```
 
-**Language resolution:**
-- `system` → detect from CLAUDE.md (look for language hints like "Отвечай", "русский", etc.) or fall back to English
-- `en` / `ru` / `uk` → use directly
+Resolve each key independently: project file → user file → built-in default. A missing file is not an
+error.
 
-Apply the resolved language to the final report output (Step 6). Agents work internally in English for accuracy; only the final report is translated.
+- `language` — `system` (default), `en`, `ru`, `uk`
+- `model` — `sonnet` (default), `opus`, `haiku`, `inherit`
+- `coderabbit` — `auto` (default: use it when installed and authenticated), `off`
+- `security` — `off` (default: only on `+security`), `auto` (every review)
+
+**Language resolution:** `system` → detect from CLAUDE.md (look for hints like "Отвечай", "русский")
+or fall back to English; `en`/`ru`/`uk` → use directly. Applies to the final report (Step 6); agents
+work internally in English and only the report is translated.
+
+**Model resolution:** pass the value as the subagent model in Step 4. `inherit` means: don't override,
+let each agent run on what it declares.
+
+**First run (neither file exists).** Say in one line that no config was found, and ask whether to set
+it up now (four questions) or continue on defaults. If the user wants setup, read
+`${CLAUDE_PLUGIN_ROOT}/commands/review-config.md` and follow it, then continue this review with the
+values just written. If the user declines or doesn't care, continue on defaults and don't ask again
+this session.
 
 ## Arguments
 
@@ -56,6 +74,7 @@ Branch-like: contains `/`, or starts with `feature/`, `fix/`, `release/`, `hotfi
 - `+comments` — add comment analysis
 - `+types` — add type design analysis
 - `+simplify` — add code simplification
+- `+security` — add the security agent (see Agent 6); redundant when config has `security: auto`
 - `+threads` — after the report, post findings as inline resolvable threads on the MR/PR (GitLab MR only; see Step 7). Opt-in — never post without this flag or an explicit request.
 - `all` — run all agents including optional
 
@@ -102,6 +121,9 @@ Also gather:
 
 ## Step 3 — CodeRabbit setup check
 
+**Skip this step entirely when config has `coderabbit: off`** — don't check, don't ask, don't mention
+it in the report.
+
 Before launching agents, check CodeRabbit availability:
 
 ```bash
@@ -118,7 +140,8 @@ If yes:
 curl -fsSL https://cli.coderabbit.ai/install.sh | sh
 ```
 
-If no — skip CodeRabbit, continue with 4 agents.
+If no — skip CodeRabbit and continue with the 4 agents. Offer to remember the refusal:
+`coderabbit: off` via `/review-config`, so the question doesn't come back every review.
 
 **If installed, check auth:**
 ```bash
@@ -131,7 +154,12 @@ Skip CodeRabbit for this run, continue with 4 agents.
 
 ## Step 4 — Launch agents
 
-Launch **4 default agents in parallel** + CodeRabbit (if available) + optional agents if requested.
+Launch **4 default agents in parallel**, plus: the security agent when `+security` was passed or
+config has `security: auto`; CodeRabbit when config has `coderabbit: auto` and the CLI is available;
+the optional agents if requested.
+
+Run every agent on the model resolved in Step 0 — pass it as the subagent model, except for `inherit`,
+which means «leave each agent on its own declared model».
 
 Pass each agent a prompt whose **first line** is `Language: <resolved>` where `<resolved>` is the language from Step 0 (`en`, `ru`, or `uk` — never literal `system`; resolve `system` to one of the three before launching). After that line, pass: full diff, file list, CLAUDE.md content.
 
@@ -187,7 +215,20 @@ Launch the `test-analyzer` agent. It checks:
 - Missing boundary condition tests
 - Test quality (behavior vs implementation testing)
 
-### Agent 5 — CodeRabbit (if available)
+### Agent 6 — Security Reviewer (opt-in)
+
+Only when `+security` was passed or config has `security: auto`. Launch the `security-reviewer` agent.
+It checks:
+- Secrets in source, tests or config
+- Injection sinks fed by untrusted input; unsafe deserialization
+- Broken authn/authz, tokens accepted without validation
+- Transport and storage of sensitive data; leaks into logs, analytics and crash reports
+- Crypto that cannot be right (hardcoded key/IV, ECB, predictable RNG in a security decision)
+
+It derives the platform's idioms from the repo rather than assuming one. Its findings join the normal
+severity/confidence pipeline in Step 5.
+
+### Agent 5 — CodeRabbit (if `coderabbit: auto` and available)
 
 CodeRabbit reviews the working tree against `--base <target>`. If the working tree is on a branch other than the source we're reviewing (PR mode or branch-diff mode where current branch ≠ source), run CodeRabbit inside a temp git worktree checked out to the source branch.
 
