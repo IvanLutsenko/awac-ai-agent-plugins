@@ -23,11 +23,6 @@ git log --oneline -15 -- <file>
 git blame -L <start>,<end> -- <file>
 ```
 
-3. Previous PRs touching these files (if gh is available):
-```bash
-gh pr list --search "<filename>" --state merged --limit 5 2>/dev/null
-```
-
 ## What to look for
 
 - **Reverted fixes**: This change undoes something that was recently fixed. Check if the original fix commit message mentions a bug ticket.
@@ -41,7 +36,7 @@ gh pr list --search "<filename>" --state merged --limit 5 2>/dev/null
 Every finding MUST include file path and line number:
 
 ```
-- [critical|warning|info] path/to/File.kt:42 — description (confidence: 0-100)
+- [critical|warning|info] path/to/File.ext:42 — description (confidence: 0-100)
 ```
 
 Only report findings with confidence >= 60. If history is clean and no concerns found, say so briefly.
