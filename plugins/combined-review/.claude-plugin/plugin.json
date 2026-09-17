@@ -1,7 +1,7 @@
 {
   "name": "combined-review",
   "description": "Combined code review: multi-agent analysis (code-reviewer, git-historian, silent-failure-hunter, test-analyzer) + CodeRabbit CLI. Supports GitHub PR, GitLab MR, branch diff, and uncommitted changes; /rereview verifies your MR threads were fixed.",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "author": {
     "name": "Ivan Lutsenko",
     "email": "ivan@lutsenko.com",
@@ -9,21 +9,24 @@
   },
   "keywords": [
     "code-review",
-    "multi-agent",
     "coderabbit",
+    "error-handling",
     "git-blame",
-    "testing",
-    "error-handling"
+    "multi-agent",
+    "security",
+    "testing"
   ],
   "license": "MIT",
   "commands": [
     "./commands/review.md",
-    "./commands/rereview.md"
+    "./commands/rereview.md",
+    "./commands/review-config.md"
   ],
   "agents": [
     "./agents/code-reviewer.md",
     "./agents/git-historian.md",
     "./agents/silent-failure-hunter.md",
-    "./agents/test-analyzer.md"
+    "./agents/test-analyzer.md",
+    "./agents/security-reviewer.md"
   ]
 }

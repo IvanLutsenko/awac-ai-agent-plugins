@@ -135,7 +135,7 @@ Project tracking, task management with kanban boards, bug logging, decision reco
 
 ### Combined Review
 
-Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + optional CodeRabbit for comprehensive review.
+Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + an opt-in security agent + optional CodeRabbit for comprehensive review.
 
 📚 **[Full Documentation](plugins/combined-review/README.md)**
 
@@ -151,11 +151,18 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 /review !22 +threads                       # GitLab MR + inline resolvable threads
 /review feature/X feature/Y               # Branch diff
 /review --base main                        # Current branch vs main
+/review feature/X feature/Y +security     # Add the security agent
 /review feature/X feature/Y +comments all # All agents
+/review-config                             # Language, model, CodeRabbit, security agent
 /rereview !22 +resolve +approve            # Were my threads fixed? → resolve → approve
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.7.1
+**Status:** ✅ Production Ready | **Version:** 1.8.0
+
+**What's New in 1.8.0:**
+- `security-reviewer` agent — secrets, injection, authn/authz, insecure storage and transport, unsafe crypto; stack-agnostic, opt-in via `+security`.
+- `/review-config` — interactive setup for report language, subagent model, CodeRabbit and the security agent.
+- Config moved out of the plugin: `~/.claude/combined-review.md` (user-level) plus the existing project file, so settings survive updates.
 
 **What's New in 1.7.1:**
 - Docs: the GitLab project-path example no longer names a specific private project.
