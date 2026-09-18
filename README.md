@@ -148,13 +148,14 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 ```bash
 /review                                    # Uncommitted changes
 /review 123                                # GitHub PR / GitLab MR (forge auto-detected)
+/review 123 +threads                       # ...+ inline resolvable threads on the PR
 /review !22 +threads                       # GitLab MR + inline resolvable threads
 /review feature/X feature/Y               # Branch diff
 /review --base main                        # Current branch vs main
 /review feature/X feature/Y +security     # Add the security agent
 /review feature/X feature/Y +comments all # All agents
 /review-config                             # Language, model, CodeRabbit, security agent
-/rereview !22 +resolve +approve            # Were my threads fixed? → resolve → approve
+/rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
 **Status:** ✅ Production Ready | **Version:** 1.10.0
