@@ -46,6 +46,15 @@ def gh_api(path, method=None, headers=None, input_file=None, paginate=False):
     if input_file:
         args += ["--input", input_file]
     r = subprocess.run(args, capture_output=True, text=True)
+    if paginate and r.returncode != 0:
+        # `gh api --paginate` streams one page at a time. A failure on page 2+
+        # (rate limit, dropped connection, expired token) leaves the earlier pages
+        # on stdout as valid JSON, so the caller would decode a partial list and
+        # treat it as the complete one - and post duplicates against it.
+        sys.exit(
+            f"`gh api --paginate {path}` failed (exit {r.returncode}) after "
+            f"{len(r.stdout)} bytes: {(r.stderr or r.stdout)[:300]}"
+        )
     return r.stdout, r.stderr
 
 
@@ -98,9 +107,11 @@ TICKET_RE = re.compile(r"\b[A-Z][A-Z0-9]{1,9}-\d+\b")
 def match_thread(comments, path, line, me):
     """Is this finding's line already covered by an existing thread?
 
-    Match is on the thread-starting comment's `path` + `line`. A reply
-    (`in_reply_to_id` set) is part of a thread that already matched on its own
-    root, so replies are skipped. An outdated comment reports `line: null` and
+    Match is on the thread-starting comment's `path` + `line` on the RIGHT side.
+    A reply (`in_reply_to_id` set) is part of a thread that already matched on its
+    own root, so replies are skipped. So is a LEFT-side comment: it sits on the
+    pre-change line of that number, which is a different place in the file from
+    the RIGHT-side line `post_thread` posts to. An outdated comment reports `line: null` and
     keeps the anchor in `original_line` — match on that, otherwise a rebase makes
     every earlier thread invisible and the next run posts them all again.
 
@@ -115,6 +126,8 @@ def match_thread(comments, path, line, me):
         threads.setdefault(root, []).append(c)
     for c in comments:
         if c.get("in_reply_to_id"):
+            continue
+        if (c.get("side") or "RIGHT") != "RIGHT":
             continue
         anchor = c.get("line")
         if anchor is None:

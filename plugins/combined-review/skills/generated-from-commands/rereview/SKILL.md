@@ -296,7 +296,9 @@ you checked, and suggest re-running `/rereview`.
 # GitHub - no server-side guard exists, so check first and pin what you approved
 VERIFIED_HEAD="<head.sha from Step 1>"
 NOW=$(gh api "repos/<owner>/<repo>/pulls/<number>" --jq .head.sha)
-if [ "$NOW" != "$VERIFIED_HEAD" ]; then
+if [ -z "$NOW" ]; then
+  echo "cannot read the current head - gh api failed; not approving"
+elif [ "$NOW" != "$VERIFIED_HEAD" ]; then
   echo "branch moved: verified $VERIFIED_HEAD, now $NOW - not approving"
 else
   gh api -X POST "repos/<owner>/<repo>/pulls/<number>/reviews" \
@@ -309,6 +311,9 @@ does not make the API refuse a stale one. So the check is client-side, and a pus
 `--jq .head.sha` read and the POST still slips through — a much smaller window than approving off a
 Step 1 memory, but not zero. Say that in the report rather than claiming the approval was guarded.
 When the check fires, treat it like the 409: don't approve, say the branch moved, suggest re-running.
+The empty-`$NOW` branch is separate on purpose: a failed `gh api` (expired token, network, PR gone)
+also leaves `$NOW` empty, and reporting that as "the branch moved" sends the user to re-run
+`/rereview`, which fixes nothing. Say the head could not be read, and why.
 
 Report the resulting approvals — `approved_by` on GitLab, the review's `state: APPROVED` on GitHub.
 If anything is still ❌ *not fixed*, ⚠️ *partial*, or

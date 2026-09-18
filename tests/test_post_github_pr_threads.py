@@ -2,6 +2,7 @@ import importlib.util
 import json
 import tempfile
 import unittest
+from types import SimpleNamespace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -199,6 +200,37 @@ class PostGithubPrThreadsTest(unittest.TestCase):
         self.assertEqual(
             len([c for c in mock_api.call_args_list if c.kwargs.get("method") == "POST"]), 2
         )
+
+    def test_left_side_comment_does_not_block_a_right_side_finding(self):
+        module = load_module()
+        # Same file, same line number, but the other side of the diff - a different place.
+        left = make_comment(7, "foo.py", 3, "someone")
+        left["side"] = "LEFT"
+        sent_payloads = []
+        fake = make_gh_api(ANALYZED_SHA, [left], sent_payloads=sent_payloads)
+        with patch.object(module, "gh_api", side_effect=fake) as mock_api:
+            exc = self.run_main(module)
+
+        self.assertEqual(exc.code, 0)
+        posts = [c for c in mock_api.call_args_list if c.kwargs.get("method") == "POST"]
+        self.assertEqual(len(posts), 1)
+        self.assertEqual(sent_payloads[0]["side"], "RIGHT")
+
+    def test_paginated_call_that_fails_midway_aborts(self):
+        module = load_module()
+        # Page 1 arrived, page 2 died: stdout is valid JSON but incomplete.
+        completed = SimpleNamespace(
+            stdout=json.dumps([make_comment(1, "foo.py", 3, "me")]),
+            stderr="API rate limit exceeded",
+            returncode=1,
+        )
+        with patch.object(module.subprocess, "run", return_value=completed):
+            with self.assertRaises(SystemExit) as cm:
+                module.gh_api("repos/o/r/pulls/1/comments", paginate=True)
+
+        # A partial page read as complete is what makes the dedup post duplicates.
+        self.assertNotEqual(cm.exception.code, 0)
+        self.assertIn("rate limit", str(cm.exception.code))
 
     def test_unreadable_comments_abort_instead_of_posting(self):
         module = load_module()

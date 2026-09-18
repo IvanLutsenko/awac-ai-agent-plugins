@@ -1,7 +1,7 @@
 ---
 description: "Combined code review: multi-agent analysis + CodeRabbit. Supports GitHub PR, GitLab MR, branch diff, uncommitted changes."
 argument-hint: "[PR#|!MR#] | [branch1 branch2] | [--base branch] | [+comments] [+types] [+simplify] [+security] [+threads] [all]"
-allowed-tools: Bash(gh:*), Bash(glab:*), Bash(git:*), Bash(coderabbit:*), Bash(cr:*), Bash(curl:*), Bash(python3:*), Bash(which:*), Bash(wc:*), Bash(head:*), Bash(tail:*), Bash(cat:*), Bash(find:*), Bash(grep:*), Bash(rg:*), Bash(mktemp:*), Bash(awk:*), Bash(cut:*), Bash(sort:*), Bash(uniq:*), Bash(sed:*), Bash(pwd:*), Bash(echo:*), Bash(umask:*), Agent, Read, Glob, Grep
+allowed-tools: Bash(gh:*), Bash(glab:*), Bash(git:*), Bash(coderabbit:*), Bash(cr:*), Bash(curl:*), Bash(python3:*), Bash(which:*), Bash(wc:*), Bash(head:*), Bash(tail:*), Bash(cat:*), Bash(find:*), Bash(grep:*), Bash(rg:*), Bash(mktemp:*), Bash(rm:*), Bash(rmdir:*), Bash(awk:*), Bash(cut:*), Bash(sort:*), Bash(uniq:*), Bash(sed:*), Bash(pwd:*), Bash(echo:*), Bash(umask:*), Agent, Read, Glob, Grep
 ---
 
 # Combined Code Review
@@ -222,9 +222,10 @@ Skip CodeRabbit for this run, continue with 4 agents.
 
 ## Step 4 — Launch agents
 
-Launch **4 default agents in parallel**, plus: the security agent when `+security` was passed or
-config has `security: auto`; CodeRabbit when config has `coderabbit: auto` and the CLI is available;
-the optional agents if requested.
+Launch **4 default agents in parallel**, plus: the security agent when `+security` or `all` was
+passed, or config has `security: auto`; CodeRabbit when config has `coderabbit: auto` and the CLI is
+available; the optional agents if requested. `all` means every optional agent — security included,
+whatever the config says.
 
 Run every agent on the model resolved in Step 0 — pass it as the subagent model, except for `inherit`,
 which means «leave each agent on its own declared model».
