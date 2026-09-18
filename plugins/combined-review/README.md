@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.9.0
+**Version:** 1.10.0
 
 ---
 
@@ -40,6 +40,7 @@ coderabbit auth login
 /review 123                                # GitHub PR / GitLab MR by number (forge auto-detected from origin)
 /review !22                                # GitLab MR explicitly
 /review !22 +threads                       # ...and post findings as inline resolvable MR threads
+/review 123 +threads                       # same on a GitHub PR
 /review feature/CPT-3617 feature/CPT-3600  # Branch diff
 /review feature/X to feature/Y            # Same (with "to")
 /review --base main                        # Current branch vs main
@@ -68,20 +69,21 @@ you decline.
 
 ### Re-review: `/rereview`
 
-Follow-up to `/review !22 +threads` — checks whether **your own** unresolved MR threads were
-actually fixed in the new revision, then resolves them and approves. GitLab MR only.
+Follow-up to `/review ... +threads` — checks whether **your own** unresolved threads were
+actually fixed in the new revision, then resolves them and approves. GitHub PRs and GitLab MRs.
 
 ```bash
 /rereview !158                # report only: per-thread ✅ / ⚠️ / ❌ / 🕓 verdicts
 /rereview !158 +resolve       # ...and resolve the confirmed ones
 /rereview !158 +approve       # ...and approve the MR
+/rereview 42 +approve         # same on a GitHub PR
 /rereview !158 +agents        # one agent per file instead of inline checking
-/rereview                     # MR of the current branch
+/rereview                     # PR/MR of the current branch
 ```
 
-Verdicts come from the code at the MR head, not from replies: GitLab's *"changed this line in
-version N of the diff"* auto-note fires on any line shift or file move, and "исправил" is a claim,
-not evidence.
+Verdicts come from the code at the head revision, not from replies: GitLab's *"changed this line in
+version N of the diff"* auto-note and GitHub's `isOutdated` both fire on any line shift or file move,
+and "исправил" is a claim, not evidence.
 
 ---
 
@@ -159,33 +161,42 @@ The shipped defaults are in `config-defaults.md`.
 
 Findings below 60 are filtered out.
 
-### GitLab MR mechanics
+### PR/MR mechanics
 
-- **Fetch.** Both `/review` and `/rereview` fetch the MR with the canonical ref form —
-  `git fetch "<repo>" "refs/merge-requests/<iid>/head:refs/remotes/mr/<iid>"` — which works for MRs
-  from a fork or from a different project. Fetching the source branch from `origin` used to fail
-  silently in those cases.
-- **Worktree.** `/review` creates a detached worktree at the MR revision *before* launching any
-  agent and passes its path as `Repository root: <path>` in every agent prompt, so agents read the
+- **Fetch.** Both `/review` and `/rereview` fetch the change by its server-side ref —
+  `refs/pull/<n>/head` on GitHub, `refs/merge-requests/<iid>/head` on GitLab — which works when the
+  change comes from a fork or another project. Fetching the source branch from `origin` fails
+  silently in those cases: the branch is in the contributor's repo, not in `origin`. `<repo>` in the
+  GitLab form is a remote name or a clone URL; a bare `group/project` path is not something
+  `git fetch` accepts.
+- **Worktree.** `/review` creates a detached worktree at the revision under review *before* launching
+  any agent and passes its path as `Repository root: <path>` in every agent prompt, so agents read the
   code under review instead of whatever happens to be checked out in cwd. CodeRabbit reuses the same
-  worktree. `current` mode and `--base <branch>` mode need no worktree — the working tree already is
+  worktree. If the worktree can't be created the review **stops** — there is no fallback to cwd,
+  because agents answering about another branch look exactly like agents answering about this one.
+  `current` mode and `--base <branch>` mode need no worktree — the working tree already is
   the revision under review, including untracked files (added as all-added diffs, and not
   double-counted against the staged diff).
-- **Pinned to a revision.** The thread-posting helper requires `--expected-head`, checks it against
-  the MR's `diff_refs`, and posts nothing if they disagree. `/rereview +approve` sends
-  `-F "sha=$VERIFIED_HEAD"`; a `409` is treated as a refusal, not retried blindly. The approval gate
-  closes on ❌ not-fixed, ⚠️ partial, and 🕓 deferred — only ✅ passes.
-- **Thread dedup.** Before posting, the helper reads the MR's existing discussions (paginated) and
-  matches findings by `new_path` + `new_line`. A duplicate of your own prior finding is skipped
+- **Pinned to a revision.** Both thread-posting helpers require `--expected-head`, check it against
+  the live head (`diff_refs.head_sha` / `head.sha`), and post nothing if they disagree. `/rereview
+  +approve` sends `-F "sha=$VERIFIED_HEAD"` on GitLab, where a `409` is treated as a refusal; GitHub
+  has no such server-side guard, so the head is re-read and compared before approving and the
+  approval carries `commit_id` — a client-side check with a small window, and the report says so. The
+  approval gate closes on ❌ not-fixed, ⚠️ partial, and 🕓 deferred — only ✅ passes.
+- **Thread dedup.** Before posting, the helper reads the existing threads (paginated) and
+  matches findings by path + line — `new_path`/`new_line` on GitLab, `path`/`line` on GitHub, falling
+  back to `original_line` for a comment that went outdated so a rebase doesn't hide it. A duplicate of your own prior finding is skipped
   (`[DUP]`); a finding that lands where someone else's thread already sits is skipped and reported as
   "already covered in thread N" (`[SEEN]`), naming the ticket if the thread mentions one. Skipping is
   not a failure — the exit status only accounts for threads actually attempted. A finding that adds
   something real to an existing thread is posted as a reply there, not as a new thread.
 - **Position map.** Scope checking builds a `(new_path, new_line)` map from
   `git diff --unified=0` instead of grepping the saved diff text — grep has no idea where one hunk
-  ends and the next begins. The same map resolves findings anchored on deleted lines: a defect in a
-  removed check is still reportable, anchored to the nearest surviving line of the same hunk, with
-  the removed code quoted in the finding body.
+  ends and the next begins. The map is built from the *same* revision range the mode diffed, and an
+  empty map is treated as a broken one: scope filtering is skipped and the report says so, instead of
+  dropping every finding and printing "no issues found". The same map resolves findings anchored on
+  deleted lines: a defect in a removed check is still reportable, anchored to the nearest surviving
+  line of the same hunk, with the removed code quoted in the finding body.
 - **Stack-agnostic.** `test-analyzer` detects the repo's own test-file convention instead of assuming
   `src/test`/`androidTest`; agent prompts carry no Kotlin-specific examples; `git-historian` no longer
   calls `gh` (not in its tool list).
@@ -245,6 +256,36 @@ Every finding includes file path and line number:
 
 ## Changelog
 
+### 1.10.0
+
+- **GitHub parity for threads**: `+threads` posts inline, resolvable review comments on a PR via the
+  new `scripts/post-github-pr-threads.py` — same threads JSON, same `--expected-head` guard, same
+  `[OK]`/`[DUP]`/`[SEEN]` output as the GitLab helper. It sends `path` + `line` + `side` +
+  `commit_id` as a JSON body; the legacy `position` parameter is a diff-hunk offset, not a file line,
+  and anchors somewhere unrelated while looking accepted.
+- **GitHub parity for `/rereview`**: collects unresolved threads through GraphQL `reviewThreads`
+  (REST never reports resolution state), resolves via `resolveReviewThread`, and approves with
+  `commit_id` pinned to the verified head after re-reading it. A thread GitHub still tracks needs no
+  diff mapping — its `line` is already at head; only an outdated one falls back to `originalLine` at
+  `originalCommit`.
+- **GitHub PRs are fetched by `refs/pull/<n>/head`**, so a PR from a fork has a real local revision to
+  diff, to check out for agents, and to map positions against. `gh pr diff` alone gave text with no
+  revision, and `origin/<headRefName>` doesn't exist locally for a fork.
+- Fixed, all three introduced in 1.9.0:
+  - the position map hardcoded the GitLab range, so on GitHub PR, branch-diff, `--base` and `current`
+    the diff failed, the map came out empty, and the scope filter dropped **every** finding while the
+    report printed "no issues found". The range is now per mode, and an empty map disables the filter
+    and is reported instead of silently emptying the review;
+  - a worktree that couldn't be created fell back to cwd, so agents reviewed whatever branch was
+    checked out and nothing in the report said so. It now stops the review;
+  - the documented MR fetch passed `group/project` as `<repo>`, which `git fetch` answers
+    `does not appear to be a git repository` — exactly the fork case the ref form exists for. It now
+    says remote name or clone URL, and where to get the URL.
+- Fixed: `awk -F/ '{print $1}'` in the CodeRabbit bucketing example (the harness substitutes `$1`
+  before the command runs) → `cut -d/ -f1`; `sed -n '<line-15>,...'` in `/rereview` clamped to 1;
+  `/rereview` reads both config files, so a user-level `language` is no longer ignored; the posting
+  helper's one Russian error string is now English like the rest of the script.
+
 ### 1.9.0
 
 - **MR fetch fixed for forks and cross-project MRs**: `/review` and `/rereview` now fetch by
@@ -297,7 +338,7 @@ Every finding includes file path and line number:
 
 ### 1.5.0
 
-- **`/rereview`**: closes the loop after `/review +threads`. Collects your unresolved threads on a GitLab MR, diffs each one's anchor revision (`position.head_sha`) against the current head with `-M` (files move between revisions), and verifies the fix in the code at head — GitLab's "changed this line in version N" auto-note and an author's "fixed" reply are explicitly not accepted as evidence. Reports ✅ / ⚠️ / ❌ / 🕓 per thread; resolving (`+resolve`) and approving (`+approve`) are opt-in, sequential (parallel `glab` calls kill the token).
+- **`/rereview`**: closes the loop after `/review +threads`. Collects your unresolved threads on a GitLab MR (GitHub PRs since 1.10.0), diffs each one's anchor revision (`position.head_sha`) against the current head with `-M` (files move between revisions), and verifies the fix in the code at head — GitLab's "changed this line in version N" auto-note and an author's "fixed" reply are explicitly not accepted as evidence. Reports ✅ / ⚠️ / ❌ / 🕓 per thread; resolving (`+resolve`) and approving (`+approve`) are opt-in, sequential (parallel `glab` calls kill the token).
 
 ### 1.4.0
 

@@ -167,7 +167,7 @@ def main():
 
     if refs["head_sha"] != a.expected_head:
         sys.exit(
-            f"ветка уехала: анализировали {a.expected_head}, сейчас {refs['head_sha']}"
+            f"branch moved: analyzed {a.expected_head}, now {refs['head_sha']}"
         )
 
     me = get_username()

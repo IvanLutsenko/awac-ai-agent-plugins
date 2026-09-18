@@ -157,7 +157,12 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 /rereview !22 +resolve +approve            # Were my threads fixed? → resolve → approve
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.9.0
+**Status:** ✅ Production Ready | **Version:** 1.10.0
+
+**What's New in 1.10.0:**
+- GitHub parity: `+threads` posts inline resolvable review comments on a PR, and `/rereview` verifies, resolves (GraphQL `resolveReviewThread`) and approves a PR — previously GitLab-only.
+- GitHub PRs are now fetched by `refs/pull/<n>/head`, so a PR from a fork is diffed and read at the right revision instead of failing on a branch that isn't in `origin`.
+- Fixed three defects from 1.9.0: the scope filter no longer discards every finding when the position map can't be built, a worktree that can't be checked out stops the review instead of quietly reviewing cwd, and the documented MR fetch command now names a remote git actually accepts.
 
 **What's New in 1.9.0:**
 - GitLab MR review now fetches by ref (works for forks/cross-project MRs), reads the reviewed revision in a worktree instead of cwd, and dedupes/pins posted threads to that revision.

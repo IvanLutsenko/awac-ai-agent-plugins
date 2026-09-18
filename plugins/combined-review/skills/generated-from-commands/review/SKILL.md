@@ -85,7 +85,7 @@ Branch-like: contains `/`, or starts with `feature/`, `fix/`, `release/`, `hotfi
 - `+types` — add type design analysis
 - `+simplify` — add code simplification
 - `+security` — add the security agent (see Agent 6); redundant when config has `security: auto`
-- `+threads` — after the report, post findings as inline resolvable threads on the MR/PR (GitLab MR only; see Step 7). Opt-in — never post without this flag or an explicit request.
+- `+threads` — after the report, post findings as inline resolvable threads on the PR/MR (GitHub PR and GitLab MR modes; see Step 7). Opt-in — never post without this flag or an explicit request.
 - `all` — run all agents including optional
 
 ## Step 2 — Gather diff and context
@@ -102,13 +102,29 @@ trap 'rm -rf "$CRDIR"' EXIT
 ```
 Everything below refers to it as `$CRDIR`.
 
-Based on mode:
+Based on mode. Whichever branch runs, it ends by fixing two values that the rest of the command reads
+instead of re-deriving:
+
+- **`<diff-spec>`** — the revision pair `git diff` gets. Step 5 rebuilds the position map from **this
+  same spec**. A spec that only fits one mode is exactly what makes the map come out empty elsewhere.
+- **`<source-ref>`** — the revision under review; Step 4 checks the agents' worktree out at it.
 
 **GitHub PR:**
 ```bash
-gh pr view <number>
-gh pr diff <number>
+gh pr view "<number>" --json title,state,baseRefName,headRefName
+git fetch origin "refs/pull/<number>/head:refs/remotes/pr/<number>"
+git fetch origin "<base>"
+git diff "origin/<base>...pr/<number>" > "$CRDIR/pr.diff"       # save the diff
+git log "origin/<base>..pr/<number>" --oneline
+git rev-parse "pr/<number>"                             # the revision under review; keep it for Step 7
 ```
+> `refs/pull/<number>/head` is on **origin** even when the PR comes from a fork — it's the one ref
+> that's always fetchable. `origin/<headRefName>` is not: for a fork PR that branch lives in the
+> contributor's repo, so nothing local resolves it and both the diff and the worktree fail. `gh pr
+> diff` alone is not enough either — it gives text with no revision to check out or map positions
+> against.
+
+`<diff-spec>` = `origin/<base>...pr/<number>`, `<source-ref>` = `pr/<number>`.
 
 **GitLab MR** (repo path from origin, e.g. `group/project`; the MR may live on a different project — pass `-R <group/project>`):
 ```bash
@@ -119,9 +135,11 @@ git diff "origin/<target>...mr/<iid>" > "$CRDIR/mr.diff"     # save the diff
 git log "origin/<target>..mr/<iid>" --oneline
 git rev-parse "mr/<iid>"                              # the revision under review; keep it for Step 7
 ```
-> This form works for an MR from a fork or another project, where `git fetch origin "<source>"` silently fails — the branch doesn't exist on `origin`. `<repo>` is the MR project's remote name or URL: `origin` for a normal MR, the project path or URL when `-R <group/project>` was used. The MR head is then `mr/<iid>`.
+> This form works for an MR from a fork or another project, where `git fetch origin "<source>"` silently fails — the branch doesn't exist on `origin`. `<repo>` is what `git fetch` accepts as a remote — a remote name or a clone URL. `origin` for a normal MR; for an MR in another project pass that project's URL, which `glab api "projects/<group%2Fproject>" --jq .http_url_to_repo` prints. A bare `group/project` path is **not** a remote: `git fetch "group/project"` answers `does not appear to be a git repository` and the MR is never fetched. The MR head is then `mr/<iid>`.
 
 Read `source`/`target` from the `glab mr view` output (`<source> -> <target>`). The working tree is usually on a *different* branch than the MR — do not read file context from cwd; a detached worktree at the MR head (`mr/<iid>`) is created before agents launch (see Step 4, "Repository root for agents") and agents read context from there.
+
+`<diff-spec>` = `origin/<target>...mr/<iid>`, `<source-ref>` = `mr/<iid>`.
 
 **Branch diff:**
 Try with `origin/` first, then local:
@@ -131,6 +149,8 @@ git log "origin/<target>..origin/<source>" --oneline
 git diff "origin/<target>...origin/<source>"
 ```
 Source = first argument, target = second.
+
+`<diff-spec>` = `origin/<target>...origin/<source>`, `<source-ref>` = `origin/<source>`.
 
 **Current changes:**
 ```bash
@@ -147,7 +167,12 @@ has not `git add`-ed yet is invisible to every `git diff`, so without the `ls-fi
 "the new screen I just wrote" sees an empty diff and stops. `git diff --no-index` exits 1 when the
 files differ — that is the normal outcome here, not a failure.
 
-With `--base`: `git diff <base>...HEAD`
+With `--base`: `git diff "<base>...HEAD"`
+
+`<diff-spec>` = `<base>...HEAD` with `--base`, and `HEAD` on its own in plain `current` mode — where
+the untracked files are not in any range and Step 5 has to add their `--no-index` diffs to the map the
+same way this step added them to the review. `<source-ref>` is unset in both: cwd already *is* the
+revision under review.
 
 **If both the diff and the untracked list are empty — report and stop.**
 
@@ -211,23 +236,27 @@ which means «leave each agent on its own declared model».
 is already checked out in cwd:
 - `current` mode and `--base <X>` mode — the current branch IS the revision under review; no worktree,
   repository root is cwd.
-- GitLab MR mode — the revision is `mr/<iid>` (fetched in Step 2); create a detached worktree.
-- GitHub PR mode and branch-diff mode — if `git branch --show-current` differs from the source branch,
-  create a detached worktree at `origin/<source>`; otherwise repository root is cwd.
+- GitHub PR and GitLab MR mode — the revision is the `<source-ref>` fixed in Step 2 (`pr/<number>` /
+  `mr/<iid>`); create a detached worktree, always. Not `origin/<headRefName>`: on a fork PR that ref
+  doesn't exist locally.
+- branch-diff mode — if `git branch --show-current` differs from the source branch, create a detached
+  worktree at `<source-ref>`; otherwise repository root is cwd.
 
 When a worktree is needed:
 ```bash
 WORKTREE=$(mktemp -d -t combined-review-XXXXXX)
-if git worktree add --detach "$WORKTREE" "<source-ref>" 2>&1; then
-  :
-else
+if ! git worktree add --detach "$WORKTREE" "<source-ref>" 2>&1; then
   rmdir "$WORKTREE"          # the mktemp dir is empty when `worktree add` failed - don't leak it
-  WORKTREE=""
-  echo "Worktree creation failed for \"<source-ref>\" — agents will read from cwd instead; note this in the report."
+  echo "Cannot check out \"<source-ref>\" — stopping instead of reviewing another revision."
+  exit 1
 fi
 ```
-`<source-ref>` is `mr/<iid>` for a GitLab MR, `origin/<source>` for a GitHub PR or branch diff. Keep
-`$WORKTREE` alive until every agent launched in this step — including CodeRabbit (Agent 5) — has
+**There is no fallback to cwd.** cwd holds some other branch; agents reading it would answer about
+code that is not under review — missing real defects and inventing ones — and the report would carry
+no sign of it. Stop, say which ref could not be checked out, and suggest the fetch from Step 2 as the
+fix. A review that didn't run is recoverable; one that silently read the wrong tree is not.
+
+Keep `$WORKTREE` alive until every agent launched in this step — including CodeRabbit (Agent 5) — has
 finished, then remove it unconditionally, even if an agent errored:
 ```bash
 [ -n "$WORKTREE" ] && git worktree remove --force "$WORKTREE" 2>/dev/null
@@ -342,14 +371,14 @@ branch at the end of this step applies.
 ```bash
 set -o pipefail
 # bucket the changed paths, e.g. by top-level dir:
-git diff "origin/<target>...origin/<source>" --name-only | awk -F/ '{print $1}' | sort | uniq -c
+git diff "<diff-spec>" --name-only | cut -d/ -f1 | sort | uniq -c
 # then, per bucket that keeps each run under 150 files — one log and one exit code per bucket:
 coderabbit review --base "origin/<target>" --dir core    > "$CRDIR/coderabbit-core.log"    2>&1; CR_RC_CORE=$?
 coderabbit review --base "origin/<target>" --dir feature > "$CRDIR/coderabbit-feature.log" 2>&1; CR_RC_FEATURE=$?
 ```
 Pick bucket boundaries (a top-level dir, or a couple grouped together) so every run stays < 150. Note in the report which paths, if any, fell outside the buckets and were not CodeRabbit-reviewed.
 
-**If the worktree failed to create (see "Repository root for agents" above) or CodeRabbit aborts** — a non-zero `$CR_RC`, including a too-many-files error you chose not to split — do not fail the review: name the skip reason in the report (the last lines of `$CRDIR/coderabbit.log` usually say it) and continue with the 4 agents' output.
+**If CodeRabbit aborts** — a non-zero `$CR_RC`, including a too-many-files error you chose not to split — do not fail the review: name the skip reason in the report (the last lines of `$CRDIR/coderabbit.log` usually say it) and continue with the 4 agents' output. (A worktree that couldn't be created is a different case: it already stopped the review back in "Repository root for agents".)
 
 ### Optional agents (by request)
 
@@ -370,14 +399,26 @@ Collect findings from all agents:
 2. **Filter out** confidence < 60
 3. **Position map** — build, once, the set of `(new_path, new_line)` pairs this change actually touches, and check every finding's cited `file:line` against it. Do not `grep` the saved diff for a line number: `grep` has no idea where one hunk ends and the next begins, so it confirms a number that belongs to a different hunk, a different file, or the `-` side of the same one.
    ```bash
-   git diff --unified=0 "origin/<target>...mr/<iid>" | awk '
+   git diff --unified=0 "<diff-spec>" | awk '
      /^diff --git /      { hunk = 0; next }
      !hunk && /^\+\+\+ /  { f = substr($0, 7); next }        # strips "+++ b/"
      /^@@ /              { split($3, h, ","); n = substr(h[1], 2) + 0; hunk = 1; next }
      hunk && /^\+/       { print f ":" n; n++ }
    ' | sort -u > "$CRDIR/positions.txt"
    ```
-   Use the same diff spec as Step 2 did for this mode (`origin/<t>...origin/<s>`, `<base>...HEAD`, or the plain working-tree diff in `current` mode). `--unified=0` is what makes the map exact: with no context lines, every `+` line in a hunk is a line the change introduced, counted from the hunk header's new-side start. A finding whose `file:line` is not in the map is out of scope — drop it, however many agents reported it. Reading-for-context is fine; reporting-on-unchanged-code is not.
+   `<diff-spec>` is the one Step 2 fixed **for this mode** — `origin/<base>...pr/<n>`, `origin/<t>...mr/<iid>`, `origin/<t>...origin/<s>`, `<base>...HEAD`, or bare `HEAD` in `current` mode. Substitute it; don't carry one mode's range into another, where it names a ref that doesn't exist. In `current` mode append the untracked files the same way Step 2 did, or every finding in a brand-new file falls outside the map:
+   ```bash
+   git ls-files --others --exclude-standard -z | while IFS= read -r -d '' f; do
+     git diff --no-index --unified=0 -- /dev/null "$f"
+   done | awk '...same script...' | sort -u >> "$CRDIR/positions.txt"
+   ```
+   `--unified=0` is what makes the map exact: with no context lines, every `+` line in a hunk is a line the change introduced, counted from the hunk header's new-side start. A finding whose `file:line` is not in the map is out of scope — drop it, however many agents reported it. Reading-for-context is fine; reporting-on-unchanged-code is not.
+
+   **An empty map is a broken map, not an empty change.** Step 2 already stopped the review if the diff was empty, so by here `positions.txt` has lines — unless the `git diff` above failed (a ref that doesn't exist in this mode is the usual cause, and it writes nothing to stdout while the error goes to stderr). Check it, and never let a failed map silently drop every finding:
+   ```bash
+   [ -s "$CRDIR/positions.txt" ] || echo "POSITION MAP EMPTY"
+   ```
+   On `POSITION MAP EMPTY`: do **not** apply the scope filter at all. Report the findings as the agents returned them, and open the report with one line saying the position map could not be built for `<diff-spec>`, so scope filtering was skipped and the findings are unverified. Never print "No issues found" off an empty map — that sentence must mean "agents found nothing", not "I discarded everything they found".
 
    **Findings on deleted lines.** A removal can be the defect — a dropped permission check, a deleted null guard. Report it, but anchor it to a line that still exists in the new file: the nearest surviving line of the same hunk, normally the line right after the deletion. Quote the removed code in the finding body so the reader sees what went away. A finding that can only be anchored to a line that no longer exists is reported in the terminal output only — it cannot be posted as a thread.
 
@@ -451,16 +492,19 @@ No issues found. Checked: CLAUDE.md, bugs, git history, error handling, tests.
 
 **Do NOT post to the PR/MR automatically.** Output to the user only — unless `+threads` was passed or the user explicitly asks to post threads (then do Step 7).
 
-## Step 7 — Post inline threads to a GitLab MR (opt-in only)
+## Step 7 — Post inline threads to the PR/MR (opt-in only)
 
-Only when `+threads` was passed or the user explicitly asks. GitLab MR mode only.
+Only when `+threads` was passed or the user explicitly asks. GitHub PR and GitLab MR modes only —
+branch-diff and `current` have nowhere to post to.
 
 Build a threads JSON from the findings you're posting (blockers + correctness + the test findings worth a thread). Each entry:
 - `path` — repo-relative path, exactly as in the diff (`new_path`)
-- `line` — line number in the **new** (post-change) file; the `(path, line)` pair must be in the position map from Step 5 (`$CRDIR/positions.txt`), else GitLab rejects the position. A finding about removed code carries the line it was re-anchored to in Step 5; one that could not be re-anchored is terminal-only — do not post it
+- `line` — line number in the **new** (post-change) file; the `(path, line)` pair must be in the position map from Step 5 (`$CRDIR/positions.txt`), else the forge rejects the position. A finding about removed code carries the line it was re-anchored to in Step 5; one that could not be re-anchored is terminal-only — do not post it
 - `body` — the finding text (markdown; keep it in the resolved report language)
 
-Then post them all as inline, resolvable diff notes with the shipped helper:
+Then post them all as inline, resolvable threads with the shipped helper for that forge. The threads
+JSON, the flags and the printed outcomes are the same on both; only the API underneath differs.
+
 ```bash
 cat > "$CRDIR/threads.json" <<'JSON'
 [
@@ -468,27 +512,43 @@ cat > "$CRDIR/threads.json" <<'JSON'
   {"path": "feature/.../BarTest.kt", "line": 38, "body": "**Test.** ..."}
 ]
 JSON
+
+# GitLab MR
 python3 "plugins/combined-review/scripts/post-gitlab-mr-threads.py" \
   --repo "<group/project>" --mr "<iid>" --threads "$CRDIR/threads.json" \
+  --expected-head "<head_sha>"
+
+# GitHub PR
+python3 "plugins/combined-review/scripts/post-github-pr-threads.py" \
+  --repo "<owner/repo>" --pr "<number>" --threads "$CRDIR/threads.json" \
   --expected-head "<head_sha>"
 ```
 `$CRDIR` is the private temp dir from Step 2; if that shell is gone, make a new one the same way (`umask 077`, `mktemp -d`, `trap ... EXIT`) — a fixed name like `/tmp/threads.json` is world-readable on a shared machine and is whatever a pre-planted symlink points at.
 
-`<head_sha>` is the SHA captured in Step 2, not a fresh `git rev-parse` — re-reading
-`mr/<iid>` here would return whatever was fetched last and the guard would compare the new
-head against itself. `--expected-head` guards against the author pushing between analysis and posting — without it, findings could land on code that's no longer at the revision we diffed. The helper reads the MR's `diff_refs` itself, checks `head_sha` against `--expected-head`, and verifies each note came back as a `DiffNote` anchored to `line`.
+`<head_sha>` is the SHA captured in Step 2 (`git rev-parse "mr/<iid>"` / `"pr/<number>"`), not a fresh
+`git rev-parse` — re-reading the ref here would return whatever was fetched last and the guard would
+compare the new head against itself. `--expected-head` guards against the author pushing between analysis and posting — without it, findings could land on code that's no longer at the revision we diffed. Each helper reads the live head itself (`diff_refs.head_sha` on GitLab, `head.sha` on GitHub), checks it against `--expected-head`, and verifies every note came back anchored to the line it asked for.
 
-**Lines that already have a thread.** Before posting anything the helper reads the MR's discussions
-(paginated, so an MR with 100+ threads doesn't hide the older ones) and matches each finding on
-`new_path` + `new_line`; a thread with `position: null` is a plain MR comment, not anchored to a
-line, and never matches. Per finding it prints one of:
+**Lines that already have a thread.** Before posting anything the helper reads the existing threads
+(paginated, so a PR/MR with 100+ of them doesn't hide the older ones) and matches each finding on
+path + line. What never matches: on GitLab a thread with `position: null` — a plain MR comment, not
+anchored to a line; on GitHub a reply (`in_reply_to_id` set), which belongs to a thread its own root
+already answered for. A GitHub comment that went outdated reports `line: null` and keeps its anchor in
+`original_line`, and is matched on that — otherwise one rebase makes every earlier thread invisible and
+the next run posts all of them again. Per finding the helper prints one of:
 - `[OK ] <file>:<line>` / `[ERR] <file>:<line>` — posted, or attempted and failed to anchor;
 - `[DUP] <file>:<line> -> own thread <id>` — your own thread from an earlier run is on that line;
 - `[SEEN] <file>:<line> -> thread <id>[ ticket=ABC-123]` — someone else's thread is on that line.
 
 Skipped findings are not failures: the exit code only covers threads the helper actually tried to post.
 
-**Why the helper, not a raw `glab api` call:** an inline thread needs the position as a **nested JSON `position` object** sent via `glab api --input <file> -H "Content-Type: application/json"`. Passing `-f "position[new_line]=.."` sends flat keys that GitLab silently ignores — you get a plain, non-anchored comment (`type: DiscussionNote`, `position: null`) that looks fine in the API response but isn't attached to any line. The helper encodes the working mechanism so this isn't re-derived each time.
+**Why a helper, not a raw `glab`/`gh api` call:** both forges have a way to accept the call and quietly
+not anchor it, and both traps look like success in the response.
+
+- GitLab: an inline thread needs the position as a **nested JSON `position` object** sent via `glab api --input <file> -H "Content-Type: application/json"`. Passing `-f "position[new_line]=.."` sends flat keys that GitLab silently ignores — you get a plain, non-anchored comment (`type: DiscussionNote`, `position: null`) that looks fine in the API response but isn't attached to any line.
+- GitHub: `POST /repos/{owner}/{repo}/pulls/{n}/comments` wants `path` + `line` + `side` + `commit_id`. The legacy `position` parameter is an offset **inside the diff hunk**, not a line of the file, so a finding's line number sent as `position` anchors somewhere unrelated. `gh api -f line=42` is the other trap: `-f` always sends a string where the API wants an integer, hence the JSON body file.
+
+Each helper encodes its forge's working mechanism so this isn't re-derived each time.
 
 After posting, tell the user how many threads landed and where; do not resolve them yourself.
 
@@ -502,7 +562,12 @@ If a `[SEEN]` finding adds something the existing thread misses — a different 
 doesn't cover — offer to add a comment **to that same thread**, not a new one, and post it only on
 the user's go-ahead:
 ```bash
+# GitLab: <discussion_id> is what the helper printed
 glab api -X POST "projects/<group%2Fproject>/merge_requests/<iid>/discussions/<discussion_id>/notes" \
+  -f body="..."
+
+# GitHub: reply to the thread's root comment id the helper printed
+gh api -X POST "repos/<owner>/<repo>/pulls/<number>/comments/<comment_id>/replies" \
   -f body="..."
 ```
 If the finding only restates what's already in the thread, drop it and say nothing.
