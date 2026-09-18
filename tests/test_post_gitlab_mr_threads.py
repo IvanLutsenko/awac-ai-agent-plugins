@@ -171,6 +171,76 @@ class PostGitlabMrThreadsTest(unittest.TestCase):
         self.assertEqual(post_calls, [])
 
 
+    def test_second_page_of_discussions_is_read(self):
+        module = load_module()
+        # `glab api --paginate` concatenates one JSON array per page.
+        page1 = json.dumps([make_discussion("d1", "other.py", 10, "someone")])
+        page2 = json.dumps([make_discussion("d2", "foo.py", 3, "someone")])
+        base = make_glab_api(ANALYZED_SHA)
+
+        def fake(path, method=None, headers=None, input_file=None, paginate=False):
+            if "/discussions" in path and method != "POST":
+                return page1 + "\n" + page2, ""
+            return base(path, method, headers, input_file, paginate)
+
+        with patch.object(module, "glab_api", side_effect=fake) as mock_api:
+            with patch(
+                "sys.argv",
+                [
+                    "post-gitlab-mr-threads.py",
+                    "--repo", "group/project", "--mr", "1",
+                    "--threads", str(self.threads_file),
+                    "--expected-head", ANALYZED_SHA,
+                ],
+            ):
+                with self.assertRaises(SystemExit) as cm:
+                    module.main()
+
+        # The match lives on page 2: without multi-page decoding it would be posted again.
+        self.assertEqual(cm.exception.code, 0)
+        self.assertEqual(
+            [c for c in mock_api.call_args_list if c.kwargs.get("method") == "POST"], []
+        )
+
+    def test_one_failed_thread_makes_the_exit_code_nonzero(self):
+        module = load_module()
+        self.threads_file.write_text(
+            json.dumps(
+                [
+                    {"path": "foo.py", "line": 3, "body": "nit"},
+                    {"path": "bar.py", "line": 9, "body": "nit"},
+                ]
+            ),
+            encoding="utf-8",
+        )
+        base = make_glab_api(ANALYZED_SHA)
+        seen = []
+
+        def fake(path, method=None, headers=None, input_file=None, paginate=False):
+            if method == "POST":
+                sent = json.loads(Path(input_file).read_text())
+                seen.append(sent)
+                if sent["position"]["new_path"] == "bar.py":
+                    return "", "400 Bad Request: line not part of the diff"
+            return base(path, method, headers, input_file, paginate)
+
+        with patch.object(module, "glab_api", side_effect=fake):
+            with patch(
+                "sys.argv",
+                [
+                    "post-gitlab-mr-threads.py",
+                    "--repo", "group/project", "--mr", "1",
+                    "--threads", str(self.threads_file),
+                    "--expected-head", ANALYZED_SHA,
+                ],
+            ):
+                with self.assertRaises(SystemExit) as cm:
+                    module.main()
+
+        # One posted, one rejected -> partial success is still a failure.
+        self.assertNotEqual(cm.exception.code, 0)
+        self.assertEqual(len(seen), 2)
+
     def test_paginated_call_that_fails_midway_aborts(self):
         module = load_module()
         # Page 1 arrived, page 2 died: stdout is valid JSON but incomplete.

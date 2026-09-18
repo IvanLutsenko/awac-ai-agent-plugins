@@ -29,8 +29,13 @@ error.
 - `coderabbit` — `auto` (default: use it when installed and authenticated), `off`
 - `security` — `off` (default: only on `+security`), `auto` (every review)
 
-**Language resolution:** `system` → detect from CLAUDE.md (look for hints like "Отвечай", "русский")
-or fall back to English; `en`/`ru`/`uk` → use directly. The resolved value is passed to every agent
+**Language resolution:** `system` → first look for a hint in CLAUDE.md ("Отвечай", "русский"); with
+no hint, read the shell locale, which is what `config-defaults.md` promises:
+```bash
+echo "${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}"      # ru_RU.UTF-8 -> ru, uk_UA.UTF-8 -> uk
+```
+Map the prefix before `_` to `ru`/`uk`; anything else, or an empty value, falls back to English.
+`en`/`ru`/`uk` in the config → use directly. The resolved value is passed to every agent
 (Step 4) and agents return their findings already in it; the report shell (Step 6) is written in the
 same language. Code snippets, file paths, identifier names and CLI commands stay as they are.
 
@@ -139,15 +144,21 @@ Read `source`/`target` from the `glab mr view` output (`<source> -> <target>`). 
 `<diff-spec>` = `origin/<target>...mr/<iid>`, `<source-ref>` = `mr/<iid>`.
 
 **Branch diff:**
-Try with `origin/` first, then local:
+Source = first argument, target = second. Resolve each side **once** — the remote-tracking ref when it
+exists, the local branch otherwise — and use the result everywhere after:
 ```bash
 git fetch origin "<branch1>" "<branch2>" 2>/dev/null
-git log "origin/<target>..origin/<source>" --oneline
-git diff "origin/<target>...origin/<source>"
+for b in "<source>" "<target>"; do
+  git rev-parse --verify --quiet "origin/$b" >/dev/null && echo "origin/$b" || echo "$b"
+done                                    # -> <resolved-source>, <resolved-target>
+git log "<resolved-target>..<resolved-source>" --oneline
+git diff "<resolved-target>...<resolved-source>"
 ```
-Source = first argument, target = second.
+Hardcoding `origin/` here is what breaks a comparison against a branch that was never pushed: the
+fetch quietly does nothing and every command after it fails on a ref that doesn't exist. If neither
+form resolves, say which branch could not be found and stop.
 
-`<diff-spec>` = `origin/<target>...origin/<source>`, `<source-ref>` = `origin/<source>`.
+`<diff-spec>` = `<resolved-target>...<resolved-source>`, `<source-ref>` = `<resolved-source>`.
 
 **Current changes:**
 ```bash
@@ -334,7 +345,11 @@ severity/confidence pipeline in Step 5.
 
 ### Agent 5 — CodeRabbit (if `coderabbit: auto` and available)
 
-CodeRabbit reviews the revision under review against `--base <target>`, using the same repository root
+CodeRabbit reviews the revision under review against `--base <base-ref>` — the target side of the
+`<diff-spec>` Step 2 fixed (`origin/<base>`, `origin/<target>`, `<resolved-target>`, or the `--base`
+branch). In `current` mode there is no base at all: run `coderabbit review` with no `--base`, here and
+in the bucketed form below. Passing a half-substituted `--base "origin/"` is how the run aborts and
+the whole CodeRabbit layer silently disappears from the report. Use the same repository root
 picked in "Repository root for agents" above — reuse `$WORKTREE` when one was created for the other
 agents; don't check out a second worktree just for CodeRabbit.
 
@@ -347,13 +362,13 @@ to every pipeline in this step.
 **In the shared worktree** (`$WORKTREE` is set):
 ```bash
 set -o pipefail
-( cd "$WORKTREE" && coderabbit review --base "origin/<target>" ) > "$CRDIR/coderabbit.log" 2>&1; CR_RC=$?
+( cd "$WORKTREE" && coderabbit review --base "<base-ref>" ) > "$CRDIR/coderabbit.log" 2>&1; CR_RC=$?
 ```
 
 **In cwd** (no `$WORKTREE` — `current` mode, `--base <X>` mode, or PR/branch-diff mode where cwd
 already IS the source):
 ```bash
-coderabbit review --base "<target>" > "$CRDIR/coderabbit.log" 2>&1; CR_RC=$?
+coderabbit review --base "<base-ref>" > "$CRDIR/coderabbit.log" 2>&1; CR_RC=$?
 ```
 
 Or, in `current` mode:
@@ -371,8 +386,8 @@ set -o pipefail
 # bucket the changed paths, e.g. by top-level dir:
 git diff "<diff-spec>" --name-only | cut -d/ -f1 | sort | uniq -c
 # then, per bucket that keeps each run under 150 files — one log and one exit code per bucket:
-coderabbit review --base "origin/<target>" --dir core    > "$CRDIR/coderabbit-core.log"    2>&1; CR_RC_CORE=$?
-coderabbit review --base "origin/<target>" --dir feature > "$CRDIR/coderabbit-feature.log" 2>&1; CR_RC_FEATURE=$?
+coderabbit review --base "<base-ref>" --dir core    > "$CRDIR/coderabbit-core.log"    2>&1; CR_RC_CORE=$?    # drop --base in `current` mode
+coderabbit review --base "<base-ref>" --dir feature > "$CRDIR/coderabbit-feature.log" 2>&1; CR_RC_FEATURE=$?
 ```
 Pick bucket boundaries (a top-level dir, or a couple grouped together) so every run stays < 150. Note in the report which paths, if any, fell outside the buckets and were not CodeRabbit-reviewed.
 
