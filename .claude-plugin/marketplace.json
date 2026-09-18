@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "crashlytics",
-      "version": "4.4.4",
+      "version": "4.4.5",
       "description": "Multi-platform crash analysis for Android & iOS with git blame forensics, code-level fixes, and a major-pinned Firebase MCP launcher. Language-aware validator (en/ru/es/de/fr/pt/it), origin/<branch> forensics. MCP-primary fetch with REST API fallback.",
       "source": "./plugins/crashlytics",
       "author": {
@@ -55,7 +55,7 @@
     },
     {
       "name": "combined-review",
-      "version": "1.7.1",
+      "version": "1.10.0",
       "description": "Combined code review: multi-agent analysis (code-reviewer, git-historian, silent-failure-hunter, test-analyzer) + CodeRabbit CLI. GitHub PR + GitLab MR (inline threads, /rereview follow-up).",
       "source": "./plugins/combined-review",
       "author": {

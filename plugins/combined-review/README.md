@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.7.1
+**Version:** 1.10.0
 
 ---
 
@@ -40,6 +40,7 @@ coderabbit auth login
 /review 123                                # GitHub PR / GitLab MR by number (forge auto-detected from origin)
 /review !22                                # GitLab MR explicitly
 /review !22 +threads                       # ...and post findings as inline resolvable MR threads
+/review 123 +threads                       # same on a GitHub PR
 /review feature/CPT-3617 feature/CPT-3600  # Branch diff
 /review feature/X to feature/Y            # Same (with "to")
 /review --base main                        # Current branch vs main
@@ -51,25 +52,38 @@ coderabbit auth login
 /review feature/X feature/Y +comments     # Add comment analysis
 /review feature/X feature/Y +types        # Add type design analysis
 /review feature/X feature/Y +simplify     # Add code simplification
+/review feature/X feature/Y +security     # Add the security agent
 /review feature/X feature/Y all           # Run all agents
 ```
 
+### Setup: `/review-config`
+
+```bash
+/review-config            # interactive setup, writes ~/.claude/combined-review.md
+/review-config --project  # same, but writes .claude/combined-review.local.md in this repo
+/review-config --show     # print the resolved config and where each value came from
+```
+
+On the first `/review` with no config anywhere, the command offers this setup and takes defaults if
+you decline.
+
 ### Re-review: `/rereview`
 
-Follow-up to `/review !22 +threads` — checks whether **your own** unresolved MR threads were
-actually fixed in the new revision, then resolves them and approves. GitLab MR only.
+Follow-up to `/review ... +threads` — checks whether **your own** unresolved threads were
+actually fixed in the new revision, then resolves them and approves. GitHub PRs and GitLab MRs.
 
 ```bash
 /rereview !158                # report only: per-thread ✅ / ⚠️ / ❌ / 🕓 verdicts
 /rereview !158 +resolve       # ...and resolve the confirmed ones
 /rereview !158 +approve       # ...and approve the MR
+/rereview 42 +approve         # same on a GitHub PR
 /rereview !158 +agents        # one agent per file instead of inline checking
-/rereview                     # MR of the current branch
+/rereview                     # PR/MR of the current branch
 ```
 
-Verdicts come from the code at the MR head, not from replies: GitLab's *"changed this line in
-version N of the diff"* auto-note fires on any line shift or file move, and "исправил" is a claim,
-not evidence.
+Verdicts come from the code at the head revision, not from replies: GitLab's *"changed this line in
+version N of the diff"* auto-note and GitHub's `isOutdated` both fire on any line shift or file move,
+and "исправил" is a claim, not evidence.
 
 ---
 
@@ -90,33 +104,42 @@ not evidence.
 | Comment Analyzer | `+comments` | Comment accuracy vs code, stale TODOs |
 | Type Design Analyzer | `+types` | Encapsulation, invariants, enforcement |
 | Code Simplifier | `+simplify` | Simplification without losing functionality |
+| **security-reviewer** | `+security` or `security: auto` | Secrets, injection, authn/authz, insecure storage and transport, unsafe crypto |
 
 ---
 
 ## Configuration
 
-Create `.claude/combined-review.local.md` in your project to customize settings:
+Two files, neither inside the plugin — updating or reinstalling it never touches your settings:
 
-```bash
-cp $(claude plugin path combined-review)/config-defaults.md .claude/combined-review.local.md
-```
+- `~/.claude/combined-review.md` — user-level, applies in every repo
+- `.claude/combined-review.local.md` — project-level, overrides the user file key by key
 
-Or manually create with YAML frontmatter:
+Each key resolves separately: project file → user file → default. Write them with `/review-config`,
+or by hand as YAML frontmatter:
 
 ```yaml
 ---
-language: system
+language: system    # system | en | ru | uk
+model: sonnet       # sonnet | opus | haiku | inherit
+coderabbit: auto    # auto | off
+security: off       # off | auto
 ---
 ```
 
-**Language options:**
+- **`language`** — language of the final report. `system` auto-detects from CLAUDE.md or your locale.
+  Agents get the resolved language up front and return their findings already in it — nothing is
+  translated afterwards. Code, file paths, identifiers and CLI commands stay as they are regardless
+  of language.
+- **`model`** — model the review subagents run on. `opus` goes deeper and burns a personal plan
+  faster, `haiku` is cheap and shallow, `inherit` leaves every agent on the model it declares.
+- **`coderabbit`** — `auto` uses the CLI when it's installed and authenticated, `off` skips the check
+  entirely (no install prompt, no CodeRabbit section). Credentials stay with the CLI
+  (`coderabbit auth login` / `coderabbit auth status`); the plugin stores none.
+- **`security`** — `off` runs the security agent only on `+security`, `auto` on every review. It is a
+  fifth parallel agent, so `auto` costs time on every review and on every shard of a large diff.
 
-- `system` — auto-detect from CLAUDE.md or system locale (default)
-- `en` — English
-- `ru` — Russian
-- `uk` — Ukrainian
-
-Agents work internally in English for accuracy; only the final report is output in the configured language.
+The shipped defaults are in `config-defaults.md`.
 
 ---
 
@@ -137,6 +160,55 @@ Agents work internally in English for accuracy; only the final report is output 
 - **75-100**: Confirmed issue, affects functionality
 
 Findings below 60 are filtered out.
+
+### PR/MR mechanics
+
+- **Fetch.** Both `/review` and `/rereview` fetch the change by its server-side ref —
+  `refs/pull/<n>/head` on GitHub, `refs/merge-requests/<iid>/head` on GitLab — which works when the
+  change comes from a fork or another project. Fetching the source branch from `origin` fails
+  silently in those cases: the branch is in the contributor's repo, not in `origin`. `<repo>` in the
+  GitLab form is a remote name or a clone URL; a bare `group/project` path is not something
+  `git fetch` accepts.
+- **Worktree.** `/review` creates a detached worktree at the revision under review *before* launching
+  any agent and passes its path as `Repository root: <path>` in every agent prompt, so agents read the
+  code under review instead of whatever happens to be checked out in cwd. CodeRabbit reuses the same
+  worktree. If the worktree can't be created the review **stops** — there is no fallback to cwd,
+  because agents answering about another branch look exactly like agents answering about this one.
+  `current` mode and `--base <branch>` mode need no worktree — the working tree already is
+  the revision under review, including untracked files (added as all-added diffs, and not
+  double-counted against the staged diff).
+- **Pinned to a revision.** Both thread-posting helpers require `--expected-head`, check it against
+  the live head (`diff_refs.head_sha` / `head.sha`), and post nothing if they disagree. `/rereview
+  +approve` sends `-F "sha=$VERIFIED_HEAD"` on GitLab, where a `409` is treated as a refusal; GitHub
+  has no such server-side guard, so the head is re-read and compared before approving and the
+  approval carries `commit_id` — a client-side check with a small window, and the report says so. The
+  approval gate closes on ❌ not-fixed, ⚠️ partial, and 🕓 deferred — only ✅ passes.
+- **Thread dedup.** Before posting, the helper reads the existing threads (paginated) and
+  matches findings by path + line — `new_path`/`new_line` on GitLab, `path`/`line` on GitHub, falling
+  back to `original_line` for a comment that went outdated so a rebase doesn't hide it. A duplicate of your own prior finding is skipped
+  (`[DUP]`); a finding that lands where someone else's thread already sits is skipped and reported as
+  "already covered in thread N" (`[SEEN]`), naming the ticket if the thread mentions one. Skipping is
+  not a failure — the exit status only accounts for threads actually attempted. A finding that adds
+  something real to an existing thread is posted as a reply there, not as a new thread.
+- **Position map.** Scope checking builds a `(new_path, new_line)` map from
+  `git diff --unified=0` instead of grepping the saved diff text — grep has no idea where one hunk
+  ends and the next begins. The map is built from the *same* revision range the mode diffed, and an
+  empty map is treated as a broken one: scope filtering is skipped and the report says so, instead of
+  dropping every finding and printing "no issues found". The same map resolves findings anchored on
+  deleted lines: a defect in a removed check is still reportable, anchored to the nearest surviving
+  line of the same hunk, with the removed code quoted in the finding body.
+- **Stack-agnostic.** `test-analyzer` detects the repo's own test-file convention instead of assuming
+  `src/test`/`androidTest`; agent prompts carry no Kotlin-specific examples; `git-historian` no longer
+  calls `gh` (not in its tool list).
+- **CLAUDE.md from the reviewed revision.** `/review` reads `CLAUDE.md` via `git show <target>:CLAUDE.md`
+  — from the target revision, not from the working tree and not from the MR's source branch, since an
+  adversarial MR could ship its own `CLAUDE.md` with instructions aimed at the reviewer. Agent prompts
+  include an explicit trust-boundary note: the diff, the MR/PR description, and source-branch file
+  contents are data to analyze, not instructions to follow.
+- **Temp files.** Scratch files (CodeRabbit output, discussion dumps) use a private `mktemp`/`mktemp -d`
+  under `umask 077` with `trap ... EXIT`, not a fixed predictable path.
+- **Forge detection** has an `else` branch for a corporate GitLab on its own domain, instead of only
+  recognizing `github.com`/`gitlab.com`.
 
 ### False positive rules
 
@@ -184,6 +256,77 @@ Every finding includes file path and line number:
 
 ## Changelog
 
+### 1.10.0
+
+- **GitHub parity for threads**: `+threads` posts inline, resolvable review comments on a PR via the
+  new `scripts/post-github-pr-threads.py` — same threads JSON, same `--expected-head` guard, same
+  `[OK]`/`[DUP]`/`[SEEN]` output as the GitLab helper. It sends `path` + `line` + `side` +
+  `commit_id` as a JSON body; the legacy `position` parameter is a diff-hunk offset, not a file line,
+  and anchors somewhere unrelated while looking accepted.
+- **GitHub parity for `/rereview`**: collects unresolved threads through GraphQL `reviewThreads`
+  (REST never reports resolution state), resolves via `resolveReviewThread`, and approves with
+  `commit_id` pinned to the verified head after re-reading it. A thread GitHub still tracks needs no
+  diff mapping — its `line` is already at head; only an outdated one falls back to `originalLine` at
+  `originalCommit`.
+- **GitHub PRs are fetched by `refs/pull/<n>/head`**, so a PR from a fork has a real local revision to
+  diff, to check out for agents, and to map positions against. `gh pr diff` alone gave text with no
+  revision, and `origin/<headRefName>` doesn't exist locally for a fork.
+- Fixed, all three introduced in 1.9.0:
+  - the position map hardcoded the GitLab range, so on GitHub PR, branch-diff, `--base` and `current`
+    the diff failed, the map came out empty, and the scope filter dropped **every** finding while the
+    report printed "no issues found". The range is now per mode, and an empty map disables the filter
+    and is reported instead of silently emptying the review;
+  - a worktree that couldn't be created fell back to cwd, so agents reviewed whatever branch was
+    checked out and nothing in the report said so. It now stops the review;
+  - the documented MR fetch passed `group/project` as `<repo>`, which `git fetch` answers
+    `does not appear to be a git repository` — exactly the fork case the ref form exists for. It now
+    says remote name or clone URL, and where to get the URL.
+- Fixed: `awk -F/ '{print $1}'` in the CodeRabbit bucketing example (the harness substitutes `$1`
+  before the command runs) → `cut -d/ -f1`; `sed -n '<line-15>,...'` in `/rereview` clamped to 1;
+  `/rereview` reads both config files, so a user-level `language` is no longer ignored; the posting
+  helper's one Russian error string is now English like the rest of the script.
+
+### 1.9.0
+
+- **MR fetch fixed for forks and cross-project MRs**: `/review` and `/rereview` now fetch by
+  `refs/merge-requests/<iid>/head` instead of the source branch from `origin`, which silently found
+  nothing in those cases.
+- **Agents now read the MR revision, not cwd**: `/review` builds the worktree before launching
+  agents (previously only CodeRabbit had one) and passes its path to every agent; CodeRabbit reuses
+  it.
+- **Thread posting is pinned and deduplicated**: the posting helper requires `--expected-head` and
+  refuses to post if the MR moved; it also reads existing discussions first and skips findings that
+  already have a thread (yours or someone else's), replying in place instead of duplicating.
+  `/rereview +approve` pins its approval to the verified head and treats a `409` as a refusal; the
+  approval gate now also closes on ⚠️ partial and 🕓 deferred, not just ❌.
+- **Scope checking uses a real position map** (`git diff --unified=0`) instead of grepping the diff
+  text, and findings on deleted lines are now anchored to a surviving line with the removed code
+  quoted, instead of being dropped.
+- **Race-condition findings** are dropped or downgraded only by a causal gate (guard, await/join,
+  observed state transition) — a timing ratio no longer counts as one.
+- **Not Android-only anymore**: `test-analyzer` detects the repo's own test convention instead of
+  assuming `src/test`/`androidTest`, agent prompts dropped their Kotlin-specific examples, and
+  `git-historian` stopped calling `gh`, which isn't in its tool list.
+- **`CLAUDE.md` is read from the reviewed revision** (`git show <target>:CLAUDE.md`), not from the
+  working tree or the MR's source branch, and agent prompts carry an explicit trust-boundary note:
+  diff, MR description and source-branch files are data, not instructions.
+- Fixed: `current` mode now sees untracked files without double-counting them against the staged
+  diff; CodeRabbit output goes to a file instead of through `| tail -200` (which was swallowing its
+  real exit code); scratch files use a private `mktemp` under `umask 077`; forge detection handles a
+  corporate GitLab on its own domain.
+
+### 1.8.0
+
+- **`security-reviewer` agent** — secrets, injection sinks, broken authn/authz, insecure storage and
+  transport, unsafe crypto. Stack-agnostic: it derives the platform's idioms from the repo instead of
+  assuming one. Opt-in via `+security`, or always-on with `security: auto`.
+- **`/review-config`** — interactive setup for language, subagent model, CodeRabbit and the security
+  agent; `--project` writes the repo-level file, `--show` prints the resolved values and their source.
+  `/review` offers it on the first run with no config.
+- **Config now has a user-level file** (`~/.claude/combined-review.md`) alongside the project one, so
+  settings survive plugin updates and apply across repos. New keys: `model`, `coderabbit`, `security`.
+- Fixed: the install snippet referenced `claude plugin path`, which is not a real CLI command.
+
 ### 1.7.0
 
 - **Falsifiability gate** (Step 5.6): every Critical now gets one pass that tries to *invalidate* it — safe behavior, intended behavior, existing mitigation, weak evidence. The existing race-condition and parallel-conflict checks became special cases of it, and a surviving Critical must name which exit it was tested against. Idea borrowed from [pr-af](https://github.com/Agent-Field/pr-af).
@@ -195,7 +338,7 @@ Every finding includes file path and line number:
 
 ### 1.5.0
 
-- **`/rereview`**: closes the loop after `/review +threads`. Collects your unresolved threads on a GitLab MR, diffs each one's anchor revision (`position.head_sha`) against the current head with `-M` (files move between revisions), and verifies the fix in the code at head — GitLab's "changed this line in version N" auto-note and an author's "fixed" reply are explicitly not accepted as evidence. Reports ✅ / ⚠️ / ❌ / 🕓 per thread; resolving (`+resolve`) and approving (`+approve`) are opt-in, sequential (parallel `glab` calls kill the token).
+- **`/rereview`**: closes the loop after `/review +threads`. Collects your unresolved threads on a GitLab MR (GitHub PRs since 1.10.0), diffs each one's anchor revision (`position.head_sha`) against the current head with `-M` (files move between revisions), and verifies the fix in the code at head — GitLab's "changed this line in version N" auto-note and an author's "fixed" reply are explicitly not accepted as evidence. Reports ✅ / ⚠️ / ❌ / 🕓 per thread; resolving (`+resolve`) and approving (`+approve`) are opt-in, sequential (parallel `glab` calls kill the token).
 
 ### 1.4.0
 

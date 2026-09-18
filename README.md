@@ -69,11 +69,10 @@ Multi-platform crash analysis for Android & iOS with git blame forensics, code-l
 /crashlytics:install-permissions    # Add read-only allowlist to settings.json
 ```
 
-**Status:** ✅ Production Ready | **Version:** 4.4.4
+**Status:** ✅ Production Ready | **Version:** 4.4.5
 
-**What's New in 4.4.4:**
-- Firebase MCP launcher pinned to `firebase-tools@15` instead of `@latest`, so plugin startup no longer drifts on silent major updates and works better offline once cached.
-- After updating, restart the Claude Code session once so the new `.mcp.json` command is picked up.
+**What's New in 4.4.5:**
+- Quality gate tightened: `git fetch` alone no longer counts as evidence that the agent inspected the code. Forensics agents run it as a mandatory pre-flight on every run, so it proved nothing — `chk_executed_commands` now requires `git blame`, `git log` or `git ls-tree`.
 
 **Features:**
 - 4-step multi-agent pipeline: classifier → fetcher → forensics → validate-report.py
@@ -136,7 +135,7 @@ Project tracking, task management with kanban boards, bug logging, decision reco
 
 ### Combined Review
 
-Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + optional CodeRabbit for comprehensive review.
+Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + an opt-in security agent + optional CodeRabbit for comprehensive review.
 
 📚 **[Full Documentation](plugins/combined-review/README.md)**
 
@@ -149,14 +148,31 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 ```bash
 /review                                    # Uncommitted changes
 /review 123                                # GitHub PR / GitLab MR (forge auto-detected)
+/review 123 +threads                       # ...+ inline resolvable threads on the PR
 /review !22 +threads                       # GitLab MR + inline resolvable threads
 /review feature/X feature/Y               # Branch diff
 /review --base main                        # Current branch vs main
+/review feature/X feature/Y +security     # Add the security agent
 /review feature/X feature/Y +comments all # All agents
-/rereview !22 +resolve +approve            # Were my threads fixed? → resolve → approve
+/review-config                             # Language, model, CodeRabbit, security agent
+/rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.7.1
+**Status:** ✅ Production Ready | **Version:** 1.10.0
+
+**What's New in 1.10.0:**
+- GitHub parity: `+threads` posts inline resolvable review comments on a PR, and `/rereview` verifies, resolves (GraphQL `resolveReviewThread`) and approves a PR — previously GitLab-only.
+- GitHub PRs are now fetched by `refs/pull/<n>/head`, so a PR from a fork is diffed and read at the right revision instead of failing on a branch that isn't in `origin`.
+- Fixed three defects from 1.9.0: the scope filter no longer discards every finding when the position map can't be built, a worktree that can't be checked out stops the review instead of quietly reviewing cwd, and the documented MR fetch command now names a remote git actually accepts.
+
+**What's New in 1.9.0:**
+- GitLab MR review now fetches by ref (works for forks/cross-project MRs), reads the reviewed revision in a worktree instead of cwd, and dedupes/pins posted threads to that revision.
+- Dropped the Android-only assumptions (test convention, `gh` call, Kotlin-only examples); race findings now need a causal gate, not just a timing gap.
+
+**What's New in 1.8.0:**
+- `security-reviewer` agent — secrets, injection, authn/authz, insecure storage and transport, unsafe crypto; stack-agnostic, opt-in via `+security`.
+- `/review-config` — interactive setup for report language, subagent model, CodeRabbit and the security agent.
+- Config moved out of the plugin: `~/.claude/combined-review.md` (user-level) plus the existing project file, so settings survive updates.
 
 **What's New in 1.7.1:**
 - Docs: the GitLab project-path example no longer names a specific private project.
