@@ -45,6 +45,15 @@ def glab_api(path, method=None, headers=None, input_file=None, paginate=False):
     if input_file:
         args += ["--input", input_file]
     r = subprocess.run(args, capture_output=True, text=True)
+    if paginate and r.returncode != 0:
+        # `glab api --paginate` streams one page at a time. A failure on page 2+
+        # (rate limit, dropped connection, expired token) leaves the earlier pages
+        # on stdout as valid JSON, so the caller would decode a partial list and
+        # treat it as the complete one - and post duplicates against it.
+        sys.exit(
+            f"`glab api --paginate {path}` failed (exit {r.returncode}) after "
+            f"{len(r.stdout)} bytes: {(r.stderr or r.stdout)[:300]}"
+        )
     return r.stdout, r.stderr
 
 

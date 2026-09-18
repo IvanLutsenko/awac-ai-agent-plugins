@@ -225,9 +225,10 @@ Skip CodeRabbit for this run, continue with 4 agents.
 
 ## Step 4 — Launch agents
 
-Launch **4 default agents in parallel**, plus: the security agent when `+security` was passed or
-config has `security: auto`; CodeRabbit when config has `coderabbit: auto` and the CLI is available;
-the optional agents if requested.
+Launch **4 default agents in parallel**, plus: the security agent when `+security` or `all` was
+passed, or config has `security: auto`; CodeRabbit when config has `coderabbit: auto` and the CLI is
+available; the optional agents if requested. `all` means every optional agent — security included,
+whatever the config says.
 
 Run every agent on the model resolved in Step 0 — pass it as the subagent model, except for `inherit`,
 which means «leave each agent on its own declared model».

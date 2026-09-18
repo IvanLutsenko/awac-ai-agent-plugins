@@ -1,7 +1,7 @@
 ---
 description: "Set up combined-review: language, subagent model, CodeRabbit, security agent. Writes a config that survives plugin updates."
 argument-hint: "[--project] [--show]"
-allowed-tools: Bash(coderabbit:*), Bash(cat:*), Bash(ls:*), Bash(mkdir:*), Bash(which:*), Read, Write, AskUserQuestion
+allowed-tools: Bash(head:*), Bash(coderabbit:*), Bash(cat:*), Bash(ls:*), Bash(mkdir:*), Bash(which:*), Read, Write, AskUserQuestion
 ---
 
 # Combined Review — config

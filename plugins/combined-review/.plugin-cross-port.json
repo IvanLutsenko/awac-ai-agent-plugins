@@ -1,7 +1,7 @@
 {
   "version": 1,
   "plugin": "combined-review",
-  "generated_at": "2026-09-18T07:06:57+00:00",
+  "generated_at": "2026-09-18T09:42:36+00:00",
   "source_of_truth": "claude-code",
   "decisions": {
     "skills_shared": false,
@@ -10,5 +10,6 @@
     "hooks_converted": false
   },
   "warnings": [],
-  "manually_maintained": "[]"
+  "manually_maintained": "[]",
+  "status": "synced"
 }
