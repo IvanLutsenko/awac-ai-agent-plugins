@@ -306,6 +306,13 @@ else
 fi
 ```
 
+**GitHub refuses to let you approve your own PR** — `422 Unprocessable Entity`, `"Review Can not
+approve your own pull request"`. That is the normal answer whenever the PR author and the
+authenticated user are the same, and no flag changes it. Check the author against `gh api user`
+before offering `+approve`, and if they match, say plainly that the verification is done but the
+approval has to come from someone else — don't report the 422 as a failed run. Resolving the threads
+(Step 6) works regardless.
+
 GitHub has no equivalent of GitLab's `sha=`: `commit_id` records **which** commit you approved, it
 does not make the API refuse a stale one. So the check is client-side, and a push landing between the
 `--jq .head.sha` read and the POST still slips through — a much smaller window than approving off a
