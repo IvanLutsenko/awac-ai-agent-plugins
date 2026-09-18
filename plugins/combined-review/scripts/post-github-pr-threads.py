@@ -210,6 +210,18 @@ def main():
         print(f"[{'OK ' if good else 'ERR'}] {short} -> {msg}")
         ok += 1 if good else 0
     print(f"--- {ok}/{tried} inline threads posted, {skipped} skipped as already covered ---")
+
+    # The guard above runs once, before the loop. A push landing while we post
+    # still gets the comments - GitHub accepts a non-latest `commit_id` and just
+    # marks them outdated, so every one of them came back [OK]. Say so instead of
+    # reporting a clean run: the threads are anchored to a revision nobody reviews
+    # any more. Checking once here costs one request; checking per thread doubles
+    # the whole run for a window of seconds.
+    if tried and get_head_sha(a.repo, a.pr) != head_sha:
+        sys.exit(
+            f"branch moved while posting: the {tried} thread(s) above are anchored to "
+            f"{head_sha}, which is no longer the head - re-run the review"
+        )
     sys.exit(0 if ok == tried else 1)
 
 

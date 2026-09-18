@@ -251,5 +251,52 @@ class PostGithubPrThreadsTest(unittest.TestCase):
         )
 
 
+class MatchThreadTest(unittest.TestCase):
+    """`match_thread` decides whether a finding is already covered. A false match
+    means the finding is silently dropped as [SEEN] and never posted, so the
+    discrimination between path, line and side is tested directly."""
+
+    def setUp(self):
+        self.module = load_module()
+        self.mine = make_comment(1, "foo.py", 3, "me")
+        self.theirs = make_comment(2, "foo.py", 3, "someone")
+
+    def match(self, comments, path="foo.py", line=3):
+        return self.module.match_thread(comments, path, line, "me")
+
+    def test_no_threads_at_all(self):
+        self.assertEqual(self.match([]), ("post", None, None))
+
+    def test_own_thread_on_the_line(self):
+        self.assertEqual(self.match([self.mine]), ("mine", 1, None))
+
+    def test_other_thread_on_the_line(self):
+        self.assertEqual(self.match([self.theirs]), ("theirs", 2, None))
+
+    def test_other_thread_names_a_ticket(self):
+        c = make_comment(2, "foo.py", 3, "someone", body="covered by ABC-123")
+        self.assertEqual(self.match([c]), ("theirs", 2, "ABC-123"))
+
+    def test_same_line_other_path(self):
+        self.assertEqual(self.match([make_comment(3, "bar.py", 3, "me")]), ("post", None, None))
+
+    def test_same_path_other_line(self):
+        self.assertEqual(self.match([make_comment(4, "foo.py", 9, "me")]), ("post", None, None))
+
+    def test_left_side_never_matches(self):
+        c = make_comment(5, "foo.py", 3, "someone")
+        c["side"] = "LEFT"
+        self.assertEqual(self.match([c]), ("post", None, None))
+
+    def test_a_reply_never_matches_on_its_own(self):
+        reply = make_comment(6, "foo.py", 3, "someone")
+        reply["in_reply_to_id"] = 99
+        self.assertEqual(self.match([reply]), ("post", None, None))
+
+    def test_outdated_thread_matches_on_original_line(self):
+        c = make_comment(7, "foo.py", 3, "me", outdated=True)
+        self.assertEqual(self.match([c]), ("mine", 7, None))
+
+
 if __name__ == "__main__":
     unittest.main()
