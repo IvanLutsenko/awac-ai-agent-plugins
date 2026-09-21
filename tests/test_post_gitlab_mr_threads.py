@@ -34,7 +34,7 @@ def make_discussion(disc_id, path, line, author, body="see MR", position=True):
 
 
 def make_glab_api(head_sha, discussions=()):
-    """Fake glab_api: GET returns diff_refs / user / discussions, POST 'succeeds'."""
+    """Fake glab_api: GET returns diff_refs / discussions, POST 'succeeds'."""
 
     def fake(path, method=None, headers=None, input_file=None, paginate=False):
         if method == "POST":
@@ -49,8 +49,6 @@ def make_glab_api(head_sha, discussions=()):
                 ),
                 "",
             )
-        if path == "user":
-            return json.dumps({"username": "me"}), ""
         if "/discussions" in path:
             return json.dumps(list(discussions)), ""
         return (
@@ -294,38 +292,30 @@ class PostGitlabMrThreadsTest(unittest.TestCase):
 
 class MatchThreadTest(unittest.TestCase):
     def match(self, discussions, path="foo.py", line=3):
-        return load_module().match_thread(discussions, path, line, "me")
+        return load_module().match_thread(discussions, path, line)
 
     def test_no_threads_at_all(self):
-        self.assertEqual(self.match([]), ("post", None, None))
+        self.assertEqual(self.match([]), ("post", None))
 
     def test_own_thread_on_the_line(self):
         d = make_discussion("d1", "foo.py", 3, "me")
-        self.assertEqual(self.match([d]), ("mine", "d1", None))
+        self.assertEqual(self.match([d]), ("dup", "d1"))
 
-    def test_other_thread_on_the_line(self):
+    def test_other_authors_thread_blocks_the_line_too(self):
         d = make_discussion("d1", "foo.py", 3, "reviewer")
-        self.assertEqual(self.match([d]), ("theirs", "d1", None))
-
-    def test_other_thread_names_a_ticket(self):
-        d = make_discussion("d1", "foo.py", 3, "reviewer", body="known, ABC-123 covers it")
-        self.assertEqual(self.match([d]), ("theirs", "d1", "ABC-123"))
-
-    def test_standard_name_is_not_a_ticket(self):
-        d = make_discussion("d1", "foo.py", 3, "reviewer", body="decode as UTF-8, then SHA-256 it")
-        self.assertEqual(self.match([d]), ("theirs", "d1", None))
+        self.assertEqual(self.match([d]), ("dup", "d1"))
 
     def test_thread_without_position_never_matches(self):
         d = make_discussion("d1", "foo.py", 3, "reviewer", position=False)
-        self.assertEqual(self.match([d]), ("post", None, None))
+        self.assertEqual(self.match([d]), ("post", None))
 
     def test_same_line_other_path(self):
         d = make_discussion("d1", "bar.py", 3, "me")
-        self.assertEqual(self.match([d]), ("post", None, None))
+        self.assertEqual(self.match([d]), ("post", None))
 
     def test_same_path_other_line(self):
         d = make_discussion("d1", "foo.py", 4, "me")
-        self.assertEqual(self.match([d]), ("post", None, None))
+        self.assertEqual(self.match([d]), ("post", None))
 
 
 if __name__ == "__main__":

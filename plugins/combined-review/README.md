@@ -185,11 +185,12 @@ Findings below 60 are filtered out.
   approval gate closes on ❌ not-fixed, ⚠️ partial, and 🕓 deferred — only ✅ passes.
 - **Thread dedup.** Before posting, the helper reads the existing threads (paginated) and
   matches findings by path + line — `new_path`/`new_line` on GitLab, `path`/`line` on GitHub, falling
-  back to `original_line` for a comment that went outdated so a rebase doesn't hide it. A duplicate of your own prior finding is skipped
-  (`[DUP]`); a finding that lands where someone else's thread already sits is skipped and reported as
-  "already covered in thread N" (`[SEEN]`), naming the ticket if the thread mentions one. Skipping is
-  not a failure — the exit status only accounts for threads actually attempted. A finding that adds
-  something real to an existing thread is posted as a reply there, not as a new thread.
+  back to `original_line` for a comment that went outdated so a rebase doesn't hide it. A line that
+  already carries a thread — yours from an earlier run or anyone else's — is skipped and reported as
+  "already covered in thread N" (`[DUP]`); the author is never read, because the answer is the same
+  either way. Skipping is not a failure — the exit status only accounts for threads actually
+  attempted. A finding that adds something real to an existing thread is posted as a reply there, not
+  as a new thread.
 - **Position map.** Scope checking builds a `(new_path, new_line)` map from
   `git diff --unified=0` instead of grepping the saved diff text — grep has no idea where one hunk
   ends and the next begins. The map is built from the *same* revision range the mode diffed, and an
@@ -258,13 +259,22 @@ Every finding includes file path and line number:
 
 ### 1.10.1
 
+- **The position map is built by `python3`, not `awk`.** The command text goes through argument
+  substitution before the model executes it, so `substr($0, 7)` arrived as `substr(<argument>, 7)`:
+  the map came out as `:42` lines with no file name, non-empty enough that the `POSITION MAP EMPTY`
+  guard stayed silent, and every finding was then dropped as out of scope — a review reporting "no
+  issues found" because it had discarded everything. Found by running `/review` on this plugin's own
+  PR. Python has no `$` for the substitution to touch.
+- **`[SEEN]` is gone.** The helpers no longer read who wrote an existing thread: a line that already
+  carries one gets no second thread whoever owns it, so the author check (`gh api user` /
+  `glab api user`) and the ticket regex that decorated its output bought nothing — and could not be
+  verified without a second account. One outcome remains, `[DUP]`, and with it go `TICKET_RE`,
+  the standards blocklist and ~40 lines of code and tests.
 - `security-reviewer` honours the `Language:` contract — it was the only agent without an
   **Output language** section, so a Russian report came back with its security findings in English.
 - `/review` numbers the security agent 5 and CodeRabbit 6, matching the README, `config-defaults.md`
   and `/review-config`, which all call security "a fifth parallel agent". The headings were also out
   of order (6 before 5).
-- `[SEEN]` no longer reports `UTF-8` or `SHA-256` as the ticket a thread names: the ticket pattern
-  now skips the standards that read like project keys, in both the GitHub and the GitLab helper.
 
 ### 1.10.0
 

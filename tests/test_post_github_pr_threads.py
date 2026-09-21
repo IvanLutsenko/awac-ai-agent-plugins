@@ -40,7 +40,7 @@ def make_comment(cid, path, line, author, body="see PR", outdated=False):
 
 
 def make_gh_api(head_sha, comments=(), comments_raw=None, sent_payloads=None):
-    """Fake gh_api: GET returns head.sha / user / review comments, POST 'succeeds'.
+    """Fake gh_api: GET returns head.sha / review comments, POST 'succeeds'.
 
     The payload file is deleted right after the call, so what was sent is captured here.
     """
@@ -56,8 +56,6 @@ def make_gh_api(head_sha, comments=(), comments_raw=None, sent_payloads=None):
                 ),
                 "",
             )
-        if path == "user":
-            return json.dumps({"login": "me"}), ""
         if "/comments" in path:
             if comments_raw is not None:
                 return comments_raw, ""
@@ -253,7 +251,7 @@ class PostGithubPrThreadsTest(unittest.TestCase):
 
 class MatchThreadTest(unittest.TestCase):
     """`match_thread` decides whether a finding is already covered. A false match
-    means the finding is silently dropped as [SEEN] and never posted, so the
+    means the finding is silently dropped as [DUP] and never posted, so the
     discrimination between path, line and side is tested directly."""
 
     def setUp(self):
@@ -262,48 +260,36 @@ class MatchThreadTest(unittest.TestCase):
         self.theirs = make_comment(2, "foo.py", 3, "someone")
 
     def match(self, comments, path="foo.py", line=3):
-        return self.module.match_thread(comments, path, line, "me")
+        return self.module.match_thread(comments, path, line)
 
     def test_no_threads_at_all(self):
-        self.assertEqual(self.match([]), ("post", None, None))
+        self.assertEqual(self.match([]), ("post", None))
 
     def test_own_thread_on_the_line(self):
-        self.assertEqual(self.match([self.mine]), ("mine", 1, None))
+        self.assertEqual(self.match([self.mine]), ("dup", 1))
 
-    def test_other_thread_on_the_line(self):
-        self.assertEqual(self.match([self.theirs]), ("theirs", 2, None))
-
-    def test_other_thread_names_a_ticket(self):
-        c = make_comment(2, "foo.py", 3, "someone", body="covered by ABC-123")
-        self.assertEqual(self.match([c]), ("theirs", 2, "ABC-123"))
-
-    def test_standard_name_is_not_a_ticket(self):
-        c = make_comment(2, "foo.py", 3, "someone", body="decode as UTF-8, then SHA-256 it")
-        self.assertEqual(self.match([c]), ("theirs", 2, None))
-
-    def test_ticket_after_a_standard_name_still_found(self):
-        c = make_comment(2, "foo.py", 3, "someone", body="UTF-8 issue, see ABC-7")
-        self.assertEqual(self.match([c]), ("theirs", 2, "ABC-7"))
+    def test_other_authors_thread_blocks_the_line_too(self):
+        self.assertEqual(self.match([self.theirs]), ("dup", 2))
 
     def test_same_line_other_path(self):
-        self.assertEqual(self.match([make_comment(3, "bar.py", 3, "me")]), ("post", None, None))
+        self.assertEqual(self.match([make_comment(3, "bar.py", 3, "me")]), ("post", None))
 
     def test_same_path_other_line(self):
-        self.assertEqual(self.match([make_comment(4, "foo.py", 9, "me")]), ("post", None, None))
+        self.assertEqual(self.match([make_comment(4, "foo.py", 9, "me")]), ("post", None))
 
     def test_left_side_never_matches(self):
         c = make_comment(5, "foo.py", 3, "someone")
         c["side"] = "LEFT"
-        self.assertEqual(self.match([c]), ("post", None, None))
+        self.assertEqual(self.match([c]), ("post", None))
 
     def test_a_reply_never_matches_on_its_own(self):
         reply = make_comment(6, "foo.py", 3, "someone")
         reply["in_reply_to_id"] = 99
-        self.assertEqual(self.match([reply]), ("post", None, None))
+        self.assertEqual(self.match([reply]), ("post", None))
 
     def test_outdated_thread_matches_on_original_line(self):
         c = make_comment(7, "foo.py", 3, "me", outdated=True)
-        self.assertEqual(self.match([c]), ("mine", 7, None))
+        self.assertEqual(self.match([c]), ("dup", 7))
 
 
 if __name__ == "__main__":
