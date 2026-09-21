@@ -28,11 +28,12 @@ Usage:
                     That SHA is also the comments' `commit_id`.
 
 Before posting, reads the PR's existing review comments and skips findings whose
-`path` + `line` already carry a thread: `[DUP]` for one of your own from a previous
-run, `[SEEN]` for someone else's. A skip is not a failure — exit code is non-zero
-only if a thread that was actually attempted failed to anchor.
+`path` + `line` already carry a thread — anyone's: `[DUP]`. Whose it is does not
+change what to do (never pile a second thread onto a discussed line), so the author
+is not read at all. A skip is not a failure — exit code is non-zero only if a thread
+that was actually attempted failed to anchor.
 """
-import argparse, json, re, subprocess, sys, tempfile, os
+import argparse, json, subprocess, sys, tempfile, os
 
 
 def gh_api(path, method=None, headers=None, input_file=None, paginate=False):
@@ -77,14 +78,6 @@ def get_head_sha(repo, pr):
         sys.exit(f"cannot read head.sha for {repo}#{pr}: {(out + err)[:300]}")
 
 
-def get_login():
-    out, err = gh_api("user")
-    try:
-        return json.loads(out)["login"]
-    except Exception:
-        sys.exit(f"cannot read current user from `gh api user`: {(out + err)[:300]}")
-
-
 def get_review_comments(repo, pr):
     """All review comments of the PR. `--paginate` matters: a PR with 100+ comments
     hides the older ones on page 2+, and a partial read posts duplicates."""
@@ -101,20 +94,7 @@ def get_review_comments(repo, pr):
         sys.exit(f"cannot read review comments for {repo}#{pr}: {(out + err)[:300]}")
 
 
-TICKET_RE = re.compile(r"\b[A-Z][A-Z0-9]{1,9}-\d+\b")
-# ponytail: prefix blocklist, not a project-key lookup — these standards read exactly like keys
-NOT_TICKET = {"UTF", "SHA", "AES", "RSA", "MD", "ISO", "RFC", "TLS", "HMAC", "PBKDF", "BASE", "IPV", "X"}
-
-
-def find_ticket(body):
-    """First ticket key in the text; a standard that looks like one (UTF-8, SHA-256) is not a ticket."""
-    for m in TICKET_RE.finditer(body or ""):
-        if m.group(0).split("-")[0] not in NOT_TICKET:
-            return m.group(0)
-    return None
-
-
-def match_thread(comments, path, line, me):
+def match_thread(comments, path, line):
     """Is this finding's line already covered by an existing thread?
 
     Match is on the thread-starting comment's `path` + `line` on the RIGHT side.
@@ -125,15 +105,10 @@ def match_thread(comments, path, line, me):
     keeps the anchor in `original_line` — match on that, otherwise a rebase makes
     every earlier thread invisible and the next run posts them all again.
 
-    Returns (outcome, comment_id, ticket):
-      ("post", None, None)          - nothing there, post it
-      ("mine", <id>, None)          - my own thread from a previous run
-      ("theirs", <id>, <ticket>)    - someone else's thread; ticket if one is mentioned
+    Returns (outcome, comment_id):
+      ("post", None)   - nothing there, post it
+      ("dup", <id>)    - a thread is already on that line; skip and name it
     """
-    threads = {}
-    for c in comments:
-        root = c.get("in_reply_to_id") or c.get("id")
-        threads.setdefault(root, []).append(c)
     for c in comments:
         if c.get("in_reply_to_id"):
             continue
@@ -144,14 +119,8 @@ def match_thread(comments, path, line, me):
             anchor = c.get("original_line")
         if c.get("path") != path or anchor != line:
             continue
-        if (c.get("user") or {}).get("login") == me:
-            return "mine", c.get("id"), None
-        for n in threads.get(c.get("id"), [c]):
-            t = find_ticket(n.get("body"))
-            if t:
-                return "theirs", c.get("id"), t
-        return "theirs", c.get("id"), None
-    return "post", None, None
+        return "dup", c.get("id")
+    return "post", None
 
 
 def post_thread(repo, pr, head_sha, path, line, body):
@@ -198,22 +167,16 @@ def main():
             f"branch moved: analyzed {a.expected_head}, now {head_sha}"
         )
 
-    me = get_login()
     comments = get_review_comments(a.repo, a.pr)
 
     ok = tried = skipped = 0
     for t in threads:
         path, line = t["path"], int(t["line"])
         short = f"{path.split('/')[-1]}:{line}"
-        outcome, cid, ticket = match_thread(comments, path, line, me)
-        if outcome == "mine":
+        outcome, cid = match_thread(comments, path, line)
+        if outcome == "dup":
             skipped += 1
-            print(f"[DUP] {short} -> own thread {cid}, not posted")
-            continue
-        if outcome == "theirs":
-            skipped += 1
-            tk = f" ticket={ticket}" if ticket else ""
-            print(f"[SEEN] {short} -> thread {cid}{tk}, not posted")
+            print(f"[DUP] {short} -> thread {cid} already on that line, not posted")
             continue
         tried += 1
         good, msg = post_thread(a.repo, a.pr, head_sha, path, line, t["body"])

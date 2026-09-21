@@ -161,9 +161,10 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 **Status:** ✅ Production Ready | **Version:** 1.10.1
 
 **What's New in 1.10.1:**
+- The scope filter's position map is built by `python3` instead of `awk` — argument substitution in the command text turned `$0` into an argument value, so the map lost every file name and the review silently dropped all findings.
+- `[SEEN]` removed: an existing thread on a line blocks a second one whoever wrote it, so the author check and the ticket regex went with it.
 - `security-reviewer` now follows the report language setting like the other four agents.
 - The security agent is agent 5 and CodeRabbit agent 6 everywhere, as the config docs already said.
-- A thread mentioning `UTF-8` or `SHA-256` is no longer reported as covered by "ticket UTF-8".
 
 **What's New in 1.10.0:**
 - GitHub parity: `+threads` posts inline resolvable review comments on a PR, and `/rereview` verifies, resolves (GraphQL `resolveReviewThread`) and approves a PR — previously GitLab-only.

@@ -415,18 +415,32 @@ Collect findings from all agents:
 2. **Filter out** confidence < 60
 3. **Position map** — build, once, the set of `(new_path, new_line)` pairs this change actually touches, and check every finding's cited `file:line` against it. Do not `grep` the saved diff for a line number: `grep` has no idea where one hunk ends and the next begins, so it confirms a number that belongs to a different hunk, a different file, or the `-` side of the same one.
    ```bash
-   git diff --unified=0 "<diff-spec>" | awk '
-     /^diff --git /      { hunk = 0; next }
-     !hunk && /^\+\+\+ /  { f = substr($0, 7); next }        # strips "+++ b/"
-     /^@@ /              { split($3, h, ","); n = substr(h[1], 2) + 0; hunk = 1; next }
-     hunk && /^\+/       { print f ":" n; n++ }
-   ' | sort -u > "$CRDIR/positions.txt"
+   git diff --unified=0 "<diff-spec>" | python3 -c '
+import re, sys
+path, line, hunk = None, 0, False
+for raw in sys.stdin:
+    if raw.startswith("diff --git "):
+        hunk = False
+    elif not hunk and raw.startswith("+++ "):
+        path = raw[6:].rstrip("\n")                  # strips "+++ b/"
+    elif raw.startswith("@@ "):
+        line = int(re.search(r"\+(\d+)", raw).group(1)); hunk = True
+    elif hunk and raw.startswith("+"):
+        print(f"{path}:{line}"); line += 1
+' | sort -u > "$CRDIR/positions.txt"
    ```
+   **Do not rewrite this in `awk`.** The command text you are executing went through argument
+   substitution before it reached you: an `awk` script written here as `substr($0, 7)` arrives as
+   `substr(<first argument>, 7)`, and `split($3, ...)` breaks the same way once a third argument is
+   passed. The map then comes out as `:42` lines with no file name — non-empty, so the
+   `POSITION MAP EMPTY` guard below does not fire, and every finding is dropped as out of scope. The
+   `hunk` flag is not decoration either: inside a hunk, a line reading `+++ b/…` is an added line of
+   content, not a file header. Python has no `$` for the substitution to touch.
    `<diff-spec>` is the one Step 2 fixed **for this mode** — `origin/<base>...pr/<n>`, `origin/<t>...mr/<iid>`, `origin/<t>...origin/<s>`, `<base>...HEAD`, or bare `HEAD` in `current` mode. Substitute it; don't carry one mode's range into another, where it names a ref that doesn't exist. In `current` mode append the untracked files the same way Step 2 did, or every finding in a brand-new file falls outside the map:
    ```bash
    git ls-files --others --exclude-standard -z | while IFS= read -r -d '' f; do
      git diff --no-index --unified=0 -- /dev/null "$f"
-   done | awk '...same script...' | sort -u >> "$CRDIR/positions.txt"
+   done | python3 -c '...same script...' | sort -u >> "$CRDIR/positions.txt"
    ```
    `--unified=0` is what makes the map exact: with no context lines, every `+` line in a hunk is a line the change introduced, counted from the hunk header's new-side start. A finding whose `file:line` is not in the map is out of scope — drop it, however many agents reported it. Reading-for-context is fine; reporting-on-unchanged-code is not.
 
@@ -551,10 +565,11 @@ path + line. What never matches: on GitLab a thread with `position: null` — a 
 anchored to a line; on GitHub a reply (`in_reply_to_id` set), which belongs to a thread its own root
 already answered for. A GitHub comment that went outdated reports `line: null` and keeps its anchor in
 `original_line`, and is matched on that — otherwise one rebase makes every earlier thread invisible and
-the next run posts all of them again. Per finding the helper prints one of:
+the next run posts all of them again. Whose thread it is is never read: a line that is already being
+discussed gets no second thread either way, so the author check bought nothing and could not be
+verified without a second account. Per finding the helper prints one of:
 - `[OK ] <file>:<line>` / `[ERR] <file>:<line>` — posted, or attempted and failed to anchor;
-- `[DUP] <file>:<line> -> own thread <id>` — your own thread from an earlier run is on that line;
-- `[SEEN] <file>:<line> -> thread <id>[ ticket=ABC-123]` — someone else's thread is on that line.
+- `[DUP] <file>:<line> -> thread <id> already on that line` — something is already there, skipped.
 
 Skipped findings are not failures: the exit code only covers threads the helper actually tried to post.
 
@@ -568,15 +583,15 @@ Each helper encodes its forge's working mechanism so this isn't re-derived each 
 
 After posting, tell the user how many threads landed and where; do not resolve them yourself.
 
-Then report the skips:
-- `[DUP]` — one line, that the finding was already posted in an earlier run.
-- `[SEEN]` — say the line is **already covered in thread `<id>`**, and name the ticket if the helper
-  printed one. Do **not** retell or paraphrase the human's remark in your own words — the user reads
-  the thread, not your summary of it.
+Then report the skips: for each `[DUP]`, one line saying the line is **already covered in thread
+`<id>`**. Open that thread before saying anything about it, and do **not** retell or paraphrase what
+is in it — the user reads the thread, not your summary of it. It may be your own finding from an
+earlier run or someone else's remark; the helper does not distinguish them and neither should the
+report, beyond naming the thread.
 
-If a `[SEEN]` finding adds something the existing thread misses — a different cause, a case it
-doesn't cover — offer to add a comment **to that same thread**, not a new one, and post it only on
-the user's go-ahead:
+If the skipped finding adds something that thread misses — a different cause, a case it doesn't
+cover — offer to add a comment **to that same thread**, not a new one, and post it only on the
+user's go-ahead:
 ```bash
 # GitLab: <discussion_id> is what the helper printed
 glab api -X POST "projects/<group%2Fproject>/merge_requests/<iid>/discussions/<discussion_id>/notes" \
