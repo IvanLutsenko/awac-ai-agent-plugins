@@ -6,6 +6,9 @@ version: 0.1.0
 
 > Converted from Claude Code command `/review`.
 > Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
+> Helper scripts ship in this skill's own `scripts/` directory. Replace
+> `<this skill directory>` with the path Codex reported when it loaded this skill —
+> a bare relative path would resolve against the repository under review instead.
 
 # Combined Code Review
 
@@ -458,7 +461,7 @@ for raw in sys.stdin:
    let the shipped script place them against the map. It is the same rule as below, executed instead
    of remembered:
    ```bash
-   python3 "plugins/combined-review/scripts/filter-findings.py" \
+   python3 "<this skill directory>/scripts/filter-findings.py" \
      --findings "$CRDIR/findings.txt" --positions "$CRDIR/positions.txt" --root "<repo-root>"
    ```
    `<repo-root>` is the worktree (or cwd) from "Repository root for agents" — the revision under
@@ -580,12 +583,12 @@ cat > "$CRDIR/threads.json" <<'JSON'
 JSON
 
 # GitLab MR
-python3 "plugins/combined-review/scripts/post-gitlab-mr-threads.py" \
+python3 "<this skill directory>/scripts/post-gitlab-mr-threads.py" \
   --repo "<group/project>" --mr "<iid>" --threads "$CRDIR/threads.json" \
   --expected-head "<head_sha>"
 
 # GitHub PR
-python3 "plugins/combined-review/scripts/post-github-pr-threads.py" \
+python3 "<this skill directory>/scripts/post-github-pr-threads.py" \
   --repo "<owner/repo>" --pr "<number>" --threads "$CRDIR/threads.json" \
   --expected-head "<head_sha>"
 ```

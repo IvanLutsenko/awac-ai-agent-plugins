@@ -158,7 +158,10 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.12.0
+**Status:** ✅ Production Ready | **Version:** 1.12.1
+
+**What's New in 1.12.1:**
+- Codex port fixed: helper scripts ship inside the generated skill, so `/review` run from Codex in another repo can actually find them (it could not — verified live).
 
 **What's New in 1.12.0:**
 - `filter-findings.py`: the scope check runs as a script you can re-run, printing KEEP / MOVED / DROP-with-reason / unparsed per finding instead of the model reporting that it filtered.
@@ -342,7 +345,10 @@ python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/exa
 python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/example --apply
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.10.1
+**Status:** 🔨 Beta | **Version:** 0.11.0
+
+**What's New in 0.11.0:**
+- Generated Codex skills carry their helper scripts: `${CLAUDE_PLUGIN_ROOT}/scripts/...` became a path that only resolved inside this marketplace, so a converted skill run from Codex in another repo could not find its own helpers.
 
 **What's New in 0.10.1:**
 - Fixed hand-authored `plugin-cross-port` skill frontmatter names to use kebab-case identifiers matching their directories

@@ -6,7 +6,7 @@ Converts individual plugins in either direction and reconciles dual-target
 Claude Code and Codex marketplaces. A repository chooses one canonical
 marketplace, while each plugin keeps its own `source_of_truth`.
 
-**Version:** 0.10.1
+**Version:** 0.11.0
 
 ---
 
@@ -200,6 +200,10 @@ available and emit a warning.
 ---
 
 ## Changelog
+
+### 0.11.0
+- **Helper scripts now ship inside the generated Codex skill.** `${CLAUDE_PLUGIN_ROOT}/scripts/...` used to be rewritten to a path relative to this marketplace, which resolves only when Codex happens to run inside it — never, for a tool that acts on another repository. Codex proved it live: `python3 plugins/combined-review/scripts/filter-findings.py` → `No such file or directory`. The converter now copies `scripts/` next to the generated `SKILL.md`, rewrites references to `<this skill directory>/scripts/...`, and adds a header line telling the model to substitute the skill path Codex reported. Copies are overwritten on every run — a stale helper runs and looks right, which is worse than a missing one.
+- `${CLAUDE_PLUGIN_ROOT}` pointing anywhere other than `scripts/` keeps the previous repo-relative rewrite.
 
 ### 0.10.1
 - Fix skill frontmatter `name:` values for hand-authored skills so they match directory kebab-case identifiers (`cc-to-codex`, `codex-to-cc`, `maintain-dual-target`)

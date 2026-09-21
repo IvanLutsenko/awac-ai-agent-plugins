@@ -131,6 +131,14 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
 # Core conversion logic
 # ---------------------------------------------------------------------------
 
+PLUGIN_ROOT_VAR = '${CLAUDE_PLUGIN_ROOT}'
+SKILL_DIR_TOKEN = '<this skill directory>'
+SCRIPTS_NOTE = (
+    "> Helper scripts ship in this skill's own `scripts/` directory. Replace\n"
+    '> `<this skill directory>` with the path Codex reported when it loaded this skill —\n'
+    '> a bare relative path would resolve against the repository under review instead.\n'
+)
+
 class Converter:
     def __init__(
         self,
@@ -250,6 +258,41 @@ class Converter:
             },
         }
 
+    last_skill_bundles_scripts = False
+
+    def _rewrite_plugin_root(self, body: str) -> tuple[str, bool]:
+        """Codex has no ${CLAUDE_PLUGIN_ROOT}.
+
+        Helper scripts are bundled into the skill directory and addressed from
+        there: a repo-relative path only resolves when Codex happens to run
+        inside this marketplace, which for a tool that acts on *another* repo is
+        never. Anything else keeps the repo-relative form.
+        """
+        bundles = f'{PLUGIN_ROOT_VAR}/scripts' in body
+        body = body.replace(f'{PLUGIN_ROOT_VAR}/scripts', f'{SKILL_DIR_TOKEN}/scripts')
+        body = body.replace(PLUGIN_ROOT_VAR, self._rel(self.plugin_path))
+        return body, bundles
+
+    def _bundle_scripts(self, out_dir: Path) -> None:
+        """Copy the plugin's scripts/ next to the generated SKILL.md.
+
+        Always overwrites: a stale copy of a helper is worse than none, because
+        it runs and looks right.
+        """
+        src = self.plugin_path / 'scripts'
+        if not src.is_dir():
+            return
+        for f in sorted(src.iterdir()):
+            if not f.is_file():
+                continue
+            dst = out_dir / 'scripts' / f.name
+            if self.dry_run:
+                print(f"  [dry-run] would copy: {self._rel(f)} -> {self._rel(dst)}")
+            else:
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(f, dst)
+            self.created.append(self._rel(dst))
+
     def convert_command_to_skill(self, cmd_path: Path, plugin_name: str) -> str:
         text = cmd_path.read_text(encoding='utf-8')
         fm, body = parse_frontmatter(text)
@@ -263,9 +306,8 @@ class Converter:
             skill_description = skill_description.rstrip() + '.'
         skill_description = f'{skill_description} {trigger_hint}'
 
-        # Codex has no ${CLAUDE_PLUGIN_ROOT}; rewrite to the plugin's repo-relative
-        # path, matching the convention used by hand-written Codex skills here.
-        body = body.replace('${CLAUDE_PLUGIN_ROOT}', self._rel(self.plugin_path))
+        body, self.last_skill_bundles_scripts = self._rewrite_plugin_root(body)
+        scripts_note = SCRIPTS_NOTE if self.last_skill_bundles_scripts else ''
 
         return (
             f'---\n'
@@ -274,7 +316,8 @@ class Converter:
             f'version: 0.1.0\n'
             f'---\n\n'
             f'> Converted from Claude Code command `/{command_name}`.\n'
-            f'> Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.\n\n'
+            f'> Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.\n'
+            f'{scripts_note}\n'
             f'{body}'
         )
 
@@ -300,8 +343,8 @@ class Converter:
         if skill_description and not skill_description.endswith('.'):
             skill_description += '.'
 
-        # Codex has no ${CLAUDE_PLUGIN_ROOT}; rewrite to the plugin's repo-relative path.
-        body = body.replace('${CLAUDE_PLUGIN_ROOT}', self._rel(self.plugin_path))
+        body, self.last_skill_bundles_scripts = self._rewrite_plugin_root(body)
+        scripts_note = SCRIPTS_NOTE if self.last_skill_bundles_scripts else ''
 
         return (
             f'---\n'
@@ -310,7 +353,8 @@ class Converter:
             f'version: 0.1.0\n'
             f'---\n\n'
             f'> Converted from Claude Code agent `{agent_name}`.\n'
-            f'> Codex has no separate agents concept; this runs as a standalone skill.\n\n'
+            f'> Codex has no separate agents concept; this runs as a standalone skill.\n'
+            f'{scripts_note}\n'
             f'{body}'
         )
 
@@ -427,6 +471,8 @@ class Converter:
 
                     content = self.convert_command_to_skill(cmd_file, plugin_name)
                     self._write(out_path, content, overwrite=True)
+                    if self.last_skill_bundles_scripts:
+                        self._bundle_scripts(out_dir)
                     converted_count += 1
 
             expected = {cmd_file.stem for cmd_file in cmd_files}
@@ -468,6 +514,8 @@ class Converter:
 
                 content = self.convert_agent_to_skill(agent_file, plugin_name)
                 self._write(out_path, content, overwrite=True)
+                if self.last_skill_bundles_scripts:
+                    self._bundle_scripts(out_path.parent)
 
         expected_agents = {f.stem for f in agent_files}
         if agents_generated_root.exists():

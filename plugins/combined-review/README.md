@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.12.0
+**Version:** 1.12.1
 
 ---
 
@@ -267,6 +267,13 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.12.1
+
+- Regenerated the Codex skills with plugin-cross-port 0.11.0: the helper scripts now ship inside the
+  skill directory. The converted `/review` called `plugins/combined-review/scripts/filter-findings.py`,
+  a path that exists only inside this marketplace — in a live Codex run on another repo it failed with
+  `No such file or directory` right after Step 5 built its position map.
 
 ### 1.12.0
 
