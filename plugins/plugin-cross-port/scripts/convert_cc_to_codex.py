@@ -599,7 +599,7 @@ class Converter:
             print(f'Shared skills/ (no action): {len(non_generated)} skill(s)')
 
         print('\nManual steps:')
-        print('  1. Review skills/generated-from-commands/ — hooks and MCP tool IDs may need manual mapping (allowed-tools dropped, ${CLAUDE_PLUGIN_ROOT} rewritten to plugin path automatically).')
+        print("  1. Review skills/generated-from-commands/ — hooks and MCP tool IDs may need manual mapping (allowed-tools dropped; ${CLAUDE_PLUGIN_ROOT}/scripts bundled into each skill's own scripts/, anything else rewritten to the repo-relative plugin path).")
         if agent_files:
             print('  2. Review skills/generated-from-agents/ — agents run as standalone skills; any command that orchestrated them references them by name (orchestration not rewritten).')
         if hook_warnings:

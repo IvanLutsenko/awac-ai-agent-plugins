@@ -62,7 +62,12 @@ reconciliation.
 - **Agents**: Codex has no separate `agents/` concept, so each `agents/<name>.md` is converted to a standalone skill under `skills/generated-from-agents/`. The agent's system prompt becomes the skill body and its description is reused (CC `<example>` trigger blocks stripped). What does *not* convert is orchestration: a command that spawned several agents via the Task tool keeps referencing them by name — they now resolve as skills, but inlining a true multi-agent workflow into one skill is per-plugin manual work.
 - **allowed-tools**: CC's per-command tool allowlist has no Codex analog. Codex uses manifest-level `capabilities`.
 - **MCP tool names**: Same `.mcp.json` format works, but tool IDs may differ between environments. Review generated skills for `mcp__*` references.
-- **`${CLAUDE_PLUGIN_ROOT}`**: This CC variable is not available in Codex. The converter auto-rewrites it to the plugin's repo-relative path (`plugins/<name>`) in generated skills, matching the convention used by hand-written Codex skills.
+- **`${CLAUDE_PLUGIN_ROOT}`**: This CC variable is not available in Codex. A reference to
+  `${CLAUDE_PLUGIN_ROOT}/scripts/...` becomes `<this skill directory>/scripts/...` and the plugin's
+  `scripts/` are copied next to the generated `SKILL.md`, because a marketplace-relative path
+  resolves only while Codex runs inside the marketplace — which, for a skill acting on another
+  repository, it never does. Any other use is rewritten to the plugin's repo-relative path
+  (`plugins/<name>`), matching the convention used by hand-written Codex skills.
 
 ## Marketplace Mapping
 

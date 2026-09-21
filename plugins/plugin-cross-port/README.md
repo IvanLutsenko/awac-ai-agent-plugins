@@ -183,7 +183,7 @@ available and emit a warning.
 
 - **Hooks** — `SessionStart`, `PostToolUse`, etc. have no Codex equivalent. Implement as GitHub Actions if needed.
 - **Agents** — **auto-converted** to standalone Codex skills under `skills/generated-from-agents/<name>/SKILL.md` (Codex has no separate agents concept). Orchestration a command did via the Task tool is *not* rewritten — the generated command-skill still references the agents by name, and they now exist as skills. Inlining full multi-agent orchestration remains per-plugin manual work.
-- **`${CLAUDE_PLUGIN_ROOT}`** — CC-specific path variable; **auto-rewritten** to the plugin's repo-relative path (`plugins/<name>`) in generated skills.
+- **`${CLAUDE_PLUGIN_ROOT}`** — CC-specific path variable. `${CLAUDE_PLUGIN_ROOT}/scripts/...` → the skill's **own** `scripts/`, copied in beside `SKILL.md` and referenced as `<this skill directory>/scripts/...`; a marketplace-relative path resolves only when Codex runs inside the marketplace. Any other use is rewritten to the plugin's repo-relative path (`plugins/<name>`).
 - **`allowed-tools`** — CC per-command tool allowlist has no Codex analog; **auto-dropped** from generated skill frontmatter.
 - **MCP tool names** — same `.mcp.json` format, but verify tool IDs work in target environment.
 - **Semantic adaptation** — hooks and ecosystem-specific paths still require

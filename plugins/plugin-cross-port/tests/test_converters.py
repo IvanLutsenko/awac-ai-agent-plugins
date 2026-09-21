@@ -50,7 +50,9 @@ class ConverterTest(unittest.TestCase):
         self.assertEqual(converter.run(), 0)
         self.assertFalse(stale.exists())
 
-    def test_cc_to_codex_rewrites_plugin_root_to_repo_relative_path(self):
+    def test_cc_to_codex_points_script_references_at_the_skills_own_copy(self):
+        """A marketplace-relative path resolves only when Codex runs inside the
+        marketplace — never, for a skill acting on another repository."""
         plugin = self.make_cc_plugin("drawbridge")
         command = plugin / "commands" / "draw.md"
         command.parent.mkdir()
@@ -70,9 +72,54 @@ class ConverterTest(unittest.TestCase):
         skill = (plugin / "skills/generated-from-commands/draw/SKILL.md").read_text(
             encoding="utf-8"
         )
-        self.assertIn("source plugins/drawbridge/scripts/lib.sh", skill)
+        self.assertIn("source <this skill directory>/scripts/lib.sh", skill)
+        self.assertIn("Helper scripts ship in this skill's own `scripts/` directory", skill)
+        self.assertNotIn("plugins/drawbridge/scripts/", skill)
         self.assertNotIn("${CLAUDE_PLUGIN_ROOT}", skill)
         self.assertNotIn("remove `allowed-tools`", skill)
+
+    def test_cc_to_codex_bundles_the_scripts_next_to_the_skill(self):
+        plugin = self.make_cc_plugin("drawbridge")
+        command = plugin / "commands" / "draw.md"
+        command.parent.mkdir()
+        command.write_text(
+            "---\ndescription: Draw\n---\n\nbash ${CLAUDE_PLUGIN_ROOT}/scripts/lib.sh\n",
+            encoding="utf-8",
+        )
+        scripts = plugin / "scripts"
+        scripts.mkdir()
+        (scripts / "lib.sh").write_text("echo one\n", encoding="utf-8")
+
+        self.assertEqual(
+            cc_to_codex.Converter(plugin, self.repo_root, False, False, False).run(), 0
+        )
+        bundled = plugin / "skills/generated-from-commands/draw/scripts/lib.sh"
+        self.assertEqual(bundled.read_text(encoding="utf-8"), "echo one\n")
+
+        # A stale copy runs and looks right, so every run overwrites it.
+        (scripts / "lib.sh").write_text("echo two\n", encoding="utf-8")
+        self.assertEqual(
+            cc_to_codex.Converter(plugin, self.repo_root, False, True, False).run(), 0
+        )
+        self.assertEqual(bundled.read_text(encoding="utf-8"), "echo two\n")
+
+    def test_cc_to_codex_keeps_repo_relative_path_outside_scripts(self):
+        plugin = self.make_cc_plugin("drawbridge")
+        command = plugin / "commands" / "draw.md"
+        command.parent.mkdir()
+        command.write_text(
+            "---\ndescription: Draw\n---\n\nread ${CLAUDE_PLUGIN_ROOT}/config-defaults.md\n",
+            encoding="utf-8",
+        )
+
+        self.assertEqual(
+            cc_to_codex.Converter(plugin, self.repo_root, False, False, False).run(), 0
+        )
+        skill = (plugin / "skills/generated-from-commands/draw/SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("read plugins/drawbridge/config-defaults.md", skill)
+        self.assertNotIn("Helper scripts ship", skill)
 
     def test_cc_to_codex_preserves_plugin_relative_manually_maintained_skill(self):
         plugin = self.make_cc_plugin()
