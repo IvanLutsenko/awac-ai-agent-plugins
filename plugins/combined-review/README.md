@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.14.0
+**Version:** 1.14.1
 
 ---
 
@@ -29,7 +29,20 @@ curl -fsSL https://cli.coderabbit.ai/install.sh | sh
 coderabbit auth login
 ```
 
-> Without CodeRabbit, the plugin works with 4 agents. CodeRabbit adds a 5th review layer.
+### What CodeRabbit is, and when not to use it
+
+CodeRabbit is a third-party AI reviewer with its own CLI. It is not part of this plugin and not an
+agent: it reads the same diff independently, on someone else's model, and its findings are merged
+into the report after deduplication. Its value is exactly that independence — twice this month it
+flagged something the agents missed, and once it was wrong in a way the agents proved wrong.
+
+**It uploads the diff to CodeRabbit's servers.** For a private or corporate repository that is a
+decision to make deliberately, not a default to inherit: set `coderabbit: off` in the config and the
+plugin never calls it — no prompt, no upload, no CodeRabbit section in the report.
+
+The free tier caps a review at 150 changed files; beyond that the run is split by directory, and the
+report says which paths, if any, fell outside the split. Without CodeRabbit the review runs on the
+five agents.
 
 ---
 
@@ -95,7 +108,8 @@ and "исправил" is a claim, not evidence.
 | **git-historian** | Git blame, history, reverted fixes, parallel work conflicts | Sonnet |
 | **silent-failure-hunter** | Empty catches, swallowed errors, broad exceptions, silent fallbacks | Sonnet |
 | **test-analyzer** | Test coverage quality, missing error/edge case tests | Sonnet |
-| **CodeRabbit** | AI-powered review via CLI (if installed) | External |
+| **security-reviewer** | Secrets, injection, authn/authz, insecure storage and transport, unsafe crypto | Sonnet |
+| **CodeRabbit** | Independent review by a third-party service (if its CLI is installed) | External |
 
 ## Optional Agents
 
@@ -104,7 +118,6 @@ and "исправил" is a claim, not evidence.
 | Comment Analyzer | `+comments` | Comment accuracy vs code, stale TODOs |
 | Type Design Analyzer | `+types` | Encapsulation, invariants, enforcement |
 | Code Simplifier | `+simplify` | Simplification without losing functionality |
-| **security-reviewer** | `+security` or `security: auto` | Secrets, injection, authn/authz, insecure storage and transport, unsafe crypto |
 
 ---
 
@@ -157,7 +170,7 @@ The shipped defaults are in `config-defaults.md`.
 1. **Parse arguments** — determine mode (PR/MR / branch diff / uncommitted)
 2. **Gather diff** — via `gh pr diff`, `glab mr` (GitLab), `git diff`, or `git diff branch1...branch2`
 3. **Check CodeRabbit** — install if missing (with user consent), check auth
-4. **Launch agents in parallel** — 4 default + CodeRabbit + optional
+4. **Launch agents in parallel** — 5 default + CodeRabbit + optional
 5. **Score and filter** — scope map, evidence rule, falsifiability gate, deduplicate
 6. **Report** — grouped by severity, every finding with `file:line`
 
@@ -276,6 +289,14 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.14.1
+
+- README: `security-reviewer` moved into the default agent table, where it belongs since 1.14.0, and
+  out of the optional one. The counts that still said "4 agents" are corrected.
+- README: what CodeRabbit actually is — a third-party reviewer, not an agent — and the part worth
+  knowing before installing it: it uploads the diff to its own servers, which for a corporate
+  repository is a decision, not a default. `coderabbit: off` keeps the review local.
 
 ### 1.14.0
 

@@ -135,7 +135,7 @@ Project tracking, task management with kanban boards, bug logging, decision reco
 
 ### Combined Review
 
-Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents (security included by default) + optional CodeRabbit for comprehensive review.
+Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents — security included, no per-agent switches — plus CodeRabbit, a third-party reviewer that reads the same diff independently. CodeRabbit uploads the diff to its own servers; `coderabbit: off` keeps the review entirely local.
 
 📚 **[Full Documentation](plugins/combined-review/README.md)**
 
@@ -154,11 +154,14 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents (s
 /review --base main                        # Current branch vs main
 /review feature/X feature/Y +security     # Add the security agent
 /review feature/X feature/Y +comments all # All agents
-/review-config                             # Language, model, CodeRabbit, security agent
+/review-config                             # Language, model, CodeRabbit
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.14.0
+**Status:** ✅ Production Ready | **Version:** 1.14.1
+
+**What's New in 1.14.1:**
+- README documents what CodeRabbit is and that it uploads the diff to a third-party service; the agent table lists all five agents.
 
 **What's New in 1.14.0:**
 - All five agents always run — the `security` key and the `+security` flag are gone. Five agents cost about five times the tokens of a single pass, so the lever for cost is `model`, not a shorter roster (on Codex the model is set for the whole session instead).
