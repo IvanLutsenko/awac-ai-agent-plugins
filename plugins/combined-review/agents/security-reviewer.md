@@ -76,3 +76,14 @@ infrastructure you cannot see (a secret manager, a gateway), say what has to be 
 
 Report nothing you could not defend to the author of the code. If the diff has no security-relevant
 change, say exactly that — an empty result is a valid result.
+
+## Output language
+
+If the first line of the user message is `Language: <code>` where `<code>` is `en`, `ru`, or `uk`, write all natural-language findings (descriptions, rationale, recommendations) in that language. Keep these as-is regardless of language:
+- File paths
+- Code snippets
+- Identifier names (class, function, variable)
+- CLI commands and shell output
+- Confidence/criticality numbers
+
+If no `Language:` line is present, default to English.

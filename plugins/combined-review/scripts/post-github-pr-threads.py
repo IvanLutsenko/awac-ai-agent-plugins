@@ -102,6 +102,16 @@ def get_review_comments(repo, pr):
 
 
 TICKET_RE = re.compile(r"\b[A-Z][A-Z0-9]{1,9}-\d+\b")
+# ponytail: prefix blocklist, not a project-key lookup — these standards read exactly like keys
+NOT_TICKET = {"UTF", "SHA", "AES", "RSA", "MD", "ISO", "RFC", "TLS", "HMAC", "PBKDF", "BASE", "IPV", "X"}
+
+
+def find_ticket(body):
+    """First ticket key in the text; a standard that looks like one (UTF-8, SHA-256) is not a ticket."""
+    for m in TICKET_RE.finditer(body or ""):
+        if m.group(0).split("-")[0] not in NOT_TICKET:
+            return m.group(0)
+    return None
 
 
 def match_thread(comments, path, line, me):
@@ -137,9 +147,9 @@ def match_thread(comments, path, line, me):
         if (c.get("user") or {}).get("login") == me:
             return "mine", c.get("id"), None
         for n in threads.get(c.get("id"), [c]):
-            m = TICKET_RE.search(n.get("body") or "")
-            if m:
-                return "theirs", c.get("id"), m.group(0)
+            t = find_ticket(n.get("body"))
+            if t:
+                return "theirs", c.get("id"), t
         return "theirs", c.get("id"), None
     return "post", None, None
 

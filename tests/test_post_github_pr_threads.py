@@ -277,6 +277,14 @@ class MatchThreadTest(unittest.TestCase):
         c = make_comment(2, "foo.py", 3, "someone", body="covered by ABC-123")
         self.assertEqual(self.match([c]), ("theirs", 2, "ABC-123"))
 
+    def test_standard_name_is_not_a_ticket(self):
+        c = make_comment(2, "foo.py", 3, "someone", body="decode as UTF-8, then SHA-256 it")
+        self.assertEqual(self.match([c]), ("theirs", 2, None))
+
+    def test_ticket_after_a_standard_name_still_found(self):
+        c = make_comment(2, "foo.py", 3, "someone", body="UTF-8 issue, see ABC-7")
+        self.assertEqual(self.match([c]), ("theirs", 2, "ABC-7"))
+
     def test_same_line_other_path(self):
         self.assertEqual(self.match([make_comment(3, "bar.py", 3, "me")]), ("post", None, None))
 

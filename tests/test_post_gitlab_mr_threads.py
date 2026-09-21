@@ -311,6 +311,10 @@ class MatchThreadTest(unittest.TestCase):
         d = make_discussion("d1", "foo.py", 3, "reviewer", body="known, ABC-123 covers it")
         self.assertEqual(self.match([d]), ("theirs", "d1", "ABC-123"))
 
+    def test_standard_name_is_not_a_ticket(self):
+        d = make_discussion("d1", "foo.py", 3, "reviewer", body="decode as UTF-8, then SHA-256 it")
+        self.assertEqual(self.match([d]), ("theirs", "d1", None))
+
     def test_thread_without_position_never_matches(self):
         d = make_discussion("d1", "foo.py", 3, "reviewer", position=False)
         self.assertEqual(self.match([d]), ("post", None, None))

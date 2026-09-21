@@ -97,6 +97,16 @@ def get_discussions(proj, mr):
 
 
 TICKET_RE = re.compile(r"\b[A-Z][A-Z0-9]{1,9}-\d+\b")
+# ponytail: prefix blocklist, not a project-key lookup — these standards read exactly like keys
+NOT_TICKET = {"UTF", "SHA", "AES", "RSA", "MD", "ISO", "RFC", "TLS", "HMAC", "PBKDF", "BASE", "IPV", "X"}
+
+
+def find_ticket(body):
+    """First ticket key in the text; a standard that looks like one (UTF-8, SHA-256) is not a ticket."""
+    for m in TICKET_RE.finditer(body or ""):
+        if m.group(0).split("-")[0] not in NOT_TICKET:
+            return m.group(0)
+    return None
 
 
 def match_thread(discussions, path, line, me):
@@ -120,9 +130,9 @@ def match_thread(discussions, path, line, me):
         if (notes[0].get("author") or {}).get("username") == me:
             return "mine", d.get("id"), None
         for n in notes:
-            m = TICKET_RE.search(n.get("body") or "")
-            if m:
-                return "theirs", d.get("id"), m.group(0)
+            t = find_ticket(n.get("body"))
+            if t:
+                return "theirs", d.get("id"), t
         return "theirs", d.get("id"), None
     return "post", None, None
 

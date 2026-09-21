@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.10.0
+**Version:** 1.10.1
 
 ---
 
@@ -255,6 +255,16 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.10.1
+
+- `security-reviewer` honours the `Language:` contract — it was the only agent without an
+  **Output language** section, so a Russian report came back with its security findings in English.
+- `/review` numbers the security agent 5 and CodeRabbit 6, matching the README, `config-defaults.md`
+  and `/review-config`, which all call security "a fifth parallel agent". The headings were also out
+  of order (6 before 5).
+- `[SEEN]` no longer reports `UTF-8` or `SHA-256` as the ticket a thread names: the ticket pattern
+  now skips the standards that read like project keys, in both the GitHub and the GitLab helper.
 
 ### 1.10.0
 
