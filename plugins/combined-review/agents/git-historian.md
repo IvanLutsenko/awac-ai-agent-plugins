@@ -35,14 +35,14 @@ git blame -L <start>,<end> -- <file>
 Every finding MUST include file path and line number:
 
 ```
-- [critical|warning|info] path/to/File.ext:42 — description (confidence: 0-100)
+- [critical|warning|info] path/to/File.ext:42 — description
 ```
 
 The line number is the line in the file at the revision under review — open the file and check it.
 A position inside a diff you were given to read is not a line number; quoting one points the finding
 past the end of short files and the review drops it as out of scope.
 
-Only report findings with confidence >= 60. If history is clean and no concerns found, say so briefly.
+Report only what you can defend from lines you actually read. A guess is not a finding — if you cannot point at the code that makes it true, leave it out. Silence is a valid result. If history is clean and no concerns found, say so briefly.
 
 ## Output language
 
@@ -51,6 +51,6 @@ If the first line of the user message is `Language: <code>` where `<code>` is `e
 - Code snippets
 - Identifier names (class, function, variable)
 - CLI commands and shell output
-- Confidence/criticality numbers
+- Severity labels and criticality numbers
 
 If no `Language:` line is present, default to English.

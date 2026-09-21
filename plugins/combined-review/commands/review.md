@@ -350,7 +350,7 @@ It checks:
 - Crypto that cannot be right (hardcoded key/IV, ECB, predictable RNG in a security decision)
 
 It derives the platform's idioms from the repo rather than assuming one. Its findings join the normal
-severity/confidence pipeline in Step 5.
+severity pipeline in Step 5.
 
 ### Agent 6 — CodeRabbit (if `coderabbit: auto` and available)
 
@@ -417,9 +417,10 @@ Find areas in diff that can be simplified without losing functionality. Provide 
 
 Collect findings from all agents:
 
-1. **Deduplicate** — if two agents found the same issue, keep one with highest confidence
-2. **Filter out** confidence < 60
-3. **Position map** — build, once, the set of `(new_path, new_line)` pairs this change actually touches, and check every finding's cited `file:line` against it. Do not `grep` the saved diff for a line number: `grep` has no idea where one hunk ends and the next begins, so it confirms a number that belongs to a different hunk, a different file, or the `-` side of the same one.
+1. **Deduplicate** — if two agents found the same issue, keep the one that cites the more specific
+   evidence: the narrower `file:line`, the quoted code, the named caller. Two vague reports of the
+   same thing do not add up to a confirmed one.
+2. **Position map** — build, once, the set of `(new_path, new_line)` pairs this change actually touches, and check every finding's cited `file:line` against it. Do not `grep` the saved diff for a line number: `grep` has no idea where one hunk ends and the next begins, so it confirms a number that belongs to a different hunk, a different file, or the `-` side of the same one.
    ```bash
    git diff --unified=0 "<diff-spec>" | python3 -c '
 import re, sys
@@ -469,15 +470,15 @@ for raw in sys.stdin:
    **Findings on deleted lines.** A removal can be the defect — a dropped permission check, a deleted null guard. Report it, but anchor it to a line that still exists in the new file: the nearest surviving line of the same hunk, normally the line right after the deletion. Quote the removed code in the finding body so the reader sees what went away. A finding that can only be anchored to a line that no longer exists is reported in the terminal output only — it cannot be posted as a thread.
 
    Mechanically: if the hunk that removed the code also added lines, those lines are in the map — anchor to the nearest one. If it removed only (`@@ -a,b +c,0 @@`), the surviving neighbour in the new file is line `c + 1`; anchor there when that pair is in the map. When neither holds, keep the finding, mark it terminal-only, and skip it in Step 7.
-4. **Race conditions — causal gate, not timing.** Drop or downgrade a concurrency finding only when a causal gate makes the bad interleaving impossible: a guard the consumer waits on, an `await`/join on the producer, or a state transition the consumer observes before reading. A ratio of delays is not a happens-before relation — "the producer takes milliseconds and the user needs seconds to get there" sets severity, not existence. Without a causal gate the finding stands, at the severity the window justifies.
-5. **Parallel-conflict sanity check** — if a finding cites a parallel branch/commit as a conflict source, verify with `git merge-base --is-ancestor <commit> origin/<target>`. If the commit is already in target, drop the finding.
-6. **Falsifiability gate** — for every Critical, spend one pass trying to *invalidate* it instead of confirming it. Any one of these exits kills or downgrades the finding:
+3. **Race conditions — causal gate, not timing.** Drop or downgrade a concurrency finding only when a causal gate makes the bad interleaving impossible: a guard the consumer waits on, an `await`/join on the producer, or a state transition the consumer observes before reading. A ratio of delays is not a happens-before relation — "the producer takes milliseconds and the user needs seconds to get there" sets severity, not existence. Without a causal gate the finding stands, at the severity the window justifies.
+4. **Parallel-conflict sanity check** — if a finding cites a parallel branch/commit as a conflict source, verify with `git merge-base --is-ancestor <commit> origin/<target>`. If the commit is already in target, drop the finding.
+5. **Falsifiability gate** — for every Critical, spend one pass trying to *invalidate* it instead of confirming it. Any one of these exits kills or downgrades the finding:
    - **safe behavior** — the bad path isn't reachable (guard upstream, the type makes it impossible, the branch is dead);
    - **intended behavior** — the diff, the MR description, or CLAUDE.md says this is the point;
    - **existing mitigation** — a caller, wrapper, retry, or global handler already covers it — quote it;
    - **weak evidence** — the claim rests on a recognized pattern, not on lines you actually read.
 
-   Checks 4 and 5 are special cases of this gate. A Critical that survives should name which exit you checked and why it didn't apply.
+   Checks 3 and 4 are special cases of this gate. A Critical that survives should name which exit you checked and why it didn't apply.
 
 **False positives (skip):**
 - Pre-existing issues (existed before this diff)
@@ -486,7 +487,7 @@ for raw in sys.stdin:
 - Intentional functionality changes
 - Generic advice without specifics ("add tests" without saying for what)
 - **Issues on lines not changed in this diff** — checked against the position map above. Common trap: an agent reads `Foo.kt` for context (because the diff calls into it) and then flags pre-existing patterns in `Foo.kt` itself. Drop these. A defect in code this diff *removed* is not one of them — it belongs to the change; re-anchor it as "Findings on deleted lines" says.
-- **Concurrency findings closed by a causal gate** — a guard the consumer waits on, a join on the producer, an observed state transition (item 4). A missing timing estimate is not a reason to skip one.
+- **Concurrency findings closed by a causal gate** — a guard the consumer waits on, a join on the producer, an observed state transition (item 3). A missing timing estimate is not a reason to skip one.
 - **Already-merged "parallel" conflicts** — a referenced commit that's already an ancestor of target.
 
 ## Step 6 — Final report
@@ -509,12 +510,12 @@ Agent findings already arrive in the resolved language (via the `Language:` pref
 
 ### Critical
 
-1. `path/to/File.kt:42` — description [source: agent-name, confidence: N]
+1. `path/to/File.kt:42` — description [source: agent-name]
    > code or context
 
 ### Findings
 
-1. `path/to/File.kt:100` — description [source: agent-name, confidence: N]
+1. `path/to/File.kt:100` — description [source: agent-name]
 
 ### Tests
 

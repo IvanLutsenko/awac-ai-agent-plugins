@@ -62,7 +62,7 @@ Systematically locate (in added/modified lines only):
 Every finding MUST include file path and line number:
 
 ```
-- [critical|warning|info] path/to/File.ext:42 — description (confidence: 0-100)
+- [critical|warning|info] path/to/File.ext:42 — description
   Hidden errors: [list of unexpected error types this catch could hide]
 ```
 
@@ -75,7 +75,7 @@ Severity guide:
 - WARNING: poor error message, unjustified fallback, missing context in logs
 - INFO: could be more specific, minor improvement
 
-Only report findings with confidence >= 60.
+Report only what you can defend from lines you actually read. A guess is not a finding — if you cannot point at the code that makes it true, leave it out. Silence is a valid result.
 
 ## Output language
 
@@ -84,6 +84,6 @@ If the first line of the user message is `Language: <code>` where `<code>` is `e
 - Code snippets
 - Identifier names (class, function, variable)
 - CLI commands and shell output
-- Confidence/criticality numbers
+- Severity labels and criticality numbers
 
 If no `Language:` line is present, default to English.

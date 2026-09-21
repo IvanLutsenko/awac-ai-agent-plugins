@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.10.2
+**Version:** 1.11.0
 
 ---
 
@@ -149,17 +149,25 @@ The shipped defaults are in `config-defaults.md`.
 2. **Gather diff** — via `gh pr diff`, `glab mr` (GitLab), `git diff`, or `git diff branch1...branch2`
 3. **Check CodeRabbit** — install if missing (with user consent), check auth
 4. **Launch agents in parallel** — 4 default + CodeRabbit + optional
-5. **Score and filter** — confidence 0-100, threshold >= 60, deduplicate
+5. **Score and filter** — scope map, evidence rule, falsifiability gate, deduplicate
 6. **Report** — grouped by severity, every finding with `file:line`
 
-### Confidence scoring
+### What gets a finding dropped
 
-- **0-25**: False positive, pre-existing issue
-- **25-50**: Possible but unlikely
-- **50-75**: Real issue, minor impact
-- **75-100**: Confirmed issue, affects functionality
+Three sieves, all mechanical — each one can be checked by the reader:
 
-Findings below 60 are filtered out.
+- **Scope map.** The cited `file:line` must be a line this diff added or changed. A wrong line in a
+  changed file is re-anchored by grepping the quoted code, not discarded.
+- **Evidence rule.** Any claim about code outside the diff — a caller, a contract, an existing
+  mitigation — must quote that code with its `file:line`. Otherwise it is a guess, and guesses are
+  not reported.
+- **Falsifiability gate.** Every Critical gets one pass spent trying to refute it: unreachable path,
+  intended behaviour, existing mitigation, evidence that rests on a pattern rather than on lines
+  actually read. Surviving Criticals name which exit was checked.
+
+There is no confidence threshold. A self-assigned 0-100 number gates nothing a reader can verify —
+an agent certain of nonsense writes 85 — so the bar is stated once, in words, in each agent:
+report only what you can defend from lines you actually read.
 
 ### PR/MR mechanics
 
@@ -233,12 +241,12 @@ Every finding includes file path and line number:
 
 ### Critical
 
-1. `path/to/File.kt:42` — description [source: code-reviewer, confidence: 90]
+1. `path/to/File.kt:42` — description [source: code-reviewer]
    > code snippet
 
 ### Findings
 
-1. `path/to/File.kt:100` — description [source: silent-failure-hunter, confidence: 75]
+1. `path/to/File.kt:100` — description [source: silent-failure-hunter]
 
 ### Tests
 
@@ -256,6 +264,20 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.11.0
+
+- **The confidence threshold is gone.** Findings were filtered on a number each agent assigned to its
+  own guess; an agent sure of nonsense writes 85 and a careful one kills a real defect at 55. Nothing
+  about that number is checkable by the reader, and it sat next to three sieves that are: the scope
+  map, the evidence rule and the falsifiability gate. `confidence` is out of the finding format, out
+  of Step 5 and out of the report.
+- The bar agents were given as a number is now stated in words, once per agent: report only what you
+  can defend from lines you actually read; a guess is not a finding; silence is a valid result. That
+  sentence was the part doing real work — it lets an agent stay quiet instead of padding.
+- Deduplication keeps the report that cites the more specific evidence, not the higher number.
+- `criticality: N/10` in test findings stays: it rates impact, which the reader can argue with, and
+  the `>= 7` bar is what keeps "add tests" out of every review.
 
 ### 1.10.2
 

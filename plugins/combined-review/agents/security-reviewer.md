@@ -68,7 +68,7 @@ When you are unsure what the platform's safe idiom is, say so in the finding ins
 Every finding MUST include file path and line number:
 
 ```
-- [critical|warning|info] path/to/File.ext:42 — description (confidence: 0-100)
+- [critical|warning|info] path/to/File.ext:42 — description
 ```
 
 The line number is the line in the file at the revision under review — open the file and check it.
@@ -88,6 +88,6 @@ If the first line of the user message is `Language: <code>` where `<code>` is `e
 - Code snippets
 - Identifier names (class, function, variable)
 - CLI commands and shell output
-- Confidence/criticality numbers
+- Severity labels and criticality numbers
 
 If no `Language:` line is present, default to English.

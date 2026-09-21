@@ -158,7 +158,11 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.10.2
+**Status:** ✅ Production Ready | **Version:** 1.11.0
+
+**What's New in 1.11.0:**
+- No more confidence threshold: findings were filtered on a number each agent gave its own guess, which nothing in the report could verify. The scope map, the evidence rule and the falsifiability gate do the filtering; the bar is now one sentence in each agent — report only what you can defend from lines you read.
+- Deduplication keeps the finding with the more specific evidence instead of the higher number.
 
 **What's New in 1.10.2:**
 - Findings must cite the line in the file, not a line of the diff — agents were quoting diff positions, which point past the end of short files.
