@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.10.1
+**Version:** 1.10.2
 
 ---
 
@@ -256,6 +256,17 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.10.2
+
+- **A finding's line number is the line in the file, not a position in the diff.** Measured on a live
+  MR in an unrelated repo: five of eleven cited anchors pointed past the end of short files, because
+  agents quoted line numbers of the saved `.diff` they had been told to read. Spelled out in the
+  finding format, in the agent prompt skeleton and in all five agent definitions.
+- **A wrong line no longer silently discards the finding.** When a finding's file is in the position
+  map but its line is not, Step 5 now greps the quoted code in that file and re-anchors it; only code
+  that isn't there, or sits on a line this diff didn't touch, is dropped. Before, an off-by-eighty
+  anchor deleted a real defect as "out of scope" — the same loss as an empty position map.
 
 ### 1.10.1
 

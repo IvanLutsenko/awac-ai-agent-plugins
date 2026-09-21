@@ -39,6 +39,10 @@ Every finding MUST include file path and line number:
 - [critical|warning|info] path/to/File.ext:42 — description (confidence: 0-100)
 ```
 
+The line number is the line in the file at the revision under review — open the file and check it.
+A position inside a diff you were given to read is not a line number; quoting one points the finding
+past the end of short files and the review drops it as out of scope.
+
 Only report findings with confidence >= 60. If history is clean and no concerns found, say so briefly.
 
 ## Output language

@@ -158,7 +158,11 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.10.1
+**Status:** ✅ Production Ready | **Version:** 1.10.2
+
+**What's New in 1.10.2:**
+- Findings must cite the line in the file, not a line of the diff — agents were quoting diff positions, which point past the end of short files.
+- A finding whose file is in the position map but whose line is wrong is re-anchored by grepping the quoted code, instead of being dropped as out of scope.
 
 **What's New in 1.10.1:**
 - The scope filter's position map is built by `python3` instead of `awk` — argument substitution in the command text turned `$0` into an argument value, so the map lost every file name and the review silently dropped all findings.

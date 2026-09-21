@@ -72,6 +72,10 @@ Every finding MUST include file path and line number:
 - [critical|warning|info] path/to/File.ext:42 — description (confidence: 0-100)
 ```
 
+The line number is the line in the file at the revision under review — open the file and check it.
+A position inside a diff you were given to read is not a line number; quoting one points the finding
+past the end of short files and the review drops it as out of scope.
+
 For each: the attack path in one sentence, then the fix in the repo's own idiom. If the fix depends on
 infrastructure you cannot see (a secret manager, a gateway), say what has to be true instead.
 

@@ -65,6 +65,10 @@ Every finding MUST include file path and line number:
   Hidden errors: [list of unexpected error types this catch could hide]
 ```
 
+The line number is the line in the file at the revision under review — open the file and check it.
+A position inside a diff you were given to read is not a line number; quoting one points the finding
+past the end of short files and the review drops it as out of scope.
+
 Severity guide:
 - CRITICAL: silent failure, empty catch, broad catch hiding bugs
 - WARNING: poor error message, unjustified fallback, missing context in logs
