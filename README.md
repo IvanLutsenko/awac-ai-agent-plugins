@@ -158,7 +158,12 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.10.0
+**Status:** ✅ Production Ready | **Version:** 1.10.1
+
+**What's New in 1.10.1:**
+- `security-reviewer` now follows the report language setting like the other four agents.
+- The security agent is agent 5 and CodeRabbit agent 6 everywhere, as the config docs already said.
+- A thread mentioning `UTF-8` or `SHA-256` is no longer reported as covered by "ticket UTF-8".
 
 **What's New in 1.10.0:**
 - GitHub parity: `+threads` posts inline resolvable review comments on a PR, and `/rereview` verifies, resolves (GraphQL `resolveReviewThread`) and approves a PR — previously GitLab-only.

@@ -89,7 +89,7 @@ Branch-like: contains `/`, or starts with `feature/`, `fix/`, `release/`, `hotfi
 - `+comments` — add comment analysis
 - `+types` — add type design analysis
 - `+simplify` — add code simplification
-- `+security` — add the security agent (see Agent 6); redundant when config has `security: auto`
+- `+security` — add the security agent (see Agent 5); redundant when config has `security: auto`
 - `+threads` — after the report, post findings as inline resolvable threads on the PR/MR (GitHub PR and GitLab MR modes; see Step 7). Opt-in — never post without this flag or an explicit request.
 - `all` — run all agents including optional
 
@@ -212,7 +212,7 @@ Before launching agents, check CodeRabbit availability:
 which coderabbit 2>/dev/null
 ```
 
-> **CLI ≥ 0.7:** `--plain` was removed (plain text is the default) — passing it errors out. Do **not** use `--plain`. Free plan caps a review at **150 changed files**; for larger diffs split by directory (see Agent 5).
+> **CLI ≥ 0.7:** `--plain` was removed (plain text is the default) — passing it errors out. Do **not** use `--plain`. Free plan caps a review at **150 changed files**; for larger diffs split by directory (see Agent 6).
 
 **If not installed:**
 Ask the user: "CodeRabbit CLI not installed. Install it? (Y/n)"
@@ -268,7 +268,7 @@ code that is not under review — missing real defects and inventing ones — an
 no sign of it. Stop, say which ref could not be checked out, and suggest the fetch from Step 2 as the
 fix. A review that didn't run is recoverable; one that silently read the wrong tree is not.
 
-Keep `$WORKTREE` alive until every agent launched in this step — including CodeRabbit (Agent 5) — has
+Keep `$WORKTREE` alive until every agent launched in this step — including CodeRabbit (Agent 6) — has
 finished, then remove it unconditionally, even if an agent errored:
 ```bash
 [ -n "$WORKTREE" ] && git worktree remove --force "$WORKTREE" 2>/dev/null
@@ -333,7 +333,7 @@ Launch the `test-analyzer` agent. It checks:
 - Missing boundary condition tests
 - Test quality (behavior vs implementation testing)
 
-### Agent 6 — Security Reviewer (opt-in)
+### Agent 5 — Security Reviewer (opt-in)
 
 Only when `+security` was passed or config has `security: auto`. Launch the `security-reviewer` agent.
 It checks:
@@ -346,7 +346,7 @@ It checks:
 It derives the platform's idioms from the repo rather than assuming one. Its findings join the normal
 severity/confidence pipeline in Step 5.
 
-### Agent 5 — CodeRabbit (if `coderabbit: auto` and available)
+### Agent 6 — CodeRabbit (if `coderabbit: auto` and available)
 
 CodeRabbit reviews the revision under review against `--base <base-ref>` — the target side of the
 `<diff-spec>` Step 2 fixed (`origin/<base>`, `origin/<target>`, `<resolved-target>`, or the `--base`
