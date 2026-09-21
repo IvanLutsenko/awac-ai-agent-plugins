@@ -139,6 +139,34 @@ SCRIPTS_NOTE = (
     '> a bare relative path would resolve against the repository under review instead.\n'
 )
 
+CODEX_DIFFERENCES = (
+    ('subagent model',
+     'Codex cannot choose a model per sub-agent: run them on the current model and say so in the '
+     'report instead of naming a model that never ran.'),
+    (('in parallel', 'Fan out', 'fan out'),
+     'Codex counts the main agent against its concurrency slots, so running agents "in parallel" '
+     'can mean in batches. The requirement is that every agent finishes before its output is used, '
+     'not that they start together — dropping one because the slots are full is not the same run.'),
+    (('Ask the user', 'ask the user', 'AskUserQuestion', '## Step 2 — Ask'),
+     'A non-interactive run (`codex exec`, CI) has nobody to answer a prompt: continue on defaults, '
+     'honour whatever the invoking prompt already specified, and report which defaults were used. '
+     'If the whole point of the command is to ask, say that it needs an interactive session and '
+     'stop rather than inventing answers.'),
+)
+
+
+def codex_differences_note(body: str) -> str:
+    """CC-isms the Codex runtime cannot honour, named for the model that will run this."""
+    lines = []
+    for marker, note in CODEX_DIFFERENCES:
+        markers = marker if isinstance(marker, tuple) else (marker,)
+        if any(m in body for m in markers):
+            lines.append(note)
+    if not lines:
+        return ''
+    return '\n## Codex differences\n\n' + '\n'.join(f'- {line}' for line in lines) + '\n'
+
+
 class Converter:
     def __init__(
         self,
@@ -319,6 +347,7 @@ class Converter:
             f'> Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.\n'
             f'{scripts_note}\n'
             f'{body}'
+            f'{codex_differences_note(body)}'
         )
 
     def convert_agent_to_skill(self, agent_path: Path, plugin_name: str) -> str:

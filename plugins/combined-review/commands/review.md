@@ -40,10 +40,15 @@ Map the prefix before `_` to `ru`/`uk`; anything else, or an empty value, falls 
 same language. Code snippets, file paths, identifier names and CLI commands stay as they are.
 
 **Model resolution:** pass the value as the subagent model in Step 4. `inherit` means: don't override,
-let each agent run on what it declares.
+let each agent run on what it declares. If your runtime cannot pick a model per agent — Codex has no
+such control — run them on whatever you are, and say so in one line in the report rather than
+implying a model that never ran.
 
 **First run (neither file exists).** Say in one line that no config was found, and ask whether to set
-it up now (four questions) or continue on defaults. If the user wants setup, read
+it up now (four questions) or continue on defaults. **In a non-interactive run** — `codex exec`, a CI
+job, anything with nobody to answer — do not stall on the question: continue on defaults, honour any
+setting the invoking prompt already stated, and say in the report which defaults you used. If the
+user wants setup, read
 `${CLAUDE_PLUGIN_ROOT}/commands/review-config.md` and follow it, then continue this review with the
 values just written. If the user declines or doesn't care, continue on defaults and don't ask again
 this session.
@@ -243,6 +248,11 @@ Launch **4 default agents in parallel**, plus: the security agent when `+securit
 passed, or config has `security: auto`; CodeRabbit when config has `coderabbit: auto` and the CLI is
 available; the optional agents if requested. `all` means every optional agent — security included,
 whatever the config says.
+
+Parallel is for speed, not for correctness: what matters is that **every** agent has finished before
+Step 5 reads their findings. A runtime that caps concurrency (Codex counts the main agent against its
+four slots) runs them in batches — that is the same review, one wave later. Dropping an agent because
+the slots are full is not.
 
 Run every agent on the model resolved in Step 0 — pass it as the subagent model, except for `inherit`,
 which means «leave each agent on its own declared model».

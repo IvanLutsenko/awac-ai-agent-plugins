@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.12.1
+**Version:** 1.12.2
 
 ---
 
@@ -267,6 +267,15 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.12.2
+
+- `/review` no longer assumes the runtime it started in. Model resolution says what to do when a
+  runtime cannot pick a model per agent (run as yourself, say so, don't name a model that never
+  ran); the first-run config question is skipped with stated defaults in a non-interactive run
+  instead of stalling; and "4 agents in parallel" is spelled out as a barrier — all must finish
+  before Step 5, batching is fine, dropping one because the slots are full is not.
+- Regenerated with plugin-cross-port 0.12.0, so the Codex skills carry the runtime notes too.
 
 ### 1.12.1
 

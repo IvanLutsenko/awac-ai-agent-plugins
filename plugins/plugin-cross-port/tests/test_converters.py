@@ -78,6 +78,45 @@ class ConverterTest(unittest.TestCase):
         self.assertNotIn("${CLAUDE_PLUGIN_ROOT}", skill)
         self.assertNotIn("remove `allowed-tools`", skill)
 
+    def test_cc_to_codex_names_the_runtime_gaps_it_knows_about(self):
+        plugin = self.make_cc_plugin("drawbridge")
+        command = plugin / "commands" / "draw.md"
+        command.parent.mkdir()
+        command.write_text(
+            "---\ndescription: Draw\n---\n\n"
+            "Launch 4 agents in parallel on the subagent model.\n"
+            "Ask the user whether to continue.\n",
+            encoding="utf-8",
+        )
+
+        self.assertEqual(
+            cc_to_codex.Converter(plugin, self.repo_root, False, False, False).run(), 0
+        )
+        skill = (plugin / "skills/generated-from-commands/draw/SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("## Codex differences", skill)
+        self.assertIn("cannot choose a model per sub-agent", skill)
+        self.assertIn("concurrency slots", skill)
+        self.assertIn("non-interactive run", skill)
+
+    def test_cc_to_codex_adds_no_differences_section_when_nothing_applies(self):
+        plugin = self.make_cc_plugin("drawbridge")
+        command = plugin / "commands" / "draw.md"
+        command.parent.mkdir()
+        command.write_text(
+            "---\ndescription: Draw\n---\n\nWrite the prompt to the clipboard.\n",
+            encoding="utf-8",
+        )
+
+        self.assertEqual(
+            cc_to_codex.Converter(plugin, self.repo_root, False, False, False).run(), 0
+        )
+        skill = (plugin / "skills/generated-from-commands/draw/SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("Codex differences", skill)
+
     def test_cc_to_codex_bundles_the_scripts_next_to_the_skill(self):
         plugin = self.make_cc_plugin("drawbridge")
         command = plugin / "commands" / "draw.md"

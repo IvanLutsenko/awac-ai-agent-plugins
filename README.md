@@ -158,7 +158,10 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.12.1
+**Status:** ✅ Production Ready | **Version:** 1.12.2
+
+**What's New in 1.12.2:**
+- `/review` states what to do when the runtime has no per-agent model, no interactive prompt, or fewer concurrency slots than agents — instead of assuming Claude Code.
 
 **What's New in 1.12.1:**
 - Codex port fixed: helper scripts ship inside the generated skill, so `/review` run from Codex in another repo can actually find them (it could not — verified live).
@@ -345,7 +348,10 @@ python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/exa
 python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/example --apply
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.11.0
+**Status:** 🔨 Beta | **Version:** 0.12.0
+
+**What's New in 0.12.0:**
+- Converted command skills end with a `## Codex differences` section listing the CC assumptions Codex cannot honour — per-agent model, true parallelism, interactive prompts.
 
 **What's New in 0.11.0:**
 - Generated Codex skills carry their helper scripts: `${CLAUDE_PLUGIN_ROOT}/scripts/...` became a path that only resolved inside this marketplace, so a converted skill run from Codex in another repo could not find its own helpers.

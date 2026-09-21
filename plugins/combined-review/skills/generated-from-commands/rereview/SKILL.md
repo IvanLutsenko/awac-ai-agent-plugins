@@ -327,3 +327,7 @@ If anything is still ❌ *not fixed*, ⚠️ *partial*, or
 🕓 *deferred*, don't approve on your own initiative — say what's open and ask. Only proceed past
 an open ❌/⚠️/🕓 thread on the user's explicit go-ahead, same as "close everything" in Step 6 —
 and name which unfixed threads you approved over, so the gap doesn't get lost.
+
+## Codex differences
+
+- Codex counts the main agent against its concurrency slots, so running agents "in parallel" can mean in batches. The requirement is that every agent finishes before its output is used, not that they start together — dropping one because the slots are full is not the same run.
