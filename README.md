@@ -158,7 +158,10 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.11.0
+**Status:** ✅ Production Ready | **Version:** 1.12.0
+
+**What's New in 1.12.0:**
+- `filter-findings.py`: the scope check runs as a script you can re-run, printing KEEP / MOVED / DROP-with-reason / unparsed per finding instead of the model reporting that it filtered.
 
 **What's New in 1.11.0:**
 - No more confidence threshold: findings were filtered on a number each agent gave its own guess, which nothing in the report could verify. The scope map, the evidence rule and the falsifiability gate do the filtering; the bar is now one sentence in each agent — report only what you can defend from lines you read.

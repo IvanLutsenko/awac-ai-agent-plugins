@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.11.0
+**Version:** 1.12.0
 
 ---
 
@@ -156,8 +156,11 @@ The shipped defaults are in `config-defaults.md`.
 
 Three sieves, all mechanical — each one can be checked by the reader:
 
-- **Scope map.** The cited `file:line` must be a line this diff added or changed. A wrong line in a
-  changed file is re-anchored by grepping the quoted code, not discarded.
+- **Scope map.** The cited `file:line` must be a line this diff added or changed, checked by
+  `scripts/filter-findings.py` rather than by eye: it prints `[KEEP ]`, `[MOVED]` (wrong line, quoted
+  code found on a line that is in the map — the finding moves there), `[DROP ]` with the reason, or
+  `[?????]` when a finding carries no `file:line` at all, and exits non-zero if anything was left
+  unplaced. A wrong line is not the same as out of scope.
 - **Evidence rule.** Any claim about code outside the diff — a caller, a contract, an existing
   mitigation — must quote that code with its `file:line`. Otherwise it is a guess, and guesses are
   not reported.
@@ -264,6 +267,17 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.12.0
+
+- **`scripts/filter-findings.py`** — the scope check is now a script the reader can re-run, not a
+  step the model reports having done. It places every finding against the position map and prints
+  `[KEEP ]` / `[MOVED]` / `[DROP ]` with a reason / `[?????]`, exiting non-zero when something was
+  left unplaced. On the pilot run's real findings it re-anchored one that a by-eye pass had dropped
+  (`:50` was a position in the saved diff; the code sits on line 11) and named why each of the other
+  three went.
+- What stays with the model is what a script would only pretend to judge: whether the quoted evidence
+  supports the claim, and whether a Critical survives the falsifiability gate.
 
 ### 1.11.0
 

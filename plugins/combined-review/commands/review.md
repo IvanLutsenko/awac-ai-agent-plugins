@@ -451,15 +451,31 @@ for raw in sys.stdin:
    ```
    `--unified=0` is what makes the map exact: with no context lines, every `+` line in a hunk is a line the change introduced, counted from the hunk header's new-side start. A finding whose `file:line` is not in the map is out of scope — drop it, however many agents reported it. Reading-for-context is fine; reporting-on-unchanged-code is not.
 
-   **A wrong line is not the same as out of scope.** Before dropping a finding whose **file** is in the
-   map but whose line is not, check whether the anchor is simply wrong: `grep -n` the code the finding
-   quotes in that file at the revision under review. If it sits on a mapped line, re-anchor the finding
-   there and keep it. If the quoted code isn't in the file, or its line is genuinely unchanged by this
-   diff, only then drop it. Agents do miscount — the common failure is quoting a position inside the
-   saved `.diff` instead of the file, which points past the end of short files — and silently discarding
-   a real defect because of an off-by-eighty anchor is the same class of loss as an empty position map.
-   A finding kept this way but still unanchorable to a mapped line is terminal-only: report it, don't
-   post it as a thread.
+   **Run the check, don't promise it.** Write the agents' finding lines to a file, one per line, and
+   let the shipped script place them against the map. It is the same rule as below, executed instead
+   of remembered:
+   ```bash
+   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/filter-findings.py" \
+     --findings "$CRDIR/findings.txt" --positions "$CRDIR/positions.txt" --root "<repo-root>"
+   ```
+   `<repo-root>` is the worktree (or cwd) from "Repository root for agents" — the revision under
+   review. Per finding it prints `[KEEP ]`, `[MOVED]` (the cited line was wrong, the quoted code was
+   found on a line that IS in the map, so it moved there), `[DROP ]` with the reason, or `[?????]`
+   when no `file:line` could be parsed at all. A non-zero exit means something was left unplaced —
+   read it, don't ignore it. Carry the `[MOVED]` line numbers into the report and into Step 7; a
+   `[DROP ]` reason is what you say if the user asks why a finding vanished.
+
+   **A wrong line is not the same as out of scope** — which is what the script implements, and why
+   you don't do this by eye. Agents do miscount, and the usual failure is quoting a position inside
+   the saved `.diff` instead of the file, which points past the end of short files. Silently
+   discarding a real defect over an off-by-eighty anchor is the same class of loss as an empty
+   position map. When the script reports the quoted code as ambiguous or absent, the finding is not
+   automatically wrong — read the file, and if you can place it yourself on a mapped line, keep it
+   and say you re-anchored it by hand. A finding that stays unanchorable is terminal-only: report it,
+   don't post it as a thread.
+
+   What the script does **not** decide: whether the quoted evidence actually supports the claim, and
+   whether a Critical survives the falsifiability gate below. Those stay yours.
 
    **An empty map is a broken map, not an empty change.** Step 2 already stopped the review if the diff was empty, so by here `positions.txt` has lines — unless the `git diff` above failed (a ref that doesn't exist in this mode is the usual cause, and it writes nothing to stdout while the error goes to stderr). Check it, and never let a failed map silently drop every finding:
    ```bash
