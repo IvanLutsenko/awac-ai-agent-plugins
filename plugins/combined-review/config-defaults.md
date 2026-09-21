@@ -6,7 +6,7 @@
 language: system
 model: sonnet
 coderabbit: auto
-security: off
+security: auto
 ---
 
 # Combined Review config
@@ -33,6 +33,6 @@ silently skips it otherwise; `off` disables the check entirely, so no install pr
 section in the report. The plugin stores no CodeRabbit credentials: `coderabbit auth login` keeps its
 own, and `coderabbit auth status` shows them.
 
-**`security`** — `off` (default) runs the security agent only when you pass `+security`; `auto` runs
-it on every review. It is a fifth parallel agent, so `auto` costs time on every review and on every
-shard of a large diff.
+**`security`** — `auto` (default) runs the security agent on every review; `off` runs it only when
+you pass `+security`. It is a fifth parallel agent, so the default costs one more agent per review and
+per shard of a large diff — set `off` if that time matters more than the check.

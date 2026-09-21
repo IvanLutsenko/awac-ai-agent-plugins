@@ -49,8 +49,9 @@ Stop here.
    If the CLI is missing: `npm i -g coderabbitai` or see coderabbit.ai/cli. If it is installed but
    `coderabbit auth status` says unauthenticated: `coderabbit auth login`. The plugin stores no
    CodeRabbit credentials — the CLI keeps its own.
-4. **Security agent** — `off` (runs only on `+security`), `auto` (runs on every review). It is a fifth
-   agent: `auto` costs one more parallel agent per review and per shard of a large diff.
+4. **Security agent** — `auto` (default, runs on every review), `off` (runs only on `+security`). It
+   is a fifth agent: the default costs one more parallel agent per review and per shard of a large
+   diff.
 
 Accept the defaults without ceremony if the user says so — the answer to all four can be «defaults».
 
@@ -63,13 +64,13 @@ Create the directory if needed, then write the file with only the keys the user 
 language: system
 model: sonnet
 coderabbit: auto
-security: off
+security: auto
 ---
 
 # Combined Review config
 
 Written by /review-config. Keys: language (system|en|ru|uk), model (sonnet|opus|haiku|inherit),
-coderabbit (auto|off), security (off|auto). Project-level overrides live in
+coderabbit (auto|off), security (auto|off). Project-level overrides live in
 `.claude/combined-review.local.md`.
 ```
 

@@ -33,7 +33,7 @@ error.
 - `language` — `system` (default), `en`, `ru`, `uk`
 - `model` — `sonnet` (default), `opus`, `haiku`, `inherit`
 - `coderabbit` — `auto` (default: use it when installed and authenticated), `off`
-- `security` — `off` (default: only on `+security`), `auto` (every review)
+- `security` — `auto` (default: every review), `off` (only on `+security`)
 
 **Language resolution:** `system` → first look for a hint in CLAUDE.md ("Отвечай", "русский"); with
 no hint, read the shell locale, which is what `config-defaults.md` promises:
@@ -103,7 +103,7 @@ Branch-like: contains `/`, or starts with `feature/`, `fix/`, `release/`, `hotfi
 - `+comments` — add comment analysis
 - `+types` — add type design analysis
 - `+simplify` — add code simplification
-- `+security` — add the security agent (see Agent 5); redundant when config has `security: auto`
+- `+security` — add the security agent (see Agent 5); redundant on the default config, which already runs it
 - `+threads` — after the report, post findings as inline resolvable threads on the PR/MR (GitHub PR and GitLab MR modes; see Step 7). Opt-in — never post without this flag or an explicit request.
 - `all` — run all agents including optional
 
@@ -250,10 +250,11 @@ Skip CodeRabbit for this run, continue with 4 agents.
 
 ## Step 4 — Launch agents
 
-Launch **4 default agents in parallel**, plus: the security agent when `+security` or `all` was
-passed, or config has `security: auto`; CodeRabbit when config has `coderabbit: auto` and the CLI is
-available; the optional agents if requested. `all` means every optional agent — security included,
-whatever the config says.
+Launch **5 default agents in parallel** — code-reviewer, git-historian, silent-failure-hunter,
+test-analyzer and security-reviewer, the last one unless config says `security: off` and `+security`
+was not passed. Plus CodeRabbit when config has `coderabbit: auto` and the CLI is available, and the
+optional agents if requested. `all` means every optional agent — security included, whatever the
+config says.
 
 Parallel is for speed, not for correctness: what matters is that **every** agent has finished before
 Step 5 reads their findings. A runtime that caps concurrency (Codex counts the main agent against its
@@ -355,9 +356,10 @@ Launch the `test-analyzer` agent. It checks:
 - Missing boundary condition tests
 - Test quality (behavior vs implementation testing)
 
-### Agent 5 — Security Reviewer (opt-in)
+### Agent 5 — Security Reviewer
 
-Only when `+security` was passed or config has `security: auto`. Launch the `security-reviewer` agent.
+Runs by default; skipped only when config says `security: off` and `+security` was not passed.
+Launch the `security-reviewer` agent.
 It checks:
 - Secrets in source, tests or config
 - Injection sinks fed by untrusted input; unsafe deserialization

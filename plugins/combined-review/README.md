@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.12.2
+**Version:** 1.13.0
 
 ---
 
@@ -136,8 +136,9 @@ security: off       # off | auto
 - **`coderabbit`** — `auto` uses the CLI when it's installed and authenticated, `off` skips the check
   entirely (no install prompt, no CodeRabbit section). Credentials stay with the CLI
   (`coderabbit auth login` / `coderabbit auth status`); the plugin stores none.
-- **`security`** — `off` runs the security agent only on `+security`, `auto` on every review. It is a
-  fifth parallel agent, so `auto` costs time on every review and on every shard of a large diff.
+- **`security`** — `auto` (default) runs the security agent on every review, `off` only on
+  `+security`. It is a fifth parallel agent, so the default costs one more agent per review and per
+  shard of a large diff.
 
 The shipped defaults are in `config-defaults.md`.
 
@@ -267,6 +268,12 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.13.0
+
+- **The security agent runs by default** (`security: auto`). It was opt-in behind `+security`, which
+  meant the review that most needed it — the one nobody thought to flag — never got it. The cost is
+  one more parallel agent per review and per shard; `security: off` in the config buys it back.
 
 ### 1.12.2
 

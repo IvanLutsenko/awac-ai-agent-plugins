@@ -135,7 +135,7 @@ Project tracking, task management with kanban boards, bug logging, decision reco
 
 ### Combined Review
 
-Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + an opt-in security agent + optional CodeRabbit for comprehensive review.
+Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents (security included by default) + optional CodeRabbit for comprehensive review.
 
 📚 **[Full Documentation](plugins/combined-review/README.md)**
 
@@ -158,7 +158,10 @@ Multi-agent code review with CodeRabbit CLI integration. 4 specialized agents + 
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.12.2
+**Status:** ✅ Production Ready | **Version:** 1.13.0
+
+**What's New in 1.13.0:**
+- The security agent runs on every review by default; `security: off` in the config returns it to opt-in.
 
 **What's New in 1.12.2:**
 - `/review` states what to do when the runtime has no per-agent model, no interactive prompt, or fewer concurrency slots than agents — instead of assuming Claude Code.
