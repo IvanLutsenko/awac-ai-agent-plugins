@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.13.0
+**Version:** 1.14.0
 
 ---
 
@@ -136,9 +136,17 @@ security: off       # off | auto
 - **`coderabbit`** — `auto` uses the CLI when it's installed and authenticated, `off` skips the check
   entirely (no install prompt, no CodeRabbit section). Credentials stay with the CLI
   (`coderabbit auth login` / `coderabbit auth status`); the plugin stores none.
-- **`security`** — `auto` (default) runs the security agent on every review, `off` only on
-  `+security`. It is a fifth parallel agent, so the default costs one more agent per review and per
-  shard of a large diff.
+There is no key for the agents: all five run on every review, security included. Which one pays off
+changes per diff — in two runs on this plugin's own code the decisive finding came from a different
+agent each time, and the one that reported nothing had spent its pass disproving four claims that
+would otherwise have shipped as findings.
+
+**What it costs.** Five agents read the same diff, so a review is roughly five times the tokens of a
+single pass, plus CodeRabbit if it runs, and that multiplies again on every shard of a large diff.
+The lever is the model, not a shorter roster: `haiku` for a cheap sweep, `sonnet` by default, `opus`
+when the diff is worth it. On Codex the `model` key does nothing — Codex has no per-sub-agent model
+selection, so set the model for the whole session (`model =` in `~/.codex/config.toml`, or `-m` at
+launch) and let the agents inherit it.
 
 The shipped defaults are in `config-defaults.md`.
 
@@ -269,11 +277,20 @@ Every finding includes file path and line number:
 
 ## Changelog
 
+### 1.14.0
+
+- **The security agent always runs, and the `security` key is gone** — along with the `+security`
+  flag. 1.13.0 made it the default; keeping a switch for one agent and not the other four made no
+  sense. Which agent pays off changes per diff, and an agent that reports nothing has still ruled
+  things out, so the roster is fixed. A `security:` key in an existing config is ignored.
+- **The token cost is documented where the config is**: five agents ≈ five times a single pass, more
+  per shard of a large diff, and the lever is `model` — with the note that on Codex that key does
+  nothing and the model is chosen for the whole session instead.
+
 ### 1.13.0
 
 - **The security agent runs by default** (`security: auto`). It was opt-in behind `+security`, which
-  meant the review that most needed it — the one nobody thought to flag — never got it. The cost is
-  one more parallel agent per review and per shard; `security: off` in the config buys it back.
+  meant the review that most needed it — the one nobody thought to flag — never got it.
 
 ### 1.12.2
 

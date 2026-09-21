@@ -5,7 +5,7 @@
 - **crashlytics** (v4.4.5) — Multi-platform crash analysis with git blame forensics
 - **obsidian-tracker** (v4.5.2) — Project tracking, task management, session logging via Obsidian
 - **locale-notifications** (v2.0.1) — macOS notifications in system language
-- **combined-review** (v1.13.0) — Multi-agent code review + CodeRabbit CLI; GitHub PR + GitLab MR with inline resolvable threads on both; `/rereview` verifies + resolves + approves on both; `security-reviewer` on by default; `/review-config` for language/model/CodeRabbit/security
+- **combined-review** (v1.14.0) — Multi-agent code review + CodeRabbit CLI; GitHub PR + GitLab MR with inline resolvable threads on both; `/rereview` verifies + resolves + approves on both; all five agents on every review, no per-agent switches; `/review-config` for language/model/CodeRabbit
 - **clip-maker** (v1.3.1) — Automated vertical clip creator (whisper + Claude + ffmpeg)
 - **drawbridge** (v0.1.1) — Bridge briefs to image-gen web UIs (Gemini/ChatGPT/Grok/Midjourney), per-target prompt tuning
 - **plugin-cross-port** (v0.12.0) — Bidirectional CC ↔ Codex plugin conversion (agents → standalone Codex skills)

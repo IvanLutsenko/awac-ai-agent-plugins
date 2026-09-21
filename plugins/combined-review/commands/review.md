@@ -1,6 +1,6 @@
 ---
 description: "Combined code review: multi-agent analysis + CodeRabbit. Supports GitHub PR, GitLab MR, branch diff, uncommitted changes."
-argument-hint: "[PR#|!MR#] | [branch1 branch2] | [--base branch] | [+comments] [+types] [+simplify] [+security] [+threads] [all]"
+argument-hint: "[PR#|!MR#] | [branch1 branch2] | [--base branch] | [+comments] [+types] [+simplify] [+threads] [all]"
 allowed-tools: Bash(gh:*), Bash(glab:*), Bash(git:*), Bash(coderabbit:*), Bash(cr:*), Bash(curl:*), Bash(python3:*), Bash(which:*), Bash(wc:*), Bash(head:*), Bash(tail:*), Bash(cat:*), Bash(find:*), Bash(grep:*), Bash(rg:*), Bash(mktemp:*), Bash(rm:*), Bash(rmdir:*), Bash(awk:*), Bash(cut:*), Bash(sort:*), Bash(uniq:*), Bash(sed:*), Bash(pwd:*), Bash(echo:*), Bash(umask:*), Agent, Read, Glob, Grep
 ---
 
@@ -27,7 +27,6 @@ error.
 - `language` — `system` (default), `en`, `ru`, `uk`
 - `model` — `sonnet` (default), `opus`, `haiku`, `inherit`
 - `coderabbit` — `auto` (default: use it when installed and authenticated), `off`
-- `security` — `auto` (default: every review), `off` (only on `+security`)
 
 **Language resolution:** `system` → first look for a hint in CLAUDE.md ("Отвечай", "русский"); with
 no hint, read the shell locale, which is what `config-defaults.md` promises:
@@ -97,7 +96,6 @@ Branch-like: contains `/`, or starts with `feature/`, `fix/`, `release/`, `hotfi
 - `+comments` — add comment analysis
 - `+types` — add type design analysis
 - `+simplify` — add code simplification
-- `+security` — add the security agent (see Agent 5); redundant on the default config, which already runs it
 - `+threads` — after the report, post findings as inline resolvable threads on the PR/MR (GitHub PR and GitLab MR modes; see Step 7). Opt-in — never post without this flag or an explicit request.
 - `all` — run all agents including optional
 
@@ -244,11 +242,11 @@ Skip CodeRabbit for this run, continue with 4 agents.
 
 ## Step 4 — Launch agents
 
-Launch **5 default agents in parallel** — code-reviewer, git-historian, silent-failure-hunter,
-test-analyzer and security-reviewer, the last one unless config says `security: off` and `+security`
-was not passed. Plus CodeRabbit when config has `coderabbit: auto` and the CLI is available, and the
-optional agents if requested. `all` means every optional agent — security included, whatever the
-config says.
+Launch **all five agents in parallel** — code-reviewer, git-historian, silent-failure-hunter,
+test-analyzer and security-reviewer. There is no switch for any of them: which agent turns out to be
+the useful one changes per diff, and an agent that reports nothing has still ruled things out. Plus
+CodeRabbit when config has `coderabbit: auto` and the CLI is available, and the optional agents if
+requested.
 
 Parallel is for speed, not for correctness: what matters is that **every** agent has finished before
 Step 5 reads their findings. A runtime that caps concurrency (Codex counts the main agent against its
@@ -352,8 +350,7 @@ Launch the `test-analyzer` agent. It checks:
 
 ### Agent 5 — Security Reviewer
 
-Runs by default; skipped only when config says `security: off` and `+security` was not passed.
-Launch the `security-reviewer` agent.
+Launch the `security-reviewer` agent — like the other four, on every review.
 It checks:
 - Secrets in source, tests or config
 - Injection sinks fed by untrusted input; unsafe deserialization

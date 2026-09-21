@@ -158,10 +158,10 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents (s
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.13.0
+**Status:** ✅ Production Ready | **Version:** 1.14.0
 
-**What's New in 1.13.0:**
-- The security agent runs on every review by default; `security: off` in the config returns it to opt-in.
+**What's New in 1.14.0:**
+- All five agents always run — the `security` key and the `+security` flag are gone. Five agents cost about five times the tokens of a single pass, so the lever for cost is `model`, not a shorter roster (on Codex the model is set for the whole session instead).
 
 **What's New in 1.12.2:**
 - `/review` states what to do when the runtime has no per-agent model, no interactive prompt, or fewer concurrency slots than agents — instead of assuming Claude Code.
