@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.14.1
+**Version:** 1.15.0
 
 ---
 
@@ -289,6 +289,18 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.15.0
+
+- **`AGENTS.md` counts as repo policy, same as `CLAUDE.md`.** They are two names for one thing —
+  Claude Code reads the first, Codex the second — and the review only ever read `CLAUDE.md`. In Codex
+  that meant the compliance dimension silently checked nothing against a file the runtime itself
+  obeys. Both are now read from the target revision, root and changed directories, and passed to the
+  agents together; when both exist and contradict each other, the contradiction is reported as a
+  finding instead of one being followed quietly.
+- **A review with no policy file says so.** Compliance checking nothing used to be indistinguishable
+  from compliance finding nothing. Agents are told not to fill the gap with invented rules — judge by
+  the repo's own idioms and say that is what was done.
 
 ### 1.14.1
 

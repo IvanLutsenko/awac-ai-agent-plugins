@@ -33,7 +33,7 @@ cat .claude/combined-review.local.md 2>/dev/null    # project-level, wins
 cat ~/.claude/combined-review.md 2>/dev/null        # user-level, applies everywhere
 ```
 
-Only `language` matters here (`system` → resolve from CLAUDE.md, else English); the report goes out in
+Only `language` matters here (`system` → resolve from `CLAUDE.md`/`AGENTS.md`, else English); the report goes out in
 it. Reading just the project file would ignore a user-level `language` and report in the wrong one.
 
 ## Arguments

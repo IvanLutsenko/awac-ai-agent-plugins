@@ -21,7 +21,7 @@ creates the exposure.
 ## Establish the platform first
 
 Do not assume a stack. Read the changed files' extensions, the build manifest, and the repo's
-`CLAUDE.md`, then apply that ecosystem's idioms. The vulnerability classes below are universal; their
+`CLAUDE.md` or `AGENTS.md`, then apply that ecosystem's idioms. The vulnerability classes below are universal; their
 shape is not:
 
 - secret storage — a platform keystore, an OS keychain, a secret manager, an env var injected at deploy

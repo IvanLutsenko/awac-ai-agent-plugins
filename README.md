@@ -158,7 +158,10 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.14.1
+**Status:** ✅ Production Ready | **Version:** 1.15.0
+
+**What's New in 1.15.0:**
+- `AGENTS.md` is read as repo policy alongside `CLAUDE.md` — in Codex the review was checking compliance against a file that wasn't there, silently. A review with no policy file now says so.
 
 **What's New in 1.14.1:**
 - README documents what CodeRabbit is and that it uploads the diff to a third-party service; the agent table lists all five agents.
