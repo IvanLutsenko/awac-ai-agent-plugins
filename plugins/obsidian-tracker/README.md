@@ -243,9 +243,12 @@ To disable auto-allow entirely, disable the plugin or remove the `PermissionRequ
 
 ## Version
 
-4.5.2
+4.5.3
 
 ## Changelog
+
+### 4.5.3
+- **Fix**: `listProjects` reported an empty vault whenever project dashboards could not be read. `scanProject` caught every error from `!Project Dashboard.md` and returned `null`, which the caller reads as "this directory is not a project" — so a permissions problem, or files evicted to iCloud and left `dataless`, looked exactly like "you have no projects". Only `ENOENT` is treated as "no dashboard" now; any other error propagates and the project is listed with `status: "Unreadable"` plus the underlying `error` code. Subprojects and archived projects are handled the same way, so one broken entry no longer removes the rest.
 
 ### 4.5.2
 - **Fix**: the `PreCompact` hook never ran. It was `type: "prompt"`, and prompt hooks are rejected outside the REPL (`Prompt stop hooks are not yet supported outside REPL`) — so tracking state silently failed to survive `/compact`. Replaced with `hooks/pre-compact.sh` (`type: "command"`).

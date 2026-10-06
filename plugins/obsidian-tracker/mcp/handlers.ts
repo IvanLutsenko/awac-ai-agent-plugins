@@ -83,6 +83,22 @@ interface ProjectInfo {
   path: string;
   localPath?: string;
   subprojects?: ProjectInfo[];
+  error?: string;
+}
+
+// Проект, который не удалось прочитать. Возвращаем заглушку вместо того чтобы
+// молча выкинуть его из списка: пустой список неотличим от «проектов нет».
+function unreadableProject(name: string, projectPath: string, archived: boolean, err: any): ProjectInfo {
+  return {
+    name,
+    status: "Unreadable",
+    description: "",
+    bugs: 0,
+    tasks: 0,
+    archived,
+    path: projectPath,
+    error: err?.code ? String(err.code) : String(err?.message ?? err),
+  };
 }
 
 async function scanProject(projectPath: string, name: string, archived: boolean, isSubproject = false): Promise<ProjectInfo | null> {
@@ -96,7 +112,11 @@ async function scanProject(projectPath: string, name: string, archived: boolean,
     const parsed = await parseMarkdown(dashboardPath);
     frontmatter = parsed.frontmatter;
     hasDashboard = true;
-  } catch {
+  } catch (err: any) {
+    // Отсутствие дашборда — штатная ситуация. Любая другая ошибка (нет прав,
+    // файл выгружен в облако и лежит dataless) означает, что о проекте ничего
+    // не известно, а не что его нет. Пробрасываем наверх.
+    if (err?.code !== "ENOENT") throw err;
     // No dashboard — for subprojects, check README
     if (isSubproject) {
       try {
@@ -129,8 +149,13 @@ async function scanProject(projectPath: string, name: string, archived: boolean,
   const entries = await fs.readdir(projectPath, { withFileTypes: true });
   for (const sub of entries) {
     if (sub.isDirectory() && sub.name !== "Sessions" && sub.name !== "_archive") {
-      const subProject = await scanProject(path.join(projectPath, sub.name), sub.name, archived, true);
-      if (subProject) subprojects.push(subProject);
+      const subPath = path.join(projectPath, sub.name);
+      try {
+        const subProject = await scanProject(subPath, sub.name, archived, true);
+        if (subProject) subprojects.push(subProject);
+      } catch (err: any) {
+        subprojects.push(unreadableProject(sub.name, subPath, archived, err));
+      }
     }
   }
 
@@ -156,8 +181,13 @@ export async function listProjects(vaultPath: string, args: ToolArgs): Promise<T
 
   for (const entry of entries) {
     if (entry.isDirectory() && entry.name !== "_archive") {
-      const project = await scanProject(path.join(vaultPath, entry.name), entry.name, false);
-      if (project) projects.push(project);
+      const projectPath = path.join(vaultPath, entry.name);
+      try {
+        const project = await scanProject(projectPath, entry.name, false);
+        if (project) projects.push(project);
+      } catch (err: any) {
+        projects.push(unreadableProject(entry.name, projectPath, false, err));
+      }
     }
   }
 
@@ -167,8 +197,13 @@ export async function listProjects(vaultPath: string, args: ToolArgs): Promise<T
       const archiveEntries = await fs.readdir(archivePath, { withFileTypes: true });
       for (const entry of archiveEntries) {
         if (entry.isDirectory()) {
-          const project = await scanProject(path.join(archivePath, entry.name), entry.name, true);
-          if (project) projects.push(project);
+          const archivedPath = path.join(archivePath, entry.name);
+          try {
+            const project = await scanProject(archivedPath, entry.name, true);
+            if (project) projects.push(project);
+          } catch (err: any) {
+            projects.push(unreadableProject(entry.name, archivedPath, true, err));
+          }
         }
       }
     } catch {

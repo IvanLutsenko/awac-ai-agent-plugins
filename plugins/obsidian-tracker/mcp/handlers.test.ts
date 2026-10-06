@@ -83,6 +83,20 @@ describe("createProject / listProjects / getProject", () => {
     expect(res.projects[0].status).toBe("Active");
   });
 
+  it("surfaces a project whose dashboard cannot be read", async () => {
+    const dashboard = path.join(vault, "alpha", "!Project Dashboard.md");
+    await fs.chmod(dashboard, 0o000);
+    try {
+      const res = parse(await listProjects(vault, {}));
+      expect(res.projects).toHaveLength(1);
+      expect(res.projects[0].name).toBe("alpha");
+      expect(res.projects[0].status).toBe("Unreadable");
+      expect(res.projects[0].error).toBe("EACCES");
+    } finally {
+      await fs.chmod(dashboard, 0o644);
+    }
+  });
+
   it("getProject aggregates bugs, sessions and task summary", async () => {
     await addBug(vault, { project: "alpha", title: "Broken", description: "d", priority: "high" });
     await addTask(vault, { project: "alpha", title: "Do it" });

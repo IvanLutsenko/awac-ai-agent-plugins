@@ -106,7 +106,10 @@ Project tracking, task management with kanban boards, bug logging, decision reco
 /track-stop                 # Save session to Obsidian
 ```
 
-**Status:** ✅ Production Ready | **Version:** 4.5.2
+**Status:** ✅ Production Ready | **Version:** 4.5.3
+
+**What's New in 4.5.3:**
+- Fix: `listProjects` returned an empty list when a project's dashboard could not be read. Any read error was treated as "not a project", so an unreadable vault (permissions, or iCloud-evicted `dataless` files) was indistinguishable from an empty one. Only `ENOENT` is silent now; everything else surfaces as a project with `status: "Unreadable"` and the error code.
 
 **What's New in 4.5.2:**
 - Fix: the `PreCompact` hook never ran — it was a `prompt` hook, and those are rejected outside the REPL, so tracking state silently failed to survive `/compact`. Now a command hook that feeds the state to the compaction summarizer.
