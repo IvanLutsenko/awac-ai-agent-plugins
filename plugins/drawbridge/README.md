@@ -2,7 +2,11 @@
 
 Bridge between a short brief and image-gen web UIs (Gemini Imagen 3, ChatGPT DALL-E 3, Grok Aurora, Midjourney). No API keys, no payments — uses your existing browser sessions.
 
-Version: 0.1.1
+Version: 0.1.2
+
+## What's New in 0.1.2
+
+- Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/drawbridge/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.
 
 ## What's New in 0.1.1
 

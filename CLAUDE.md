@@ -2,13 +2,13 @@
 
 ## Active Plugins
 
-- **crashlytics** (v4.4.5) — Multi-platform crash analysis with git blame forensics
-- **obsidian-tracker** (v4.5.3) — Project tracking, task management, session logging via Obsidian
+- **crashlytics** (v4.4.6) — Multi-platform crash analysis with git blame forensics
+- **obsidian-tracker** (v4.5.4) — Project tracking, task management, session logging via Obsidian
 - **locale-notifications** (v2.0.1) — macOS notifications in system language
 - **combined-review** (v1.15.0) — Multi-agent code review + CodeRabbit CLI; GitHub PR + GitLab MR with inline resolvable threads on both; `/rereview` verifies + resolves + approves on both; all five agents on every review, no per-agent switches; `/review-config` for language/model/CodeRabbit
-- **clip-maker** (v1.3.1) — Automated vertical clip creator (whisper + Claude + ffmpeg)
-- **drawbridge** (v0.1.1) — Bridge briefs to image-gen web UIs (Gemini/ChatGPT/Grok/Midjourney), per-target prompt tuning
-- **plugin-cross-port** (v0.12.0) — Bidirectional CC ↔ Codex plugin conversion (agents → standalone Codex skills)
+- **clip-maker** (v1.3.2) — Automated vertical clip creator (whisper + Claude + ffmpeg)
+- **drawbridge** (v0.1.2) — Bridge briefs to image-gen web UIs (Gemini/ChatGPT/Grok/Midjourney), per-target prompt tuning
+- **plugin-cross-port** (v0.12.1) — Bidirectional CC ↔ Codex plugin conversion (agents → standalone Codex skills)
 - **auto-theme** (v1.1.2) — Syncs Claude Code + Codex themes with macOS light/dark; bundles gruvbox-light / sunset-drive
 - **nyan-progress** (v0.1.0) — Nyan Cat + full-width rainbow over the turn spinner (mod: function hooks); `/nyan gif|pixel|dots`
 

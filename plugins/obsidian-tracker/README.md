@@ -243,9 +243,12 @@ To disable auto-allow entirely, disable the plugin or remove the `PermissionRequ
 
 ## Version
 
-4.5.3
+4.5.4
 
 ## Changelog
+
+### 4.5.4
+- **Changed:** Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/obsidian-tracker/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.
 
 ### 4.5.3
 - **Fix**: `listProjects` reported an empty vault whenever project dashboards could not be read. `scanProject` caught every error from `!Project Dashboard.md` and returned `null`, which the caller reads as "this directory is not a project" — so a permissions problem, or files evicted to iCloud and left `dataless`, looked exactly like "you have no projects". Only `ENOENT` is treated as "no dashboard" now; any other error propagates and the project is listed with `status: "Unreadable"` plus the underlying `error` code. Subprojects and archived projects are handled the same way, so one broken entry no longer removes the rest.

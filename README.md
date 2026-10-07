@@ -69,7 +69,10 @@ Multi-platform crash analysis for Android & iOS with git blame forensics, code-l
 /crashlytics:install-permissions    # Add read-only allowlist to settings.json
 ```
 
-**Status:** ✅ Production Ready | **Version:** 4.4.5
+**Status:** ✅ Production Ready | **Version:** 4.4.6
+
+**What's New in 4.4.6:**
+- Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/crashlytics/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.
 
 **What's New in 4.4.5:**
 - Quality gate tightened: `git fetch` alone no longer counts as evidence that the agent inspected the code. Forensics agents run it as a mandatory pre-flight on every run, so it proved nothing — `chk_executed_commands` now requires `git blame`, `git log` or `git ls-tree`.
@@ -106,7 +109,10 @@ Project tracking, task management with kanban boards, bug logging, decision reco
 /track-stop                 # Save session to Obsidian
 ```
 
-**Status:** ✅ Production Ready | **Version:** 4.5.3
+**Status:** ✅ Production Ready | **Version:** 4.5.4
+
+**What's New in 4.5.4:**
+- Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/obsidian-tracker/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.
 
 **What's New in 4.5.3:**
 - Fix: `listProjects` returned an empty list when a project's dashboard could not be read. Any read error was treated as "not a project", so an unreadable vault (permissions, or iCloud-evicted `dataless` files) was indistinguishable from an empty one. Only `ENOENT` is silent now; everything else surfaces as a project with `status: "Unreadable"` and the error code.
@@ -303,7 +309,7 @@ macOS notifications for Claude Code in your system language.
 
 Bridge between a short brief and image-gen web UIs (Gemini Imagen 3, ChatGPT DALL-E 3, Grok Aurora, Midjourney). Crafts a target-tuned prompt, copies it to clipboard, opens the target — no API keys, no payments.
 
-**What's New in 0.1.1:** frontmatter parsing no longer reopens on markdown `---` lines in the config body.
+**What's New in 0.1.2:** Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/drawbridge/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.
 
 📚 **[Full Documentation](plugins/drawbridge/README.md)**
 
@@ -322,14 +328,14 @@ Bridge between a short brief and image-gen web UIs (Gemini Imagen 3, ChatGPT DAL
 /draw-config set default_target chatgpt          # change default
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.1.1
+**Status:** 🔨 Beta | **Version:** 0.1.2
 
 **Features:**
 - Per-target prompt fine-tuning (Imagen prose / DALL-E structure / Aurora density / MJ tag syntax)
 - Auto-translate brief to English (configurable)
 - Settings via `~/.claude/drawbridge.local.md` with project-local override
 - History of last 200 prompts for `/redraw`
-- macOS only in 0.1.1
+- macOS only in 0.1.2
 
 ---
 
@@ -360,7 +366,10 @@ python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/exa
 python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/example --apply
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.12.0
+**Status:** 🔨 Beta | **Version:** 0.12.1
+
+**What's New in 0.12.1:**
+- Its own Codex skill (`install-hook`) is rebuilt by the rules of 0.11–0.12: helper scripts bundled into the skill, plus the `## Codex differences` note. The converter itself is unchanged.
 
 **What's New in 0.12.0:**
 - Converted command skills end with a `## Codex differences` section listing the CC assumptions Codex cannot honour — per-agent model, true parallelism, interactive prompts.
@@ -417,7 +426,7 @@ Automated vertical clip creator for talks and presentations. Whisper + Claude + 
 /find-moments ~/Downloads/transcript.json      # Only find moments
 ```
 
-**Status:** 🔨 Beta | **Version:** 1.3.1
+**Status:** 🔨 Beta | **Version:** 1.3.2
 
 **Features:**
 - Whisper transcription (local or API)
@@ -426,6 +435,9 @@ Automated vertical clip creator for talks and presentations. Whisper + Claude + 
 - ffmpeg vertical clip cutting (9:16)
 - Auto-subtitles from transcript
 - Social media copy generation (Shorts/Reels/TikTok)
+
+**What's New in 1.3.2:**
+- Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/clip-maker/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.
 
 **What's New in 1.3.1:**
 - Fixed dual-target agent naming for Claude Code pipeline calls

@@ -6,7 +6,7 @@ Converts individual plugins in either direction and reconciles dual-target
 Claude Code and Codex marketplaces. A repository chooses one canonical
 marketplace, while each plugin keeps its own `source_of_truth`.
 
-**Version:** 0.12.0
+**Version:** 0.12.1
 
 ---
 
@@ -200,6 +200,9 @@ available and emit a warning.
 ---
 
 ## Changelog
+
+### 0.12.1
+- **Changed:** Its own Codex skill (`install-hook`) is rebuilt by the rules of 0.11–0.12: helper scripts bundled into the skill, plus the `## Codex differences` note. The converter itself is unchanged.
 
 ### 0.12.0
 - **Converted command skills end with a `## Codex differences` section** naming the CC assumptions the Codex runtime cannot honour, and only those that apply to that command: no per-sub-agent model, concurrency slots that count the main agent (so "in parallel" can mean in batches), and prompts with nobody to answer them in `codex exec`/CI. A live Codex run reported all three itself, after silently working around them — a converted skill should say them up front instead.

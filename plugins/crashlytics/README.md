@@ -2,7 +2,7 @@
 
 Crash log analysis with root cause identification, code-level fixes, and developer assignment via git blame.
 
-**Version:** 4.4.5 — Android & iOS
+**Version:** 4.4.6 — Android & iOS
 
 ---
 
@@ -125,7 +125,7 @@ The plugin tries paths in order: MCP fast-path → MCP via fetcher → REST fall
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      crashlytics v4.4.5                         │
+│                      crashlytics v4.4.6                         │
 └─────────────────────────────────────────────────────────────────┘
                               │
               ┌───────────────┴───────────────┐
@@ -310,6 +310,9 @@ MCP is also used for **project/app discovery** (`firebase_get_environment`, `fir
 ---
 
 ## Changelog
+
+### 4.4.6
+- **Changed:** Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/crashlytics/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.
 
 ### 4.4.5
 - **Changed:** `chk_executed_commands` no longer accepts `git fetch` as proof that the agent inspected the code. Forensics agents run `git fetch origin --quiet` as a mandatory pre-flight before any blame, so it is present in every run and carries no signal — the check now requires `git blame`, `git log` or `git ls-tree`.

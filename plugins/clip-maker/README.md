@@ -33,7 +33,10 @@ Dependencies (auto-installed on first run):
 
 ## Status
 
-**Version:** 1.3.1 | **Status:** Beta
+**Version:** 1.3.2 | **Status:** Beta
+
+**What's New in 1.3.2:**
+- Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/clip-maker/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.
 
 **What's New in 1.3.1:**
 - Fixed Claude agent names so `/clip-maker` resolves the expected agent types
