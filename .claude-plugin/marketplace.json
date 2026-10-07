@@ -100,7 +100,7 @@
     {
       "name": "nyan",
       "version": "0.1.0",
-      "description": "Nyan Cat and a full-width rainbow over the turn spinner: the real picture where the terminal draws images, else a braille outline with dotted speed lines. /nyan auto|pixel|dots. Fan project; art © Chris Torres.",
+      "description": "Nyan Cat and a full-width rainbow over the turn spinner: the real picture where the terminal draws images, else a braille outline with dotted speed lines. /nyan gif|pixel|dots. Fan project; art © Chris Torres.",
       "source": "./plugins/nyan",
       "author": {
         "name": "Ivan Lutsenko",

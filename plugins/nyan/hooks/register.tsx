@@ -5,8 +5,8 @@ import { PNG_FRAMES, RAINBOW_PNG } from './cat-png'
 
 // Three looks, picked with /nyan: the real picture (where the terminal draws pictures, else the
 // braille look), the sprite in half-block pixels (any truecolor terminal), or its outline in braille.
-type Style = 'auto' | 'pixel' | 'dots'
-const STYLES: readonly string[] = ['auto', 'pixel', 'dots']
+type Style = 'gif' | 'pixel' | 'dots'
+const STYLES: readonly string[] = ['gif', 'pixel', 'dots']
 
 const RAINBOW = [0xff0000, 0xff9900, 0xffff00, 0x33ff00, 0x0099ff, 0x6633ff]
 const SEGMENT = 6 // wave: blocks this wide sit a pixel up or down, flipping every few frames
@@ -84,13 +84,13 @@ export const packDots = (width: number, frame: number): string => {
 }
 
 export const register: Register = on => {
-  let style: Style = 'auto'
+  let style: Style = 'gif'
   let picturesDraw = true // until a blit says this terminal draws the Image's alt
   let frame = 0
   let timer: { cancel: () => void } | null = null
   const sites = new Map<string, number>() // spinner requestId -> strip width
 
-  const look = (): 'image' | 'pixel' | 'dots' => (style === 'auto' ? (picturesDraw ? 'image' : 'dots') : style)
+  const look = (): Style => (style === 'gif' && !picturesDraw ? 'dots' : style)
 
   const stop = () => {
     timer?.cancel()
@@ -102,8 +102,8 @@ export const register: Register = on => {
     if (typeof saved === 'string' && STYLES.includes(saved)) style = saved as Style
     await $.command.register({
       name: 'nyan',
-      description: 'Nyan spinner look: auto (the real picture where the terminal can, else braille), pixel, dots',
-      argumentHint: 'auto|pixel|dots',
+      description: 'Nyan spinner look: gif (the original picture where the terminal draws images, else dots), pixel, dots',
+      argumentHint: 'gif|pixel|dots',
     })
     return next(e)
   })
@@ -114,8 +114,8 @@ export const register: Register = on => {
       style = want as Style
       await $.store.set('style', want)
     }
-    const now = style === 'auto' ? `auto (${picturesDraw ? 'picture' : 'braille: this terminal draws no pictures'})` : style
-    return { text: `nyan: ${now}${STYLES.includes(want) ? '' : '. Usage: /nyan auto|pixel|dots'}` }
+    const now = style === 'gif' && !picturesDraw ? 'gif (dots: this terminal draws no pictures)' : style
+    return { text: `nyan: ${now}${STYLES.includes(want) ? '' : '. Usage: /nyan gif|pixel|dots'}` }
   })
 
   on('turn.start', ($, e, next) => {
@@ -126,7 +126,7 @@ export const register: Register = on => {
       for (const [requestId, width] of sites) {
         // ponytail: blit refusals (site gone, resized) are ignored; the next render re-registers the site
         const mode = look()
-        if (mode !== 'image') {
+        if (mode !== 'gif') {
           void $.ui.blit({ requestId, key: 'nyan', cells: mode === 'dots' ? packDots(width, frame) : pack(width, frame) })
           continue
         }
@@ -163,7 +163,7 @@ export const register: Register = on => {
     const { Box, Raster, Image } = $.ui.resolve(e)
     const engineLine = await next(e) // keeps the word, elapsed time and tokens
     const strip =
-      mode === 'image' ? (
+      mode === 'gif' ? (
         <Box flexDirection="row">
           <Image key="rainbow" source={{ png: RAINBOW_PNG[Math.floor(frame / 3) % 2]! }} columns={Math.min(IMAGE_MAX_COLS, width - IMAGE_COLS)} rows={IMAGE_ROWS} alt=" " />
           <Image key="cat" source={{ png: PNG_FRAMES[frame % PNG_FRAMES.length]! }} columns={IMAGE_COLS} rows={IMAGE_ROWS} alt=" " />

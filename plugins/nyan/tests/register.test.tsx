@@ -30,7 +30,7 @@ describe('register', () => {
     expect([fg, bg]).toEqual([0x01000000, 0x01000000])
   })
 
-  test('the spinner: picture by default, braille after /nyan dots', async ($, on) => {
+  test('the spinner: the gif by default, braille after /nyan dots', async ($, on) => {
     mock.clock(on)
     mock.store(on, {})
     on('session.start', ($, e) => ({ cwd: e.cwd }))
@@ -41,10 +41,10 @@ describe('register', () => {
     })
     await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
 
-    const auto = await $.ui.mount({ plugin: 'nyan', surface: 'terminal', ...SPINNER })
-    expect(await auto.find({ type: 'Image', key: 'cat' })).toBeDefined()
-    expect(await auto.find({ type: 'Image', key: 'rainbow' })).toBeDefined()
-    await auto.unmount()
+    const gif = await $.ui.mount({ plugin: 'nyan', surface: 'terminal', ...SPINNER })
+    expect(await gif.find({ type: 'Image', key: 'cat' })).toBeDefined()
+    expect(await gif.find({ type: 'Image', key: 'rainbow' })).toBeDefined()
+    await gif.unmount()
 
     const { text } = await $.command.run({ command: 'nyan', args: 'dots', origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 100 } })
     expect(text).toBe('nyan: dots')

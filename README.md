@@ -447,7 +447,7 @@ Nyan Cat and a rainbow across the whole terminal width over Claude Code's turn s
 **Quick Start:**
 ```bash
 /nyan            # show the current look
-/nyan auto       # the real picture, 2 rows (falls back to braille where images don't draw)
+/nyan gif        # the real picture, 2 rows (falls back to dots where images don't draw)
 /nyan pixel      # the sprite in colour cells, any truecolor terminal
 /nyan dots       # the outline in braille with rainbow-dotted speed lines, 5 rows
 ```
