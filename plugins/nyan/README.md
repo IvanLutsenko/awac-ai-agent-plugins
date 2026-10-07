@@ -21,13 +21,13 @@ Version: 0.1.0
 
 `/nyan auto|pixel|mono` chooses the look. The choice is kept across sessions. `/nyan` with no argument shows the current look.
 
-- `auto` (the default): the real picture. It shows the 12 frames of the original gif and a rainbow wave, both 2 rows tall. It works where the terminal draws images (kitty graphics: kitty, Ghostty). If the terminal cannot draw images, `auto` falls back to `pixel` after the first frame.
+- `auto` (the default): the real picture. It shows the 12 frames of the original gif and a rainbow wave, both 2 rows tall. It works where the terminal draws images (kitty graphics: kitty, Ghostty). If the terminal cannot draw images, `auto` falls back to `mono` after the first frame.
 - `pixel`: the 34×21 sprite in half-block colour cells, 11 rows. It works in any truecolor terminal.
-- `mono`: the sprite's outline in braille dots of the text colour, 6 rows, with a thin rainbow.
+- `mono`: the sprite's outline in braille dots of the text colour, 5 rows. The rainbow becomes six dotted speed lines that wave like the colour one. It works in any terminal.
 
 ### Pictures inside a multiplexer
 
-tmux, herdr and similar multiplexers hide the outer terminal from Claude Code. Claude Code then decides that the terminal draws no images, and `auto` shows pixels. If your multiplexer passes kitty graphics through (herdr does), tell Claude Code to use images:
+tmux, herdr and similar multiplexers hide the outer terminal from Claude Code. Claude Code then decides that the terminal draws no images, and `auto` shows the braille look. If your multiplexer passes kitty graphics through (herdr does), tell Claude Code to use images:
 
 ```bash
 # ~/.zshrc: only inside herdr

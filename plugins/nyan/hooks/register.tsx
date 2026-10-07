@@ -1,10 +1,10 @@
 import type { Register } from 'claude-code'
 
-import { CAT_H, CAT_W, FRAMES, PALETTE, TART_LEFT } from './cat'
+import { CAT_H, CAT_W, FRAMES, MONO_FRAMES, MONO_H, MONO_W, PALETTE, TART_LEFT } from './cat'
 import { PNG_FRAMES, RAINBOW_PNG } from './cat-png'
 
-// Three looks, picked with /nyan: the real picture (where the terminal draws pictures, else
-// pixels), the sprite in half-block pixels (any truecolor terminal), or its outline in braille.
+// Three looks, picked with /nyan: the real picture (where the terminal draws pictures, else the
+// braille look), the sprite in half-block pixels (any truecolor terminal), or its outline in braille.
 type Style = 'auto' | 'pixel' | 'mono'
 const STYLES: readonly string[] = ['auto', 'pixel', 'mono']
 
@@ -15,10 +15,10 @@ const UPPER = 0x2580 // ▀: fg paints the upper half, bg the lower
 const LOWER = 0x2584 // ▄: fg paints the lower half (an empty upper half stays the terminal's bg)
 const BRAILLE = 0x2800
 const DOTS = [[0x01, 0x08], [0x02, 0x10], [0x04, 0x20], [0x40, 0x80]] // [dot row][dot column] -> bit
-const MONO_INK = 'ks' // outline and sprinkles become dots
 const PIXEL_ROWS = CAT_H / 2
-const MONO_ROWS = Math.ceil(CAT_H / 4)
-const MONO_COLS = Math.ceil(CAT_W / 2)
+const MONO_ROWS = MONO_H / 4
+const MONO_COLS = MONO_W / 2
+const MONO_LINES_TOP = (MONO_H - 12) / 2 // six speed lines, a dot row apart, centred on the tart
 const IMAGE_ROWS = 2
 // The engine repaints the spinner row on request at most 10 times a second (the gif's own pace is
 // FRAME_MS = 70): ticking at that cap gives every frame its paint, ticking faster drops some unevenly.
@@ -61,18 +61,21 @@ export const pack = (width: number, frame: number): string => {
   return raster(width, PIXEL_ROWS, (x, row) => halves(pixel(x, row * 2), pixel(x, row * 2 + 1)))
 }
 
-
-// Thin rainbow, then the cat's outline in braille dots of the text color.
+// The braille look, all in the text color: the rainbow as six dotted speed lines (a dot every
+// other column, waving like the colour one), then the cat's outline.
 export const packMono = (width: number, frame: number): string => {
   const tail = width - MONO_COLS
-  const sprite = FRAMES[frame % FRAMES.length]!
+  const sprite = MONO_FRAMES[frame % MONO_FRAMES.length]!
+  const dot = (x: number, y: number): boolean => {
+    if (x >= tail * 2) return sprite[y]?.[x - tail * 2] !== '.'
+    if (x % 2) return false
+    const line = y - MONO_LINES_TOP - ((Math.floor((x - tail * 2 + 1200) / SEGMENT) + Math.floor(frame / 3)) % 2)
+    return line >= 0 && line < 12 && line % 2 === 0
+  }
   return raster(width, MONO_ROWS, (x, row) => {
-    if (x < tail) return halves(rainbow(x - tail, row * 2, frame, 1, 2), rainbow(x - tail, row * 2 + 1, frame, 1, 2))
     let bits = 0
     for (let dy = 0; dy < 4; dy++) {
-      for (let dx = 0; dx < 2; dx++) {
-        if (MONO_INK.includes(sprite[row * 4 + dy]?.[(x - tail) * 2 + dx] ?? '.')) bits |= DOTS[dy]![dx]!
-      }
+      for (let dx = 0; dx < 2; dx++) if (dot(x * 2 + dx, row * 4 + dy)) bits |= DOTS[dy]![dx]!
     }
     return [BRAILLE + bits, NONE, NONE]
   })
@@ -85,7 +88,7 @@ export const register: Register = on => {
   let timer: { cancel: () => void } | null = null
   const sites = new Map<string, number>() // spinner requestId -> strip width
 
-  const look = (): 'image' | 'pixel' | 'mono' => (style === 'auto' ? (picturesDraw ? 'image' : 'pixel') : style)
+  const look = (): 'image' | 'pixel' | 'mono' => (style === 'auto' ? (picturesDraw ? 'image' : 'mono') : style)
 
   const stop = () => {
     timer?.cancel()
@@ -97,7 +100,7 @@ export const register: Register = on => {
     if (typeof saved === 'string' && STYLES.includes(saved)) style = saved as Style
     await $.command.register({
       name: 'nyan',
-      description: 'Nyan spinner look: auto (the real picture where the terminal can, else pixels), pixel, mono',
+      description: 'Nyan spinner look: auto (the real picture where the terminal can, else braille), pixel, mono',
       argumentHint: 'auto|pixel|mono',
     })
     return next(e)
@@ -109,7 +112,7 @@ export const register: Register = on => {
       style = want as Style
       await $.store.set('style', want)
     }
-    const now = style === 'auto' ? `auto (${picturesDraw ? 'picture' : 'pixels: this terminal draws no pictures'})` : style
+    const now = style === 'auto' ? `auto (${picturesDraw ? 'picture' : 'braille: this terminal draws no pictures'})` : style
     return { text: `nyan: ${now}${STYLES.includes(want) ? '' : '. Usage: /nyan auto|pixel|mono'}` }
   })
 
@@ -129,8 +132,8 @@ export const register: Register = on => {
         for (const [key, png] of [['rainbow', RAINBOW_PNG[Math.floor(frame / 3) % 2]!], ['cat', PNG_FRAMES[frame % PNG_FRAMES.length]!]]) {
           void $.ui.blit({ requestId, key: key!, source: { png: png! } }).then(r => {
             if (r.deny && /\balt\b/.test(r.deny) && picturesDraw) {
-              picturesDraw = false // the terminal shows the alt: fall back to pixels from the next draw on
-              $.ui.log(`nyan: picture not drawn (${r.deny}); using pixels`, { to: 'debug' })
+              picturesDraw = false // the terminal shows the alt: fall back to braille from the next draw on
+              $.ui.log(`nyan: picture not drawn (${r.deny}); using braille`, { to: 'debug' })
               $.ui.invalidate('ui.render')
             }
           })

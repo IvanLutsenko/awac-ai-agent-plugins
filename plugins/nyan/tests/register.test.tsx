@@ -20,12 +20,13 @@ describe('register', () => {
     expect(at(0, width - CAT_W + 9)).toEqual([0x2580, 0x000000, 0xffcc99]) // tart: outline over crust
   })
 
-  test('packMono: the cat is braille in the text color', async () => {
+  test('packMono: speed lines then the cat, braille in the text color', async () => {
     const w = 40
     const cells = cellsOf(packMono(w, 0))
     const at = (row: number, x: number) => [...cells.slice((row * w + x) * 3, (row * w + x) * 3 + 3)]
-    const [ch, fg, bg] = at(0, w - 17 + 4) // over the tart's top outline
-    expect(ch! >= 0x2801 && ch! <= 0x28ff).toBe(true)
+    expect(at(1, 0)).toEqual([0x2805, 0x01000000, 0x01000000]) // two lines, left dot column only
+    const [ch, fg, bg] = at(0, w - 16 + 4) // over the tart's top outline
+    expect(ch! > 0x2800 && ch! <= 0x28ff).toBe(true)
     expect([fg, bg]).toEqual([0x01000000, 0x01000000])
   })
 
