@@ -6,6 +6,9 @@ version: 0.1.0
 
 > Converted from Claude Code command `/draw`.
 > Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
+> Helper scripts ship in this skill's own `scripts/` directory. Replace
+> `<this skill directory>` with the path Codex reported when it loaded this skill —
+> a bare relative path would resolve against the repository under review instead.
 
 # /draw — bridge brief to image-gen web UI
 
@@ -22,7 +25,7 @@ If no brief is given, stop and report: `Usage: /draw [-t target] <brief>`.
 ### 1. Resolve target and translate flag
 
 ```bash
-source plugins/drawbridge/scripts/lib.sh
+source <this skill directory>/scripts/lib.sh
 echo "default_target=$(db_default_target)"
 echo "translate=$(db_translate_enabled)"
 ```
@@ -45,7 +48,7 @@ PROMPT_EOF
 TARGET="<resolved target>"
 BRIEF="<original brief>"
 
-source plugins/drawbridge/scripts/lib.sh
+source <this skill directory>/scripts/lib.sh
 printf "%s" "$PROMPT" | db_copy_clipboard
 db_history_append "$TARGET" "$BRIEF" "$PROMPT"
 db_open_url "$(db_target_url "$TARGET")"

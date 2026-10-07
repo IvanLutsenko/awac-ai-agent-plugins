@@ -6,6 +6,9 @@ version: 0.1.0
 
 > Converted from Claude Code command `/crash-report`.
 > Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
+> Helper scripts ship in this skill's own `scripts/` directory. Replace
+> `<this skill directory>` with the path Codex reported when it loaded this skill —
+> a bare relative path would resolve against the repository under review instead.
 
 # Crash Analysis
 
@@ -57,7 +60,7 @@ Skip if `.claude/crashlytics-prereqs-ok` exists. Otherwise run and cache on succ
 Bash: test -f .claude/crashlytics-prereqs-ok && echo "CACHED_OK"
 
 If not cached:
-  Bash: plugins/crashlytics/scripts/check-prerequisites.sh
+  Bash: <this skill directory>/scripts/check-prerequisites.sh
   Parse output: OK → pass, MISSING → fail with fix instruction
   If ALL OK → Bash: touch .claude/crashlytics-prereqs-ok
   If any MISSING → show checklist, degrade gracefully (do NOT cache)
@@ -149,7 +152,7 @@ Forensics output is multi-page markdown with backticks, `$`, code fences and quo
 1. Write tool: /tmp/crashlytics-forensics-{ISSUE_ID}.md
    contents: <full forensics_output verbatim, no truncation>
 
-2. Bash: python3 plugins/crashlytics/scripts/validate-report.py \
+2. Bash: python3 <this skill directory>/scripts/validate-report.py \
            --console-url "{console_url}" \
            < /tmp/crashlytics-forensics-{ISSUE_ID}.md
 ```

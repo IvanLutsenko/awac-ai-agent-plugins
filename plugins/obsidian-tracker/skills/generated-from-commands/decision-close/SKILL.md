@@ -24,3 +24,7 @@ version: 0.1.0
 5. **Close** via `closeDecision`.
 
 6. **Confirm** closure.
+
+## Codex differences
+
+- A non-interactive run (`codex exec`, CI) has nobody to answer a prompt: continue on defaults, honour whatever the invoking prompt already specified, and report which defaults were used. If the whole point of the command is to ask, say that it needs an interactive session and stop rather than inventing answers.

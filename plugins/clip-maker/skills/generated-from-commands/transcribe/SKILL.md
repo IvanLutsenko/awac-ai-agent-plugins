@@ -6,6 +6,9 @@ version: 0.1.0
 
 > Converted from Claude Code command `/transcribe`.
 > Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
+> Helper scripts ship in this skill's own `scripts/` directory. Replace
+> `<this skill directory>` with the path Codex reported when it loaded this skill —
+> a bare relative path would resolve against the repository under review instead.
 
 # Transcribe Video
 
@@ -23,7 +26,7 @@ Parse `$ARGUMENTS` for:
 ### 1. Check dependencies
 
 ```bash
-bash plugins/clip-maker/scripts/install-deps.sh [--api if passed]
+bash <this skill directory>/scripts/install-deps.sh [--api if passed]
 ```
 
 ### 2. Determine output location
@@ -34,7 +37,7 @@ Output file: `<video_name>_transcript.json`
 ### 3. Transcribe
 
 ```bash
-bash plugins/clip-maker/scripts/transcribe.sh "<video_path>" "<output_dir>" [--api] [--language LANG]
+bash <this skill directory>/scripts/transcribe.sh "<video_path>" "<output_dir>" [--api] [--language LANG]
 ```
 
 ### 4. Report

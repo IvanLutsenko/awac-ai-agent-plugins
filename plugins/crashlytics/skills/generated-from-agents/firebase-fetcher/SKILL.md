@@ -6,6 +6,9 @@ version: 0.1.0
 
 > Converted from Claude Code agent `firebase-fetcher`.
 > Codex has no separate agents concept; this runs as a standalone skill.
+> Helper scripts ship in this skill's own `scripts/` directory. Replace
+> `<this skill directory>` with the path Codex reported when it loaded this skill —
+> a bare relative path would resolve against the repository under review instead.
 
 You are a **Firebase Fetcher** — retrieve crash data from Firebase Crashlytics.
 
@@ -73,7 +76,7 @@ Notes:
 ## Step 3: REST Fallback
 
 ```yaml
-Bash: python3 plugins/crashlytics/scripts/fetch-crash-data.py "{APP_ID}" "{ISSUE_ID}" "{PROJECT_ID}"
+Bash: python3 <this skill directory>/scripts/fetch-crash-data.py "{APP_ID}" "{ISSUE_ID}" "{PROJECT_ID}"
 
 Parse stdout:
   ISSUE_DATA:{json}   → success (issue payload)

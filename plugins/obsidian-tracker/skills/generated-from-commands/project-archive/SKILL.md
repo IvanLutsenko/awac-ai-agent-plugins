@@ -37,3 +37,7 @@ Parse action and project name from arguments. If action is not provided, ask the
 4. **Always confirm with explicit warning**: this action is irreversible, all data will be lost
 5. Call `deleteProject` with the project name and appropriate `fromArchive` flag
 6. Report result
+
+## Codex differences
+
+- A non-interactive run (`codex exec`, CI) has nobody to answer a prompt: continue on defaults, honour whatever the invoking prompt already specified, and report which defaults were used. If the whole point of the command is to ask, say that it needs an interactive session and stop rather than inventing answers.

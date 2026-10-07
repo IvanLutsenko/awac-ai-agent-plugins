@@ -6,6 +6,9 @@ version: 0.1.0
 
 > Converted from Claude Code command `/install-permissions`.
 > Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
+> Helper scripts ship in this skill's own `scripts/` directory. Replace
+> `<this skill directory>` with the path Codex reported when it loaded this skill —
+> a bare relative path would resolve against the repository under review instead.
 
 # Install Crashlytics permissions
 
@@ -73,9 +76,9 @@ SAFE_SET = [
     "Bash(git config --get:*)",
 
     # crashlytics scripts
-    "Bash(plugins/crashlytics/scripts/check-prerequisites.sh:*)",
-    "Bash(python3 plugins/crashlytics/scripts/validate-report.py:*)",
-    "Bash(python3 plugins/crashlytics/scripts/fetch-crash-data.py:*)",
+    "Bash(<this skill directory>/scripts/check-prerequisites.sh:*)",
+    "Bash(python3 <this skill directory>/scripts/validate-report.py:*)",
+    "Bash(python3 <this skill directory>/scripts/fetch-crash-data.py:*)",
 
     # generic safe utils used by the plugin
     "Bash(test -f:*)",
@@ -168,3 +171,7 @@ Run /crashlytics:crash-report again — no permission prompts on read-only steps
 
 When Claude Code adds a `permissions` field to `plugin.json` for declarative
 allowlists, this command becomes obsolete. Track Anthropic's plugin spec.
+
+## Codex differences
+
+- A non-interactive run (`codex exec`, CI) has nobody to answer a prompt: continue on defaults, honour whatever the invoking prompt already specified, and report which defaults were used. If the whole point of the command is to ask, say that it needs an interactive session and stop rather than inventing answers.

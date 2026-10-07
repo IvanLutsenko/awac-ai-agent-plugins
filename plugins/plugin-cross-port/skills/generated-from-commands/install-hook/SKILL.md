@@ -6,6 +6,9 @@ version: 0.1.0
 
 > Converted from Claude Code command `/install-hook`.
 > Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
+> Helper scripts ship in this skill's own `scripts/` directory. Replace
+> `<this skill directory>` with the path Codex reported when it loaded this skill —
+> a bare relative path would resolve against the repository under review instead.
 
 # Install Hook
 
@@ -31,7 +34,7 @@ If this fails: stop with "Not a git repository: <target>".
 
 Run to get the absolute path to the converter scripts:
 ```bash
-echo "plugins/plugin-cross-port/scripts"
+echo "<this skill directory>/scripts"
 ```
 
 Store the result as `SCRIPTS_DIR`. This is the path that will be embedded in the generated hook.

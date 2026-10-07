@@ -28,3 +28,7 @@ version: 0.1.0
 5. **Confirm** the updated links.
 
 Note: `linkEntity` works for any entity type (TASK, BUG, DEC). This command is a convenience wrapper focused on decisions.
+
+## Codex differences
+
+- A non-interactive run (`codex exec`, CI) has nobody to answer a prompt: continue on defaults, honour whatever the invoking prompt already specified, and report which defaults were used. If the whole point of the command is to ask, say that it needs an interactive session and stop rather than inventing answers.

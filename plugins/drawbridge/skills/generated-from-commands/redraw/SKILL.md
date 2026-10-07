@@ -6,6 +6,9 @@ version: 0.1.0
 
 > Converted from Claude Code command `/redraw`.
 > Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
+> Helper scripts ship in this skill's own `scripts/` directory. Replace
+> `<this skill directory>` with the path Codex reported when it loaded this skill —
+> a bare relative path would resolve against the repository under review instead.
 
 # /redraw — variation of last brief
 
@@ -14,7 +17,7 @@ version: 0.1.0
 ### 1. Read last entry
 
 ```bash
-source plugins/drawbridge/scripts/lib.sh
+source <this skill directory>/scripts/lib.sh
 LAST=$(db_history_last)
 ```
 

@@ -6,6 +6,9 @@ version: 0.1.0
 
 > Converted from Claude Code command `/draw-config`.
 > Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
+> Helper scripts ship in this skill's own `scripts/` directory. Replace
+> `<this skill directory>` with the path Codex reported when it loaded this skill —
+> a bare relative path would resolve against the repository under review instead.
 
 # /draw-config — view or update settings
 
@@ -16,7 +19,7 @@ Settings live in YAML frontmatter of `~/.claude/drawbridge.local.md` (project-lo
 ### `show` (default if no args)
 
 ```bash
-source plugins/drawbridge/scripts/lib.sh
+source <this skill directory>/scripts/lib.sh
 echo "config_path: $(db_config_path)"
 echo "default_target: $(db_default_target)"
 echo "translate_to_english: $(db_translate_enabled)"
@@ -52,3 +55,7 @@ If `$ARGUMENTS` is empty, ask the user via AskUserQuestion:
 - options: `show`, `change default_target`, `change translate_to_english`
 
 For `change` paths, ask the new value via a follow-up AskUserQuestion with constrained options.
+
+## Codex differences
+
+- A non-interactive run (`codex exec`, CI) has nobody to answer a prompt: continue on defaults, honour whatever the invoking prompt already specified, and report which defaults were used. If the whole point of the command is to ask, say that it needs an interactive session and stop rather than inventing answers.

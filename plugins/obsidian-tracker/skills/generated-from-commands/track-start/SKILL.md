@@ -6,6 +6,9 @@ version: 0.1.0
 
 > Converted from Claude Code command `/track-start`.
 > Review and adapt: hooks and MCP tool IDs may need manual mapping for Codex.
+> Helper scripts ship in this skill's own `scripts/` directory. Replace
+> `<this skill directory>` with the path Codex reported when it loaded this skill —
+> a bare relative path would resolve against the repository under review instead.
 
 # Track Start Command
 
@@ -54,7 +57,7 @@ cat .claude/obsidian-tracking.json 2>/dev/null || echo "NO_TRACKING"
 Создай трекинг-файл через скрипт:
 
 ```bash
-plugins/obsidian-tracker/scripts/start-tracking.sh "{project-name}" "{goal}"
+<this skill directory>/scripts/start-tracking.sh "{project-name}" "{goal}"
 ```
 
 ## Step 5: Confirm
@@ -68,3 +71,7 @@ plugins/obsidian-tracker/scripts/start-tracking.sh "{project-name}" "{goal}"
 Твои действия будут автоматически записываться.
 Используй /track-stop или /clear для сохранения в Obsidian.
 ```
+
+## Codex differences
+
+- A non-interactive run (`codex exec`, CI) has nobody to answer a prompt: continue on defaults, honour whatever the invoking prompt already specified, and report which defaults were used. If the whole point of the command is to ask, say that it needs an interactive session and stop rather than inventing answers.
