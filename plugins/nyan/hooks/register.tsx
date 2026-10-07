@@ -61,8 +61,9 @@ export const pack = (width: number, frame: number): string => {
   return raster(width, PIXEL_ROWS, (x, row) => halves(pixel(x, row * 2), pixel(x, row * 2 + 1)))
 }
 
-// The braille look, all in the text color: the rainbow as six dotted speed lines (a dot every
-// other column, waving like the colour one), then the cat's outline.
+// The braille look: the rainbow as six dotted speed lines (a dot every other column, waving like
+// the colour one), then the cat's outline in the text color. A braille cell has one colour, and two
+// lines share each row of cells, so the rainbow's colours run along the lines, one per wave segment.
 export const packMono = (width: number, frame: number): string => {
   const tail = width - MONO_COLS
   const sprite = MONO_FRAMES[frame % MONO_FRAMES.length]!
@@ -77,7 +78,8 @@ export const packMono = (width: number, frame: number): string => {
     for (let dy = 0; dy < 4; dy++) {
       for (let dx = 0; dx < 2; dx++) if (dot(x * 2 + dx, row * 4 + dy)) bits |= DOTS[dy]![dx]!
     }
-    return [BRAILLE + bits, NONE, NONE]
+    const fg = x < tail ? RAINBOW[Math.floor((x - tail + 1200) / (SEGMENT / 2)) % RAINBOW.length]! : NONE
+    return [BRAILLE + bits, fg, NONE]
   })
 }
 

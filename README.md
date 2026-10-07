@@ -449,7 +449,7 @@ Nyan Cat and a rainbow across the whole terminal width over Claude Code's turn s
 /nyan            # show the current look
 /nyan auto       # the real picture, 2 rows (falls back to braille where images don't draw)
 /nyan pixel      # the sprite in colour cells, any truecolor terminal
-/nyan mono       # the outline in braille with dotted speed lines, 5 rows
+/nyan mono       # the outline in braille with rainbow-dotted speed lines, 5 rows
 ```
 
 **Status:** 🔨 Beta | **Version:** 0.1.0

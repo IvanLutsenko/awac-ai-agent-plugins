@@ -23,7 +23,7 @@ Version: 0.1.0
 
 - `auto` (the default): the real picture. It shows the 12 frames of the original gif and a rainbow wave, both 2 rows tall. It works where the terminal draws images (kitty graphics: kitty, Ghostty). If the terminal cannot draw images, `auto` falls back to `mono` after the first frame.
 - `pixel`: the 34×21 sprite in half-block colour cells, 11 rows. It works in any truecolor terminal.
-- `mono`: the sprite's outline in braille dots of the text colour, 5 rows. The rainbow becomes six dotted speed lines that wave like the colour one. It works in any terminal.
+- `mono`: the sprite's outline in braille dots of the text colour, 5 rows. The rainbow becomes six dotted speed lines that wave like the colour one; its colours run along the lines, because a braille cell has one colour. It works in any truecolor terminal.
 
 ### Pictures inside a multiplexer
 
