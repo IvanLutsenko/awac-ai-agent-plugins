@@ -22,8 +22,16 @@ Version: 0.1.0
 `/nyan gif|pixel|dots` chooses the look. The choice is kept across sessions. `/nyan` with no argument shows the current look.
 
 - `gif` (the default): the real picture. It shows the 12 frames of the original gif and a rainbow wave, both 2 rows tall. It works where the terminal draws images (kitty graphics: kitty, Ghostty). If the terminal cannot draw images, `gif` falls back to `dots` after the first frame.
+
+  ![gif](docs/gif.gif)
+
 - `pixel`: the 34×21 sprite in half-block colour cells, 11 rows. It works in any truecolor terminal.
+
+  ![pixel](docs/pixel.gif)
+
 - `dots`: the sprite's outline in braille dots of the text colour, 5 rows. The rainbow becomes six dotted speed lines that wave like the colour one; its colours run along the lines, because a braille cell has one colour. It works in any truecolor terminal.
+
+  ![dots](docs/dots.gif)
 
 ### Pictures inside a multiplexer
 
@@ -35,6 +43,9 @@ tmux, herdr and similar multiplexers hide the outer terminal from Claude Code. C
 ```
 
 ## How it works
+
+The previews above are rendered from the mod's own sprite data and packing by `docs/make-previews.py` (`uv run --with pillow python docs/make-previews.py`).
+
 
 - `hooks/register.tsx`: a `ui.render` hook on `Spinner` puts the strip above the engine's line. A timer runs while the turn runs. On each tick it repaints the strip with `$.ui.blit` and calls `$.ui.invalidate`.
 - The timer ticks every 100 ms. This matches the engine's repaint cap for the spinner row. A faster timer drops frames unevenly, so the strip stutters, mostly before the first tokens.
