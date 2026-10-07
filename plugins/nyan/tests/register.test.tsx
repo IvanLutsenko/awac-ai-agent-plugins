@@ -24,7 +24,7 @@ describe('register', () => {
     const w = 40
     const cells = cellsOf(packDots(w, 0))
     const at = (row: number, x: number) => [...cells.slice((row * w + x) * 3, (row * w + x) * 3 + 3)]
-    expect(at(1, 0)).toEqual([0x2805, 0xffff00, 0x01000000]) // two lines, left dot column only, in a rainbow colour
+    expect(at(1, 0)).toEqual([0x2805, 0x968000, 0x01000000]) // two lines, left dot column only, in a rainbow colour
     const [ch, fg, bg] = at(0, w - 16 + 4) // over the tart's top outline
     expect(ch! > 0x2800 && ch! <= 0x28ff).toBe(true)
     expect([fg, bg]).toEqual([0x01000000, 0x01000000])

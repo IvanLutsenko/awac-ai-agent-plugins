@@ -9,6 +9,10 @@ type Style = 'gif' | 'pixel' | 'dots'
 const STYLES: readonly string[] = ['gif', 'pixel', 'dots']
 
 const RAINBOW = [0xff0000, 0xff9900, 0xffff00, 0x33ff00, 0x0099ff, 0x6633ff]
+// The dots' rainbow is text on the terminal's own background, so terminals that enforce a minimum
+// contrast (Ghostty's minimum-contrast, Warp's) would darken the light colours to black. These keep
+// at least 3:1 against both light and dark backgrounds, so no theme rewrites them.
+const DOT_RAINBOW = [0xe8202a, 0xd2690a, 0x968000, 0x2f9e35, 0x1f7fe0, 0x8a4cf2]
 const SEGMENT = 6 // wave: blocks this wide sit a pixel up or down, flipping every few frames
 const NONE = 0x01000000 // terminal default color
 const UPPER = 0x2580 // ▀: fg paints the upper half, bg the lower
@@ -78,7 +82,7 @@ export const packDots = (width: number, frame: number): string => {
     for (let dy = 0; dy < 4; dy++) {
       for (let dx = 0; dx < 2; dx++) if (dot(x * 2 + dx, row * 4 + dy)) bits |= DOTS[dy]![dx]!
     }
-    const fg = x < tail ? RAINBOW[Math.floor((x - tail + 1200) / (SEGMENT / 2)) % RAINBOW.length]! : NONE
+    const fg = x < tail ? DOT_RAINBOW[Math.floor((x - tail + 1200) / (SEGMENT / 2)) % DOT_RAINBOW.length]! : NONE
     return [BRAILLE + bits, fg, NONE]
   })
 }
