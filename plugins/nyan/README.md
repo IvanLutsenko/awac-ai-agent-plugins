@@ -6,7 +6,7 @@ Version: 0.1.0
 
 ## What's New in 0.1.0
 
-- The first release. It has three looks (`auto`, `pixel`, `mono`), and `/nyan` switches between them.
+- The first release. It has three looks (`auto`, `pixel`, `dots`), and `/nyan` switches between them.
 
 ## Installation
 
@@ -19,11 +19,11 @@ Version: 0.1.0
 
 ## Looks
 
-`/nyan auto|pixel|mono` chooses the look. The choice is kept across sessions. `/nyan` with no argument shows the current look.
+`/nyan auto|pixel|dots` chooses the look. The choice is kept across sessions. `/nyan` with no argument shows the current look.
 
-- `auto` (the default): the real picture. It shows the 12 frames of the original gif and a rainbow wave, both 2 rows tall. It works where the terminal draws images (kitty graphics: kitty, Ghostty). If the terminal cannot draw images, `auto` falls back to `mono` after the first frame.
+- `auto` (the default): the real picture. It shows the 12 frames of the original gif and a rainbow wave, both 2 rows tall. It works where the terminal draws images (kitty graphics: kitty, Ghostty). If the terminal cannot draw images, `auto` falls back to `dots` after the first frame.
 - `pixel`: the 34×21 sprite in half-block colour cells, 11 rows. It works in any truecolor terminal.
-- `mono`: the sprite's outline in braille dots of the text colour, 5 rows. The rainbow becomes six dotted speed lines that wave like the colour one; its colours run along the lines, because a braille cell has one colour. It works in any truecolor terminal.
+- `dots`: the sprite's outline in braille dots of the text colour, 5 rows. The rainbow becomes six dotted speed lines that wave like the colour one; its colours run along the lines, because a braille cell has one colour. It works in any truecolor terminal.
 
 ### Pictures inside a multiplexer
 

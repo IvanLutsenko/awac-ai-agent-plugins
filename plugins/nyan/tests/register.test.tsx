@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from 'claude-code/testing'
 
 import { CAT_W } from '../hooks/cat'
-import { pack, packMono } from '../hooks/register'
+import { pack, packDots } from '../hooks/register'
 
 const cellsOf = (b64: string) => new Uint32Array(Uint8Array.fromBase64(b64).buffer)
 const width = CAT_W + 10
@@ -20,9 +20,9 @@ describe('register', () => {
     expect(at(0, width - CAT_W + 9)).toEqual([0x2580, 0x000000, 0xffcc99]) // tart: outline over crust
   })
 
-  test('packMono: speed lines then the cat, braille in the text color', async () => {
+  test('packDots: speed lines then the cat, braille in the text color', async () => {
     const w = 40
-    const cells = cellsOf(packMono(w, 0))
+    const cells = cellsOf(packDots(w, 0))
     const at = (row: number, x: number) => [...cells.slice((row * w + x) * 3, (row * w + x) * 3 + 3)]
     expect(at(1, 0)).toEqual([0x2805, 0xffff00, 0x01000000]) // two lines, left dot column only, in a rainbow colour
     const [ch, fg, bg] = at(0, w - 16 + 4) // over the tart's top outline
@@ -30,7 +30,7 @@ describe('register', () => {
     expect([fg, bg]).toEqual([0x01000000, 0x01000000])
   })
 
-  test('the spinner: picture by default, braille after /nyan mono', async ($, on) => {
+  test('the spinner: picture by default, braille after /nyan dots', async ($, on) => {
     mock.clock(on)
     mock.store(on, {})
     on('session.start', ($, e) => ({ cwd: e.cwd }))
@@ -46,11 +46,11 @@ describe('register', () => {
     expect(await auto.find({ type: 'Image', key: 'rainbow' })).toBeDefined()
     await auto.unmount()
 
-    const { text } = await $.command.run({ command: 'nyan', args: 'mono', origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 100 } })
-    expect(text).toBe('nyan: mono')
-    const mono = await $.ui.mount({ plugin: 'nyan', surface: 'terminal', ...SPINNER })
-    expect(await mono.find({ type: 'Raster', key: 'nyan' })).toBeDefined()
-    expect(await mono.find({ type: 'Image' })).toBeUndefined()
-    expect(await mono.find({ type: 'Text', text: 'Sauteing…' })).toBeDefined()
+    const { text } = await $.command.run({ command: 'nyan', args: 'dots', origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 100 } })
+    expect(text).toBe('nyan: dots')
+    const dots = await $.ui.mount({ plugin: 'nyan', surface: 'terminal', ...SPINNER })
+    expect(await dots.find({ type: 'Raster', key: 'nyan' })).toBeDefined()
+    expect(await dots.find({ type: 'Image' })).toBeUndefined()
+    expect(await dots.find({ type: 'Text', text: 'Sauteing…' })).toBeDefined()
   })
 })

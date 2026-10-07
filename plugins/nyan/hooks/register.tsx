@@ -1,12 +1,12 @@
 import type { Register } from 'claude-code'
 
-import { CAT_H, CAT_W, FRAMES, MONO_FRAMES, MONO_H, MONO_W, PALETTE, TART_LEFT } from './cat'
+import { CAT_H, CAT_W, FRAMES, DOT_FRAMES, DOT_H, DOT_W, PALETTE, TART_LEFT } from './cat'
 import { PNG_FRAMES, RAINBOW_PNG } from './cat-png'
 
 // Three looks, picked with /nyan: the real picture (where the terminal draws pictures, else the
 // braille look), the sprite in half-block pixels (any truecolor terminal), or its outline in braille.
-type Style = 'auto' | 'pixel' | 'mono'
-const STYLES: readonly string[] = ['auto', 'pixel', 'mono']
+type Style = 'auto' | 'pixel' | 'dots'
+const STYLES: readonly string[] = ['auto', 'pixel', 'dots']
 
 const RAINBOW = [0xff0000, 0xff9900, 0xffff00, 0x33ff00, 0x0099ff, 0x6633ff]
 const SEGMENT = 6 // wave: blocks this wide sit a pixel up or down, flipping every few frames
@@ -16,9 +16,9 @@ const LOWER = 0x2584 // ▄: fg paints the lower half (an empty upper half stays
 const BRAILLE = 0x2800
 const DOTS = [[0x01, 0x08], [0x02, 0x10], [0x04, 0x20], [0x40, 0x80]] // [dot row][dot column] -> bit
 const PIXEL_ROWS = CAT_H / 2
-const MONO_ROWS = MONO_H / 4
-const MONO_COLS = MONO_W / 2
-const MONO_LINES_TOP = (MONO_H - 12) / 2 // six speed lines, a dot row apart, centred on the tart
+const DOT_ROWS = DOT_H / 4
+const DOT_COLS = DOT_W / 2
+const DOT_LINES_TOP = (DOT_H - 12) / 2 // six speed lines, a dot row apart, centred on the tart
 const IMAGE_ROWS = 2
 // The engine repaints the spinner row on request at most 10 times a second (the gif's own pace is
 // FRAME_MS = 70): ticking at that cap gives every frame its paint, ticking faster drops some unevenly.
@@ -64,16 +64,16 @@ export const pack = (width: number, frame: number): string => {
 // The braille look: the rainbow as six dotted speed lines (a dot every other column, waving like
 // the colour one), then the cat's outline in the text color. A braille cell has one colour, and two
 // lines share each row of cells, so the rainbow's colours run along the lines, one per wave segment.
-export const packMono = (width: number, frame: number): string => {
-  const tail = width - MONO_COLS
-  const sprite = MONO_FRAMES[frame % MONO_FRAMES.length]!
+export const packDots = (width: number, frame: number): string => {
+  const tail = width - DOT_COLS
+  const sprite = DOT_FRAMES[frame % DOT_FRAMES.length]!
   const dot = (x: number, y: number): boolean => {
     if (x >= tail * 2) return sprite[y]?.[x - tail * 2] !== '.'
     if (x % 2) return false
-    const line = y - MONO_LINES_TOP - ((Math.floor((x - tail * 2 + 1200) / SEGMENT) + Math.floor(frame / 3)) % 2)
+    const line = y - DOT_LINES_TOP - ((Math.floor((x - tail * 2 + 1200) / SEGMENT) + Math.floor(frame / 3)) % 2)
     return line >= 0 && line < 12 && line % 2 === 0
   }
-  return raster(width, MONO_ROWS, (x, row) => {
+  return raster(width, DOT_ROWS, (x, row) => {
     let bits = 0
     for (let dy = 0; dy < 4; dy++) {
       for (let dx = 0; dx < 2; dx++) if (dot(x * 2 + dx, row * 4 + dy)) bits |= DOTS[dy]![dx]!
@@ -90,7 +90,7 @@ export const register: Register = on => {
   let timer: { cancel: () => void } | null = null
   const sites = new Map<string, number>() // spinner requestId -> strip width
 
-  const look = (): 'image' | 'pixel' | 'mono' => (style === 'auto' ? (picturesDraw ? 'image' : 'mono') : style)
+  const look = (): 'image' | 'pixel' | 'dots' => (style === 'auto' ? (picturesDraw ? 'image' : 'dots') : style)
 
   const stop = () => {
     timer?.cancel()
@@ -102,8 +102,8 @@ export const register: Register = on => {
     if (typeof saved === 'string' && STYLES.includes(saved)) style = saved as Style
     await $.command.register({
       name: 'nyan',
-      description: 'Nyan spinner look: auto (the real picture where the terminal can, else braille), pixel, mono',
-      argumentHint: 'auto|pixel|mono',
+      description: 'Nyan spinner look: auto (the real picture where the terminal can, else braille), pixel, dots',
+      argumentHint: 'auto|pixel|dots',
     })
     return next(e)
   })
@@ -115,7 +115,7 @@ export const register: Register = on => {
       await $.store.set('style', want)
     }
     const now = style === 'auto' ? `auto (${picturesDraw ? 'picture' : 'braille: this terminal draws no pictures'})` : style
-    return { text: `nyan: ${now}${STYLES.includes(want) ? '' : '. Usage: /nyan auto|pixel|mono'}` }
+    return { text: `nyan: ${now}${STYLES.includes(want) ? '' : '. Usage: /nyan auto|pixel|dots'}` }
   })
 
   on('turn.start', ($, e, next) => {
@@ -127,7 +127,7 @@ export const register: Register = on => {
         // ponytail: blit refusals (site gone, resized) are ignored; the next render re-registers the site
         const mode = look()
         if (mode !== 'image') {
-          void $.ui.blit({ requestId, key: 'nyan', cells: mode === 'mono' ? packMono(width, frame) : pack(width, frame) })
+          void $.ui.blit({ requestId, key: 'nyan', cells: mode === 'dots' ? packDots(width, frame) : pack(width, frame) })
           continue
         }
         // an unchanged source sends nothing, so the rainbow costs a command only when its wave flips
@@ -168,8 +168,8 @@ export const register: Register = on => {
           <Image key="rainbow" source={{ png: RAINBOW_PNG[Math.floor(frame / 3) % 2]! }} columns={Math.min(IMAGE_MAX_COLS, width - IMAGE_COLS)} rows={IMAGE_ROWS} alt=" " />
           <Image key="cat" source={{ png: PNG_FRAMES[frame % PNG_FRAMES.length]! }} columns={IMAGE_COLS} rows={IMAGE_ROWS} alt=" " />
         </Box>
-      ) : mode === 'mono' ? (
-        <Raster key="nyan" columns={width} rows={MONO_ROWS} cells={packMono(width, frame)} />
+      ) : mode === 'dots' ? (
+        <Raster key="nyan" columns={width} rows={DOT_ROWS} cells={packDots(width, frame)} />
       ) : (
         <Raster key="nyan" columns={width} rows={PIXEL_ROWS} cells={pack(width, frame)} />
       )

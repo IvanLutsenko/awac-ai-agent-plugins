@@ -307,7 +307,7 @@ export const TART_LEFT = 7 // first column of the tart: the rainbow runs under t
 
 // The outline for the braille look: the sprite with one row and two tart columns dropped by one
 // mask for all frames, so it fits 5 rows of braille cells (4 dots tall). Only 'k' and 's' kept.
-export const MONO_FRAMES: readonly string[][] = [
+export const DOT_FRAMES: readonly string[][] = [
   [
     '.........kkkkkkkkkkkkkkk........',
     '........k...............k.......',
@@ -573,5 +573,5 @@ export const MONO_FRAMES: readonly string[][] = [
     '....kkk..kk......kkk...kkk......',
   ],
 ]
-export const MONO_W = 32
-export const MONO_H = 20 // dots = 5 rows of braille cells
+export const DOT_W = 32
+export const DOT_H = 20 // dots = 5 rows of braille cells
