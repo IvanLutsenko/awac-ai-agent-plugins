@@ -96,6 +96,17 @@
         "url": "https://github.com/IvanLutsenko"
       },
       "category": "development"
+    },
+    {
+      "name": "nyan",
+      "version": "0.1.0",
+      "description": "Nyan Cat and a full-width rainbow over the turn spinner: the real picture where the terminal draws images, else colour pixels or a braille outline. /nyan auto|pixel|mono. Fan project; art © Chris Torres.",
+      "source": "./plugins/nyan",
+      "author": {
+        "name": "Ivan Lutsenko",
+        "url": "https://github.com/IvanLutsenko"
+      },
+      "category": "productivity"
     }
   ]
 }

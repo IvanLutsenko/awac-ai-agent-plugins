@@ -433,6 +433,34 @@ Automated vertical clip creator for talks and presentations. Whisper + Claude + 
 
 ---
 
+### Nyan
+
+Nyan Cat and a rainbow across the whole terminal width over Claude Code's turn spinner, while a turn runs. The real picture where the terminal draws images (kitty, Ghostty); colour pixels or a braille outline elsewhere. A mod: built on function hooks (early access).
+
+📚 **[Full Documentation](plugins/nyan/README.md)**
+
+**Installation:**
+```bash
+/plugin install nyan
+```
+
+**Quick Start:**
+```bash
+/nyan            # show the current look
+/nyan auto       # the real picture, 2 rows (falls back to pixels where images don't draw)
+/nyan pixel      # the sprite in colour cells, any truecolor terminal
+/nyan mono       # the outline in braille, 6 rows
+```
+
+**Status:** 🔨 Beta | **Version:** 0.1.0
+
+**Features:**
+- The original gif's 12 frames, and a waving rainbow as wide as the terminal
+- Animation paced to the engine's spinner repaint cap, so it does not stutter at the start of a turn
+- Fan project: Nyan Cat © Chris Torres; MIT covers the code only
+
+---
+
 ## Setup
 
 After cloning, enable git hooks (runs plugin tests before push):

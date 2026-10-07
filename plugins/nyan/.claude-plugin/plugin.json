@@ -1,0 +1,12 @@
+{
+  "name": "nyan",
+  "version": "0.1.0",
+  "description": "Nyan Cat and a full-width rainbow over Claude Code's turn spinner: the real picture where the terminal draws images, else colour pixels or a braille outline. Fan project; the Nyan Cat art is Chris Torres'.",
+  "author": {
+    "name": "Ivan Lutsenko",
+    "email": "ivan@lutsenko.com",
+    "url": "https://github.com/IvanLutsenko"
+  },
+  "keywords": ["nyan-cat", "spinner", "progress-bar", "fun", "mod"],
+  "license": "MIT"
+}

@@ -1,0 +1,4 @@
+{
+  "description": "Nyan Cat over the turn spinner: a ui.render hook on Spinner draws the strip, a turn timer animates it, /nyan picks the look",
+  "modules": ["./register.tsx"]
+}
