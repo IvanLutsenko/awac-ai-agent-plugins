@@ -366,7 +366,10 @@ python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/exa
 python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/example --apply
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.12.1
+**Status:** 🔨 Beta | **Version:** 0.12.2
+
+**What's New in 0.12.2:**
+- `skills_authored` now covers agents too. A plugin whose Codex skills are hand-written got its agents generated as Codex skills anyway (only command skills were skipped), so they sat beside the authored ones and duplicated them. Both are skipped now, and the generated folders are removed.
 
 **What's New in 0.12.1:**
 - Its own Codex skill (`install-hook`) is rebuilt by the rules of 0.11–0.12: helper scripts bundled into the skill, plus the `## Codex differences` note. The converter itself is unchanged.

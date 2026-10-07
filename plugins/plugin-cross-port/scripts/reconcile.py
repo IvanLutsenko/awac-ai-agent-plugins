@@ -195,7 +195,7 @@ class Reconciler:
                 self._run_converter(
                     plugin_path,
                     plugin_source,
-                    skip_command_skills=name in authored,
+                    skip_generated_skills=name in authored,
                 )
                 manifest = self._manifest(plugin_path, plugin_source)
                 source_path = plugin_source_path(
@@ -437,7 +437,7 @@ class Reconciler:
                 self.results.append(PluginResult(name, "failed", "", str(error)))
 
     def _run_converter(
-        self, plugin_path: Path, source: str, *, skip_command_skills: bool = False
+        self, plugin_path: Path, source: str, *, skip_generated_skills: bool = False
     ) -> None:
         if source == "claude-code":
             code = Converter(
@@ -447,7 +447,7 @@ class Reconciler:
                 True,
                 False,
                 sync_marketplace=False,
-                skip_command_skills=skip_command_skills,
+                skip_generated_skills=skip_generated_skills,
             ).run()
         else:
             code = ReverseConverter(

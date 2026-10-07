@@ -267,15 +267,19 @@ class ReconcileTest(unittest.TestCase):
         self.assertTrue((self.repo / "plugins/two/.claude-plugin/plugin.json").exists())
         self.assertFalse((self.repo / "plugins/two/.plugin-cross-port.json").exists())
 
-    def test_skills_authored_skips_command_generation(self):
+    def test_skills_authored_skips_command_and_agent_generation(self):
         make_cc_marketplace(self.repo, ["one"])
         make_cc_plugin(self.repo, "one")
         command = self.repo / "plugins/one/commands/do.md"
         command.parent.mkdir(parents=True, exist_ok=True)
         command.write_text("---\ndescription: Do\n---\n\nbody\n", encoding="utf-8")
+        agent = self.repo / "plugins/one/agents/helper.md"
+        agent.parent.mkdir(parents=True, exist_ok=True)
+        agent.write_text("---\nname: helper\ndescription: Helps\n---\n\nbody\n", encoding="utf-8")
         self.reconciler().attach_marketplace("claude-code")
         generated = self.repo / "plugins/one/skills/generated-from-commands/do/SKILL.md"
         self.assertTrue(generated.exists())
+        self.assertTrue((self.repo / "plugins/one/skills/generated-from-agents/helper/SKILL.md").exists())
 
         state_path = self.repo / ".plugin-cross-port.marketplace.json"
         state = read_json(state_path)
@@ -286,6 +290,8 @@ class ReconcileTest(unittest.TestCase):
 
         self.assertEqual(report.exit_code, 0)
         self.assertFalse((self.repo / "plugins/one/skills/generated-from-commands").exists())
+        # hand-authored Codex skills replace the agents too: no agent skills beside them
+        self.assertFalse((self.repo / "plugins/one/skills/generated-from-agents").exists())
         # manifest + marketplace entry are still synced for an authored plugin
         self.assertTrue((self.repo / "plugins/one/.codex-plugin/plugin.json").exists())
         names = [

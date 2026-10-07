@@ -176,7 +176,7 @@ class Converter:
         force: bool,
         strict: bool,
         sync_marketplace: bool = True,
-        skip_command_skills: bool = False,
+        skip_generated_skills: bool = False,
     ):
         self.plugin_path = plugin_path.resolve()
         self.repo_root = repo_root.resolve()
@@ -184,7 +184,7 @@ class Converter:
         self.force = force
         self.strict = strict
         self.sync_marketplace = sync_marketplace
-        self.skip_command_skills = skip_command_skills
+        self.skip_generated_skills = skip_generated_skills
         self.warnings: list[str] = []
         self.created: list[str] = []
         self.removed: list[str] = []
@@ -473,7 +473,7 @@ class Converter:
         cmd_files: list[Path] = []
         generated_root = self.plugin_path / 'skills' / 'generated-from-commands'
 
-        if self.skip_command_skills:
+        if self.skip_generated_skills:
             # Codex skills for this plugin are hand-authored; drop mechanical output.
             if generated_root.exists():
                 self._remove(generated_root)
@@ -524,7 +524,12 @@ class Converter:
         agent_files: list[Path] = []
         agents_generated_root = self.plugin_path / 'skills' / 'generated-from-agents'
 
-        if agents_dir.exists():
+        if self.skip_generated_skills:
+            # Hand-authored skills replace the agents too: agent skills beside them would
+            # duplicate (or contradict) what the authored skills already do.
+            if agents_generated_root.exists():
+                self._remove(agents_generated_root)
+        elif agents_dir.exists():
             agent_files = sorted(agents_dir.glob('*.md'))
             for agent_file in agent_files:
                 agent_name = agent_file.stem

@@ -6,7 +6,7 @@ Converts individual plugins in either direction and reconciles dual-target
 Claude Code and Codex marketplaces. A repository chooses one canonical
 marketplace, while each plugin keeps its own `source_of_truth`.
 
-**Version:** 0.12.1
+**Version:** 0.12.2
 
 ---
 
@@ -200,6 +200,9 @@ available and emit a warning.
 ---
 
 ## Changelog
+
+### 0.12.2
+- **Fixed:** `skills_authored` now covers agents too. A plugin whose Codex skills are hand-written got its agents generated as Codex skills anyway (only command skills were skipped), so they sat beside the authored ones and duplicated them. Both are skipped now, and the generated folders are removed.
 
 ### 0.12.1
 - **Changed:** Its own Codex skill (`install-hook`) is rebuilt by the rules of 0.11–0.12: helper scripts bundled into the skill, plus the `## Codex differences` note. The converter itself is unchanged.
