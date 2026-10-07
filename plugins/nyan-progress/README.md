@@ -1,4 +1,4 @@
-# nyan
+# nyan-progress
 
 Nyan Cat and a rainbow across the whole terminal width, drawn above Claude Code's turn spinner (`Sauteing… (12s · tokens)`) while a turn runs. The engine's own line stays under it.
 
@@ -12,7 +12,7 @@ Version: 0.1.0
 
 ```bash
 /plugin marketplace add https://github.com/IvanLutsenko/awac-ai-agent-plugins
-/plugin install nyan
+/plugin install nyan-progress
 ```
 
 **Requires** Claude Code with function hooks (mods). This is early access: the hook API can change between releases.

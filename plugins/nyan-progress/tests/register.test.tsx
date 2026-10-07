@@ -41,14 +41,14 @@ describe('register', () => {
     })
     await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
 
-    const gif = await $.ui.mount({ plugin: 'nyan', surface: 'terminal', ...SPINNER })
+    const gif = await $.ui.mount({ plugin: 'nyan-progress', surface: 'terminal', ...SPINNER })
     expect(await gif.find({ type: 'Image', key: 'cat' })).toBeDefined()
     expect(await gif.find({ type: 'Image', key: 'rainbow' })).toBeDefined()
     await gif.unmount()
 
     const { text } = await $.command.run({ command: 'nyan', args: 'dots', origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 100 } })
     expect(text).toBe('nyan: dots')
-    const dots = await $.ui.mount({ plugin: 'nyan', surface: 'terminal', ...SPINNER })
+    const dots = await $.ui.mount({ plugin: 'nyan-progress', surface: 'terminal', ...SPINNER })
     expect(await dots.find({ type: 'Raster', key: 'nyan' })).toBeDefined()
     expect(await dots.find({ type: 'Image' })).toBeUndefined()
     expect(await dots.find({ type: 'Text', text: 'Sauteing…' })).toBeDefined()
