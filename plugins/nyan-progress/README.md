@@ -44,7 +44,7 @@ tmux, herdr and similar multiplexers hide the outer terminal from Claude Code. C
 
 ## How it works
 
-The previews above are rendered from the mod's own sprite data and packing by `docs/make-previews.py` (`uv run --with pillow python docs/make-previews.py`).
+The previews above are screen recordings in Ghostty (light Solarized theme), cropped to the strip and the spinner line.
 
 
 - `hooks/register.tsx`: a `ui.render` hook on `Spinner` puts the strip above the engine's line. A timer runs while the turn runs. On each tick it repaints the strip with `$.ui.blit` and calls `$.ui.invalidate`.
