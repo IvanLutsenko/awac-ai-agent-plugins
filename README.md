@@ -469,7 +469,7 @@ Nyan Cat and a rainbow across the whole terminal width over Claude Code's turn s
 /nyan dots       # the outline in braille with rainbow-dotted speed lines, 5 rows
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.1.0
+**Status:** 🔨 Beta | **Version:** 0.1.1
 
 **Features:**
 - The original gif's 12 frames, and a waving rainbow as wide as the terminal

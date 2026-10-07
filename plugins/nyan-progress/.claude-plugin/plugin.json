@@ -1,6 +1,6 @@
 {
   "name": "nyan-progress",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Nyan Cat and a full-width rainbow over Claude Code's turn spinner: the real picture where the terminal draws images, else a braille outline with dotted speed lines. Fan project; the Nyan Cat art is Chris Torres'.",
   "author": {
     "name": "Ivan Lutsenko",

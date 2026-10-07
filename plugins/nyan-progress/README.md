@@ -2,7 +2,11 @@
 
 Nyan Cat and a rainbow across the whole terminal width, drawn above Claude Code's turn spinner (`Sauteing… (12s · tokens)`) while a turn runs. The engine's own line stays under it.
 
-Version: 0.1.0
+Version: 0.1.1
+
+## What's New in 0.1.1
+
+- `/nyan` answered `nyan: nyan: pixel`: Claude Code already names the command above its output, so the mod's own `nyan:` prefix is gone (from its debug-log line too).
 
 ## What's New in 0.1.0
 

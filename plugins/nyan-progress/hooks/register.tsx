@@ -119,7 +119,7 @@ export const register: Register = on => {
       await $.store.set('style', want)
     }
     const now = style === 'gif' && !picturesDraw ? 'gif (dots: this terminal draws no pictures)' : style
-    return { text: `nyan: ${now}${STYLES.includes(want) ? '' : '. Usage: /nyan gif|pixel|dots'}` }
+    return { text: `${now}${STYLES.includes(want) ? '' : '. Usage: /nyan gif|pixel|dots'}` }
   })
 
   on('turn.start', ($, e, next) => {
@@ -139,7 +139,7 @@ export const register: Register = on => {
           void $.ui.blit({ requestId, key: key!, source: { png: png! } }).then(r => {
             if (r.deny && /\balt\b/.test(r.deny) && picturesDraw) {
               picturesDraw = false // the terminal shows the alt: fall back to braille from the next draw on
-              $.ui.log(`nyan: picture not drawn (${r.deny}); using braille`, { to: 'debug' })
+              $.ui.log(`picture not drawn (${r.deny}); using braille`, { to: 'debug' })
               $.ui.invalidate('ui.render')
             }
           })

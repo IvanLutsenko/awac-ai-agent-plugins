@@ -99,7 +99,7 @@
     },
     {
       "name": "nyan-progress",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "description": "Nyan Cat and a full-width rainbow over the turn spinner: the real picture where the terminal draws images, else a braille outline with dotted speed lines. /nyan gif|pixel|dots. Fan project; art © Chris Torres.",
       "source": "./plugins/nyan-progress",
       "author": {

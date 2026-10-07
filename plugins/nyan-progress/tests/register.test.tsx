@@ -47,7 +47,7 @@ describe('register', () => {
     await gif.unmount()
 
     const { text } = await $.command.run({ command: 'nyan', args: 'dots', origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 100 } })
-    expect(text).toBe('nyan: dots')
+    expect(text).toBe('dots') // Claude Code names the command itself
     const dots = await $.ui.mount({ plugin: 'nyan-progress', surface: 'terminal', ...SPINNER })
     expect(await dots.find({ type: 'Raster', key: 'nyan' })).toBeDefined()
     expect(await dots.find({ type: 'Image' })).toBeUndefined()
