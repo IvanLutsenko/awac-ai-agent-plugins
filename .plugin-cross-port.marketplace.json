@@ -43,6 +43,7 @@
     }
   },
   "codex_exclude": [
-    "locale-notifications"
+    "locale-notifications",
+    "nyan-progress"
   ]
 }
