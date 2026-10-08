@@ -1,6 +1,6 @@
 # push-gate
 
-Asks before every `git push` the model runs. The question is Claude Code's own AskUserQuestion dialog: «Пушу? <command>» with «Пушить» and «Отмена». A click on «Пушить» lets that one command run. «Отмена», a typed answer, Esc or a session with no one to ask (`claude -p`) refuse it, and the model reads why.
+Asks before every `git push` the model runs. The question is Claude Code's own AskUserQuestion dialog: the full command, the repository, the branch and its upstream, how many commits go, and a warning for a force push or a protected branch (`release`, `master`, `main`). A click on «Пушить» lets that one call run. «Отмена», a typed answer, Esc or a session with no one to ask (`claude -p`) refuse it, and the model reads why.
 
 Version: 0.1.0
 
@@ -16,33 +16,26 @@ Version: 0.1.0
 
 **Requires** Claude Code with function hooks (mods), 2.1.287 or later. This is early access: the hook API can change between releases.
 
-## What counts as a push
+## What it asks about
 
-Any Bash command that holds the words `git` and `push`. The rule is coarse on purpose: it catches `bash -c "git push"`, `( git push )`, `/usr/bin/git push`, `env git push`, a quoted `-C` path and a push on the second line. A commit message or a heredoc with the word "push" in it costs one extra dialog.
-
-## Why it does not allow the call
-
-The mod only asks. It never answers `tool.check` with `allow`, and it never rewrites the call. So the auto mode classifier still judges the push, and auto mode does not refuse the call as rewritten after the model wrote it.
+- Any Bash command that holds the words `git` and `push`. The rule is coarse on purpose: it catches `bash -c "git push"`, `( git push )`, `/usr/bin/git push`, `env git push`, a quoted `-C` path and a push on the second line. A commit message with the word "push" in it costs one extra dialog.
+- `glab … --push` and `gh pr create`, which push on their own.
+- `claude`, `codex` or `pi` started with their guards off (`--safe-mode`, `--bare`, `--dangerously-…`).
+- A command over 2000 characters is refused outright: the dialog shows every command whole, so nothing can hide past its end.
 
 ## Pairing with a PreToolUse guard
 
-A guard in `settings.json` runs after the mod. Alone, the mod already refuses every push the person did not confirm. A guard that denies every push is also safe when mods are off (`--safe-mode`) or in a session where the mod is not installed. The two need a way to agree, and that is a one-shot token:
-
-- On «Пушить» the mod writes the exact command to the file `token` in `~/.claude/push-gate/`.
-- The guard lets a command through when it equals the token and the token is under 60 seconds old, and deletes the token.
-- Any tool call that names the token's path is refused, by the mod and by the guard, so the model cannot write a token itself by naming the file. A script that writes it without naming it is not caught: this stops mistakes, not a model that sets out to get around it.
-
-The guard's part, before its own push check:
+Alone, the mod refuses every push the person did not confirm. It is not a wall, though: a push from a script file, a git hook, an API call or another agent never passes through it. For a guard that also holds when mods are off (`--safe-mode`) or the mod is not installed, deny every push in a PreToolUse hook in `settings.json`:
 
 ```bash
-PG_DIR="$HOME/.claude/push-gate"
-PG_TOKEN="$PG_DIR/token"
-if [ -f "$PG_TOKEN" ] && [ "$(cat "$PG_TOKEN")" = "$CMD" ] && [ $(( $(date +%s) - $(stat -f %m "$PG_TOKEN") )) -lt 60 ]; then
-  rm -f "$PG_TOKEN"; exit 0
+if printf '%s' "$CMD" | grep -qw git && printf '%s' "$CMD" | grep -qw push; then
+  deny 'Push only through the push-gate dialog.'
 fi
 ```
 
-(`stat -f %m` is macOS; on Linux it is `stat -c %Y`.)
+The mod lifts that deny for the one call the person confirmed: `tool.check` runs after PreToolUse and may allow what a PreToolUse hook from user settings denied (not one from managed settings). The approval lives in the mod's memory, so there is no file the model could write to forge it. The cost: a confirmed push skips the auto mode classifier; the click is the decision.
+
+The server is the real boundary: protect the branches that matter (no force push, no deletion) on GitHub or GitLab.
 
 ## Tests
 
