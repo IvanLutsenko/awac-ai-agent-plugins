@@ -107,6 +107,17 @@
         "url": "https://github.com/IvanLutsenko"
       },
       "category": "productivity"
+    },
+    {
+      "name": "push-gate",
+      "version": "0.1.0",
+      "description": "Asks before every git push the model runs, in Claude Code's own question dialog: a click confirms that one command, anything else refuses it. Optional one-shot token for a PreToolUse guard. Mod: function hooks.",
+      "source": "./plugins/push-gate",
+      "author": {
+        "name": "Ivan Lutsenko",
+        "url": "https://github.com/IvanLutsenko"
+      },
+      "category": "productivity"
     }
   ]
 }

@@ -11,6 +11,7 @@
 - **plugin-cross-port** (v0.12.2) — Bidirectional CC ↔ Codex plugin conversion (agents → standalone Codex skills)
 - **auto-theme** (v1.1.2) — Syncs Claude Code + Codex themes with macOS light/dark; bundles gruvbox-light / sunset-drive
 - **nyan-progress** (v0.1.1) — Nyan Cat + full-width rainbow over the turn spinner (mod: function hooks); `/nyan gif|pixel|dots`
+- **push-gate** (v0.1.0) — Confirms every git push in a native dialog (mod: function hooks); one-shot token for a PreToolUse guard
 
 ## Plugin Structure
 

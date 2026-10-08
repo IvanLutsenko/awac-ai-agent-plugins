@@ -478,6 +478,26 @@ Nyan Cat and a rainbow across the whole terminal width over Claude Code's turn s
 
 ---
 
+### Push Gate
+
+Asks before every `git push` the model runs, in Claude Code's own question dialog. A click confirms that one command; anything else refuses it. A mod: built on function hooks (early access).
+
+📚 **[Full Documentation](plugins/push-gate/README.md)**
+
+**Installation:**
+```bash
+/plugin install push-gate
+```
+
+**Status:** 🔨 Beta | **Version:** 0.1.0
+
+**Features:**
+- Catches every spelling of a push: `bash -c`, subshells, `/usr/bin/git`, `env`/`command` prefixes, multi-line commands
+- Only asks, never allows: the auto mode classifier still judges the push
+- Optional one-shot token for a PreToolUse guard, so the guard stays safe when mods are off
+
+---
+
 ## Setup
 
 After cloning, enable git hooks (runs plugin tests before push):
