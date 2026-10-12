@@ -4,30 +4,52 @@ const PUSH = 'Пушить'
 const MAX_SHOWN = 2000
 const PROTECTED = /\b(release|master|main)\b/
 
-// Errs toward asking. A push is `git` and `push` as words anywhere in the line
-// (bash -c, subshells, /usr/bin/git, env prefixes, quoted -C paths, newlines);
-// also the tools that push on their own and child agents started with their
-// guards off. A commit message with "push" in it costs one extra dialog.
+// git, its global options (-C <path>, -c <k=v>, --git-dir=…, -P), then push as
+// the subcommand: `push` as a path segment (core/push/…) or a word in a grep
+// pattern or a commit message is not a push. The shape stays wide: bash -c,
+// subshells, /usr/bin/git, env prefixes, quoted -C paths, a push on a later
+// line or after a backslash-newline. Group 1: global options, group 2: the
+// push's own arguments up to the end of its command.
+// Mirror: ~/.claude/hooks/bash-footgun-guard.sh (PreToolUse deny); keep in step.
+const GIT_PUSH =
+  /(?:^|[^\w.-])git((?:\s+(?:-C|-c|--git-dir|--work-tree|--namespace)(?:\s+|=)(?:"[^"]*"|'[^']*'|\S+)|\s+--?[\w-]+(?:=\S*)?)*)\s+["']?push(?=$|[\s;&|)"'])([^;&|\n]*)/
+
+const unfold = (command: string) => command.replace(/\\\n/g, ' ')
+
+// Also a push hidden in an alias (`git -c alias.p=push p`), the tools that push
+// on their own, and child agents started with their guards off.
 export function needsConfirm(command: string): boolean {
+  const c = unfold(command)
   return (
-    (/\bgit\b/.test(command) && /\bpush\b/.test(command)) ||
-    /\bglab\b[^\n]*--push\b/.test(command) ||
-    /\bgh\s+pr\s+create\b/.test(command) ||
-    /\b(claude|codex|pi)\b[^\n]*--(safe-mode|bare|dangerously-[\w-]+)/.test(command)
+    GIT_PUSH.test(c) ||
+    /(?:^|[^\w.-])git\s(?:[^;&|\n]*\s)?-c\s*alias\./.test(c) ||
+    /\bglab\b[^\n]*--push\b/.test(c) ||
+    /\bgh\s+pr\s+create\b/.test(c) ||
+    /\b(claude|codex|pi)\b[^\n]*--(safe-mode|bare|dangerously-[\w-]+)/.test(c)
   )
 }
 
+// Only the push's own arguments: `merge-base origin/release` or `rm -rf` in a
+// neighbouring command is neither a protected branch nor a force.
 export function warnings(command: string, branch?: string): string[] {
+  const args = unfold(command).match(GIT_PUSH)?.[2] ?? command
   const marks: string[] = []
-  if (/(^|\s)(--force|--force-with-lease|-[a-zA-Z]*f[a-zA-Z]*)(\s|=|$)|\s\+\S/.test(command)) marks.push('FORCE')
-  if (PROTECTED.test(command) || (branch !== undefined && PROTECTED.test(branch))) marks.push('защищённая ветка')
+  if (/(^|\s)(--force|--force-with-lease|-[a-zA-Z]*f[a-zA-Z]*)(\s|=|$)|\s\+\S/.test(args)) marks.push('FORCE')
+  if (PROTECTED.test(args) || (branch !== undefined && PROTECTED.test(branch))) marks.push('защищённая ветка')
   return marks
 }
 
-// Where the push runs: git's -C path when given, else the session's directory.
+// Where the push runs: the -C path of the push itself, with $VAR / ${VAR} taken
+// from a VAR=value earlier in the same command; else the session's directory.
+// ponytail: an exported VAR or ~ stays as written and the branch line shows "?".
 export function repoDir(command: string): string | undefined {
-  const m = command.match(/\bgit\s+-C\s+(?:"([^"]+)"|'([^']+)'|(\S+))/)
-  return m === null ? undefined : (m[1] ?? m[2] ?? m[3])
+  const c = unfold(command)
+  const m = c.match(GIT_PUSH)?.[1].match(/-C\s+(?:"([^"]+)"|'([^']+)'|(\S+))/)
+  const dir = m == null ? undefined : (m[1] ?? m[2] ?? m[3])
+  return dir?.replace(/\$\{?(\w+)\}?/g, (raw, name: string) => {
+    const a = c.match(new RegExp(`(?:^|[\\s;&(])${name}=(?:"([^"]*)"|'([^']*)'|([^\\s;&|]*))`))
+    return a === null ? raw : (a[1] ?? a[2] ?? a[3])
+  })
 }
 
 async function git($: EngineInterface, cwd: string, ...args: string[]): Promise<string | undefined> {

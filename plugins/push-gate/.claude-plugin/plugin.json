@@ -1,6 +1,6 @@
 {
   "name": "push-gate",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Asks before every git push the model runs, in Claude Code's own question dialog: a click confirms that one command, anything else refuses it. Optional one-shot token for a PreToolUse guard.",
   "author": {
     "name": "Ivan Lutsenko",
