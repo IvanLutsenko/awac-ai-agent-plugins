@@ -1,7 +1,7 @@
 ---
 name: crash-forensics-ios
 description: iOS crash analyst with mandatory git blame forensics, code-level fixes, and assignee identification (Swift/Objective-C)
-tools: Read, Grep, Glob, Bash, TodoWrite
+tools: Read, Grep, Glob, Bash, Write, TodoWrite
 model: opus
 color: orange
 ---
@@ -66,6 +66,7 @@ firebase_data:  # from firebase-fetcher (optional)
 context:  # from crash-report command
   console_url: "https://console.firebase.google.com/..."  # include in report
   branch_ref: "origin/master"  # remote-tracking ref for git blame
+  report_path: "/tmp/crashlytics-forensics-<ISSUE_ID>.md"  # write the full report here
 ```
 
 Or **direct user input**:
@@ -299,6 +300,14 @@ After:
 
 ---
 
+## SAVE THE REPORT (MANDATORY, LAST STEP)
+
+When `report_path` is given in the context, write the **complete** report — Detailed Analysis and JIRA Brief, exactly as you return it — to that path with the Write tool. Then return the same report.
+
+The orchestrator validates this file with `validate-report.py` and does not retype your report: a summary or partial copy in the file fails the quality gate. Write the file once, after the report is final.
+
+---
+
 ## MANDATORY CHECKLIST
 
 ### Before submitting, verify:
@@ -314,6 +323,7 @@ After:
 - [ ] **Reproduction scenario 1-3 steps** (MANDATORY!)
 - [ ] **Firebase link included** (MANDATORY!)
 - [ ] Report formats match output_format config (both by default)
+- [ ] Full report written to `report_path` (when given)
 
 ### DO NOT SUBMIT IF:
 

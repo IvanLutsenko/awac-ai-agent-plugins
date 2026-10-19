@@ -47,6 +47,7 @@ run_one "$HERE/sample-translated-de.md"      "de (translated headers — alias c
 run_one "$HERE/sample-translated-fr.md"      "fr (translated headers — alias check)"
 run_one "$HERE/sample-translated-pt.md"      "pt (translated headers — alias check)"
 run_one "$HERE/sample-translated-it.md"      "it (translated headers — alias check)"
+run_one "$HERE/sample-inline-headers.md"     "inline (**Header**: value, live agent format)"
 
 # Negative case: `git fetch` alone is a pre-flight step, not evidence of inspection.
 printf '  %-45s ' "negative (fetch alone is not evidence)"

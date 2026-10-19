@@ -69,7 +69,10 @@ Multi-platform crash analysis for Android & iOS with git blame forensics, code-l
 /crashlytics:install-permissions    # Add read-only allowlist to settings.json
 ```
 
-**Status:** ✅ Production Ready | **Version:** 4.4.6
+**Status:** ✅ Production Ready | **Version:** 4.4.7
+
+**What's New in 4.4.7:**
+- Quality gate: the forensics agent writes its full report to a file, and the validator checks that file — the orchestrator no longer retypes the report. No manual pass on a failed validation. The validator now reads `**Assignee**: value` lines and `File.kt:77` stack lines, which failed full live reports.
 
 **What's New in 4.4.6:**
 - Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/crashlytics/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.

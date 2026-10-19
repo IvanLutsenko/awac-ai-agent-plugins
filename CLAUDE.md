@@ -2,7 +2,7 @@
 
 ## Active Plugins
 
-- **crashlytics** (v4.4.6) — Multi-platform crash analysis with git blame forensics
+- **crashlytics** (v4.4.7) — Multi-platform crash analysis with git blame forensics
 - **obsidian-tracker** (v4.5.4) — Project tracking, task management, session logging via Obsidian
 - **locale-notifications** (v2.0.1) — macOS notifications in system language
 - **combined-review** (v1.15.0) — Multi-agent code review + CodeRabbit CLI; GitHub PR + GitLab MR with inline resolvable threads on both; `/rereview` verifies + resolves + approves on both; all five agents on every review, no per-agent switches; `/review-config` for language/model/CodeRabbit

@@ -169,6 +169,8 @@ AFTER_TOKENS  = ['after',  'после', 'después', 'nachher', 'après', 'depoi
 _HEADER_RE = re.compile(r'^(#{2,3})\s+(.+)$')
 # bold-only header: line is entirely **Text** or **Text:**  (no other content)
 _BOLD_HEADER_RE = re.compile(r'^\*\*([^*]+?)\*\*\s*:?\s*$')
+_INLINE_HEADER_RE = re.compile(r'^\*\*([^*]+?):?\*\*\s*:?\s*(\S.*)$')
+_SECTION_LABELS = {a for aliases in SECTION_ALIASES.values() for a in aliases}
 
 
 def split_sections(text):
@@ -185,8 +187,9 @@ def split_sections(text):
     def flush(name, body_lines):
         if name is None:
             return
-        # last-write-wins is fine for our checks; but skip empty bodies
-        sections[name] = '\n'.join(body_lines)
+        # first-write-wins: the JIRA Brief repeats labels (`**Assignee**: ...`)
+        # and must not overwrite the detailed section.
+        sections.setdefault(name, '\n'.join(body_lines))
 
     for line in text.split('\n'):
         m = _HEADER_RE.match(line)
@@ -200,6 +203,14 @@ def split_sections(text):
             flush(current, lines)
             current = bm.group(1).strip().lower()
             lines = []
+            continue
+        # `**Assignee**: Jane Doe` — label and value on one line (live agent format).
+        # Only known section labels, so bold emphasis inside prose stays body text.
+        im = _INLINE_HEADER_RE.match(line.strip())
+        if im and im.group(1).strip().lower() in _SECTION_LABELS:
+            flush(current, lines)
+            current = im.group(1).strip().lower()
+            lines = [im.group(2)]
             continue
         lines.append(line)
     flush(current, lines)
@@ -294,7 +305,8 @@ def chk_stack_trace(sections):
     s = find_section(sections, 'stack_trace')
     if not s:
         return 'MISSING'
-    line_num_hits = len(re.findall(r'[:(]\d+[):]', s))
+    # `File.kt:77` (any trailing char, e.g. a backtick) or `(77)` / `:77:`
+    line_num_hits = len(re.findall(r'\.\w+:\d+\b|[:(]\d+[):]', s))
     if line_num_hits >= 3:
         return 'OK'
     # Fallback: stack-frame "at <symbol>" lines (Java/Kotlin/iOS) — accept >=4 even

@@ -2,7 +2,7 @@
 
 Crash log analysis with root cause identification, code-level fixes, and developer assignment via git blame.
 
-**Version:** 4.4.6 — Android & iOS
+**Version:** 4.4.7 — Android & iOS
 
 ---
 
@@ -125,7 +125,7 @@ The plugin tries paths in order: MCP fast-path → MCP via fetcher → REST fall
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      crashlytics v4.4.6                         │
+│                      crashlytics v4.4.7                         │
 └─────────────────────────────────────────────────────────────────┘
                               │
               ┌───────────────┴───────────────┐
@@ -310,6 +310,10 @@ MCP is also used for **project/app discovery** (`firebase_get_environment`, `fir
 ---
 
 ## Changelog
+
+### 4.4.7
+- **Fixed:** `validate-report.py` failed reports in the format the forensics agents actually produce. `**Assignee**: Jane Doe` (label and value on one line) was not read as a section, and `` `FragmentExt.kt:77` `` did not count as a stack line with a line number. A full live report scored 12/14. Inline labels are now sections when the label is a known section name, and the first occurrence wins, so the JIRA Brief does not overwrite the detailed section. New fixture `sample-inline-headers.md`.
+- **Changed:** the forensics agents write the full report to `report_path` (`/tmp/crashlytics-forensics-<ISSUE_ID>.md`), and the quality gate validates that file. Before, the orchestrator retyped the report into the file, came out with a shortened copy and then talked the failed fields away as false positives. The gate no longer allows a manual pass: a `pass: false` after one Edit round is reported as `Валидатор: <score>, не хватает: <fields>`.
 
 ### 4.4.6
 - **Changed:** Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/crashlytics/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.

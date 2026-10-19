@@ -140,17 +140,19 @@ Task(
     Firebase data: {firebase_output}
     Stack trace: {stack_trace}
     console_url: {console_url}
-    branch_ref: origin/{default_branch from config, default master}"
+    branch_ref: origin/{default_branch from config, default master}
+    report_path: /tmp/crashlytics-forensics-{ISSUE_ID}.md"
 )
 ```
 
 ## Step 4: Quality Gate
 
-Forensics output is multi-page markdown with backticks, `$`, code fences and quotes — passing it through `echo "..."` mangles it. **Always go through a tmp file** so the validator gets the raw bytes.
+The forensics agent writes its full report to `/tmp/crashlytics-forensics-{ISSUE_ID}.md` (`report_path`). Validate **that file**. Do not write it from your own copy of the report: a retyped report comes out shortened, and the validator then checks a different text from the one the user sees.
 
 ```yaml
-1. Write tool: /tmp/crashlytics-forensics-{ISSUE_ID}.md
-   contents: <full forensics_output verbatim, no truncation>
+1. Bash: test -s /tmp/crashlytics-forensics-{ISSUE_ID}.md || echo MISSING
+   MISSING (the agent skipped the step) → Write tool: the forensics output byte-for-byte
+   as returned — a copy, no edits, no summary, no reformatting.
 
 2. Bash: python3 <this skill directory>/scripts/validate-report.py \
            --console-url "{console_url}" \
@@ -158,12 +160,14 @@ Forensics output is multi-page markdown with backticks, `$`, code fences and quo
 ```
 
 Parse the YAML result:
-- `pass: true` → output report as-is.
-- `pass: false`:
-    - Если все элементы `missing[]` относятся к одной секции (basic / stack / jira) — fill in those fields using the existing forensics output.
-    - Если score >= 8/14 и language config != en — высоко вероятен false-positive validator'а на переведённых заголовках. Проверить вручную каждое поле из `missing[]` по факту наличия в полном отчёте; если все на месте, считать pass: true и вывести.
-    - Иначе — fill missing fields from previous steps. Do NOT re-call forensics. Do NOT re-validate against an abbreviated summary — это даёт false 1/14.
-- `pass: null` (has `needs_review` items) → evaluate those fields yourself and decide pass/fail.
+- `pass: true` → output the report from this file.
+- `pass: false` → add each field from `missing[]` to the file with Edit, using data from earlier steps (do not re-call forensics). Re-run the validator on the same file. One round only. Still `pass: false` → output the report and the line `Валидатор: <score>, не хватает: <fields>`.
+- `needs_review[]` → judge each listed field yourself and give the verdict per field.
+
+The validator verdict is final:
+- Do not declare a pass after a manual check, and do not explain a fail away as a false positive.
+- If you think the validator is wrong, say so separately: name the field and quote the text it missed. That is a validator bug report, not a pass.
+- Validate only this file. Never run the validator on a summary, an excerpt or a reformatted copy.
 
 ## Step 5: Output
 
@@ -179,5 +183,5 @@ Based on `output_format` from config:
 - [ ] git blame executed on configured branch
 - [ ] Assignee determined with source (git blame line X)
 - [ ] Report formats match config
-- [ ] Reviewer passed or missing fields filled in
+- [ ] Validator ran on the agent's report file; its verdict is reported as-is
 - [ ] console_url included in JIRA Brief
