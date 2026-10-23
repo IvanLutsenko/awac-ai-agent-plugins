@@ -2,7 +2,12 @@
 
 Asks before every `git push` the model runs. The question is Claude Code's own AskUserQuestion dialog: the full command, the repository, the branch and its upstream, how many commits go, and a warning for a force push or a protected branch (`release`, `master`, `main`). A click on «Пушить» lets that one call run. «Отмена», a typed answer, Esc or a session with no one to ask (`claude -p`) refuse it, and the model reads why.
 
-Version: 0.1.1
+Version: 0.2.0
+
+## What's New in 0.2.0
+
+- A confirmed command now runs from the mod itself, and its output reaches the model as the Bash call's result. Lifting a PreToolUse deny in `tool.check` stopped working in Claude Code 2.1.308: a managed-tier hook there hands the event past the user tier, so the click was asked for and then the push was denied anyway.
+- The command runs under `bash -c` in the session's working directory, not in the Bash tool's shell: a `cd` from an earlier Bash call does not carry over, so give the repository with `git -C <path>`. Ten minutes at most.
 
 ## What's New in 0.1.1
 
@@ -21,7 +26,7 @@ Version: 0.1.1
 /plugin install push-gate --marketplace IvanLutsenko/awac-ai-agent-plugins
 ```
 
-**Requires** Claude Code with function hooks (mods), 2.1.287 or later. This is early access: the hook API can change between releases.
+**Requires** Claude Code with function hooks (mods), 2.1.308 or later. This is early access: the hook API can change between releases.
 
 ## What it asks about
 
@@ -46,7 +51,7 @@ fi
 
 A guard with a coarser rule than the mod's denies pushes the mod never asks about; a finer one lets them through unasked.
 
-The mod lifts that deny for the one call the person confirmed: `tool.check` runs after PreToolUse and may allow what a PreToolUse hook from user settings denied (not one from managed settings). The approval lives in the mod's memory, so there is no file the model could write to forge it. The cost: a confirmed push skips the auto mode classifier; the click is the decision.
+The mod does not lift that deny: on the click it runs the confirmed command itself and answers the call with its output, so PreToolUse and `tool.check` never see that one call, and the guard keeps denying every other push. The approval is the click itself, so there is nothing the model could write to forge it. The cost: a confirmed push runs outside the permission system, the auto mode classifier and any managed `tool.check` hook included; the click is the decision.
 
 The server is the real boundary: protect the branches that matter (no force push, no deletion) on GitHub or GitLab.
 

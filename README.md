@@ -495,7 +495,7 @@ Asks before every `git push` the model runs, in Claude Code's own question dialo
 /plugin install push-gate
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.1.1
+**Status:** 🔨 Beta | **Version:** 0.2.0
 
 **Features:**
 - Catches every spelling of a push: `bash -c`, subshells, `/usr/bin/git`, `env`/`command` prefixes, global options (`-C`, `-c`), multi-line commands; `push` in a path or a grep pattern is not a push

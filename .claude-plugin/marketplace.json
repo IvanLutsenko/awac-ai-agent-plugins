@@ -110,8 +110,8 @@
     },
     {
       "name": "push-gate",
-      "version": "0.1.1",
-      "description": "Asks before every git push the model runs, in Claude Code's own question dialog: a click confirms that one command, anything else refuses it. Optional one-shot token for a PreToolUse guard. Mod: function hooks.",
+      "version": "0.2.0",
+      "description": "Asks before every git push the model runs, in Claude Code's own question dialog: a click confirms that one command, anything else refuses it. The confirmed command runs from the mod, past a PreToolUse guard that denies every push. Mod: function hooks.",
       "source": "./plugins/push-gate",
       "author": {
         "name": "Ivan Lutsenko",

@@ -78,14 +78,18 @@ async function question($: EngineInterface, command: string): Promise<string> {
   ].join('\n')
 }
 
-// The mod asks in tool.call and, on the click, lifts the deny of a PreToolUse
-// guard for that one call in tool.check (which runs after PreToolUse). The
-// approval lives in this module's memory, out of the model's reach: there is
-// no file to forge. A confirmed push skips the auto mode classifier; the
-// click is the decision.
-export const register: Register = on => {
-  const approved = new Set<string>()
+// Up to 10 minutes, $.process.run's ceiling: a push over a slow link, gh pr create.
+const RUN_MS = 10 * 60 * 1000
 
+// The mod asks in tool.call and, on the click, runs the command itself and
+// answers with its output in place of next: PreToolUse and tool.check never
+// see a confirmed push, so a PreToolUse guard that denies every push stays
+// the backstop for sessions without the mod. Lifting that deny in tool.check
+// stopped working once a managed tier hook there began handing the event past
+// the user tier (CC 2.1.308). The click is the decision; nothing to forge.
+// ponytail: runs in the session's cwd under bash, not the Bash tool's shell;
+// a `cd` the model ran earlier in the Bash tool does not carry over.
+export const register: Register = on => {
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
     if (!needsConfirm(e.command)) return next(e)
     if (e.command.length > MAX_SHOWN) {
@@ -95,20 +99,10 @@ export const register: Register = on => {
     const answer = await $.ui.ask(await question($, e.command), { options: [PUSH, 'Отмена'], header: 'push-gate' })
     if (answer !== PUSH) return { deny: 'The person declined this push in the push-gate dialog.' }
 
-    approved.add(e.tool_use_id)
-    try {
-      return await next(e)
-    } finally {
-      approved.delete(e.tool_use_id)
-    }
+    const run = await $.process.run(['bash', '-c', e.command], { cwd: await $.session.cwd(), timeoutMs: RUN_MS })
+    const exit = run.exitCode === 0 ? '' : `${run.stderr === '' ? '' : '\n'}Exit code ${run.exitCode}`
+    return { result: { stdout: run.stdout, stderr: run.stderr + exit, interrupted: false } }
   }).catch(($, e, next) =>
-    next.called ? next(e) : { deny: 'push-gate could not ask the person; push refused.' },
-  )
-
-  // ponytail: no .catch — a failure here only fails to lift a deny, which is safe.
-  on('tool.check', { tool: 'Bash' }, ($, e, next) =>
-    e.tool_use_id !== undefined && approved.has(e.tool_use_id)
-      ? { decision: 'allow', reason: 'confirmed in the push-gate dialog' }
-      : next(e),
+    next.called ? next(e) : { deny: 'push-gate could not ask the person or run the push; push refused.' },
   )
 }
