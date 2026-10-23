@@ -46,11 +46,14 @@ Stop here.
    If the CLI is missing: `npm i -g coderabbitai` or see coderabbit.ai/cli. If it is installed but
    `coderabbit auth status` says unauthenticated: `coderabbit auth login`. The plugin stores no
    CodeRabbit credentials — the CLI keeps its own.
+4. **Voice for posted threads** — empty (default: threads carry the agents' wording) or a path to a
+   file describing how the user writes review comments, e.g. `~/.claude/skills/my-voice/SKILL.md`.
+   Only `+threads` uses it. Personal by nature — put it in the user-level file, not a shared project one.
 The agents themselves have no setting: all five run on every review. If the user asks to switch one
 off, say that the roster is fixed on purpose — which agent pays off changes per diff — and that
 `model` is the lever for cost.
 
-Accept the defaults without ceremony if the user says so — the answer to all three can be «defaults».
+Accept the defaults without ceremony if the user says so — the answer to all four can be «defaults».
 
 ## Step 3 — Write
 
@@ -66,7 +69,7 @@ coderabbit: auto
 # Combined Review config
 
 Written by /review-config. Keys: language (system|en|ru|uk), model (sonnet|opus|haiku|inherit),
-coderabbit (auto|off). Project-level overrides live in
+coderabbit (auto|off), voice (empty|path to a style file). Project-level overrides live in
 `.claude/combined-review.local.md`.
 ```
 

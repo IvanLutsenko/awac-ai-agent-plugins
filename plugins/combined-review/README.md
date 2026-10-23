@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.15.0
+**Version:** 1.16.0
 
 ---
 
@@ -136,7 +136,7 @@ or by hand as YAML frontmatter:
 language: system    # system | en | ru | uk
 model: sonnet       # sonnet | opus | haiku | inherit
 coderabbit: auto    # auto | off
-security: off       # off | auto
+voice:              # empty | path to a style file (used by +threads only)
 ---
 ```
 
@@ -149,6 +149,10 @@ security: off       # off | auto
 - **`coderabbit`** — `auto` uses the CLI when it's installed and authenticated, `off` skips the check
   entirely (no install prompt, no CodeRabbit section). Credentials stay with the CLI
   (`coderabbit auth login` / `coderabbit auth status`); the plugin stores none.
+- **`voice`** — empty by default. Set it to a file describing how you write review comments
+  (e.g. `~/.claude/skills/my-voice/SKILL.md`) and `+threads` rewords every posted thread by it:
+  the claim first in your words, then the line and scenario as evidence. What is found and the
+  terminal report don't change. Personal, so keep it in the user-level file.
 There is no key for the agents: all five run on every review, security included. Which one pays off
 changes per diff — in two runs on this plugin's own code the decisive finding came from a different
 agent each time, and the one that reported nothing had spent its pass disproving four claims that
@@ -289,6 +293,14 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.16.0
+
+- **`voice` config key: posted threads in your own wording.** Threads went out in the agents' house
+  style — bold header, `file:line` list, «I suggest…» — which reads as a bot even when you post it.
+  With `voice` pointing at a file that describes how you write review comments, Step 7 rewords each
+  thread by it before posting: claim first, evidence kept. Empty by default and meant for the
+  user-level config, so a shared project config never imposes one person's style on the team.
 
 ### 1.15.0
 

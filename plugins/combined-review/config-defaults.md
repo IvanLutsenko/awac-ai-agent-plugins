@@ -6,6 +6,7 @@
 language: system
 model: sonnet
 coderabbit: auto
+voice:
 ---
 
 # Combined Review config
@@ -31,6 +32,11 @@ the model it declares. Per-agent tuning stays inside the plugin — this key mov
 silently skips it otherwise; `off` disables the check entirely, so no install prompt and no CodeRabbit
 section in the report. The plugin stores no CodeRabbit credentials: `coderabbit auth login` keeps its
 own, and `coderabbit auth status` shows them.
+
+**`voice`** — empty (default) or a path to a file describing how you write review comments. Only
+`+threads` reads it: before posting, each thread is reworded by that file — claim first in your words,
+then the evidence. What gets found and the terminal report stay as they are. It is personal, so keep it
+in the user-level file.
 
 **There is no key for the agents.** All five run on every review, security included — which agent
 turns out to be the useful one changes per diff, and one that reports nothing has still ruled things

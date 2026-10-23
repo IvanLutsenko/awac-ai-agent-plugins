@@ -27,6 +27,12 @@ error.
 - `language` — `system` (default), `en`, `ru`, `uk`
 - `model` — `sonnet` (default), `opus`, `haiku`, `inherit`
 - `coderabbit` — `auto` (default: use it when installed and authenticated), `off`
+- `voice` — empty (default) or a path to a style file; only affects the text of threads posted in Step 7
+
+**Voice resolution:** empty → threads carry the finding text as is. A path (`~` allowed) → read that
+file once before Step 7; if it is missing or unreadable, say so in one line and post as if `voice` were
+empty. The file describes how the person posting writes review comments; Step 7 rewrites thread bodies
+by it. It never changes what is found, only how it is worded, and never touches the terminal report.
 
 **Language resolution:** `system` → first look for a hint in the repo policy file — `CLAUDE.md` or
 `AGENTS.md` ("Отвечай", "русский"); with
@@ -585,7 +591,11 @@ branch-diff and `current` have nowhere to post to.
 Build a threads JSON from the findings you're posting (blockers + correctness + the test findings worth a thread). Each entry:
 - `path` — repo-relative path, exactly as in the diff (`new_path`)
 - `line` — line number in the **new** (post-change) file; the `(path, line)` pair must be in the position map from Step 5 (`$CRDIR/positions.txt`), else the forge rejects the position. A finding about removed code carries the line it was re-anchored to in Step 5; one that could not be re-anchored is terminal-only — do not post it
-- `body` — the finding text (markdown; keep it in the resolved report language)
+- `body` — the finding text (markdown; keep it in the resolved report language). With `voice` set, rewrite it by
+  the voice file instead: the claim first, in that person's words, then the evidence the author needs to act —
+  the line or call that is wrong and the scenario that breaks. Cut headers and severity labels if the voice has
+  none; keep identifiers, paths and code verbatim. Shorter is fine, losing the reason is not: a one-word thread
+  from a bot reads as a nitpick with nothing behind it
 
 Then post them all as inline, resolvable threads with the shipped helper for that forge. The threads
 JSON, the flags and the printed outcomes are the same on both; only the API underneath differs.
