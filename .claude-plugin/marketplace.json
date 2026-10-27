@@ -118,6 +118,18 @@
         "url": "https://github.com/IvanLutsenko"
       },
       "category": "productivity"
+    },
+    {
+      "name": "talk-deck",
+      "version": "0.1.0",
+      "description": "Talk decks on top of the Craft skill: a fresh holiday theme per talk, the author's defaults, a themed Harold at the end, a PDF for organizers and a card on the author's site.",
+      "author": {
+        "name": "Ivan Lutsenko",
+        "email": "ivan@lutsenko.com",
+        "url": "https://github.com/IvanLutsenko"
+      },
+      "source": "./plugins/talk-deck",
+      "category": "development"
     }
   ]
 }

@@ -40,6 +40,11 @@
       "path": "plugins/auto-theme",
       "source_of_truth": "claude-code",
       "status": "synced"
+    },
+    "talk-deck": {
+      "path": "plugins/talk-deck",
+      "source_of_truth": "claude-code",
+      "status": "synced"
     }
   },
   "codex_exclude": [

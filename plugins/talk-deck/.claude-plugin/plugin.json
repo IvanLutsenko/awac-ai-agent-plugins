@@ -1,0 +1,32 @@
+{
+  "name": "talk-deck",
+  "description": "Talk decks on top of the Craft skill: a fresh holiday theme per talk, the author's defaults, a themed Harold at the end, a PDF for organizers and a card on the author's site.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Ivan Lutsenko",
+    "email": "ivan@lutsenko.com",
+    "url": "https://github.com/IvanLutsenko"
+  },
+  "keywords": ["slides", "presentation", "talk", "craft", "html", "pdf"],
+  "license": "MIT",
+  "commands": [
+    "./commands/deck-new.md",
+    "./commands/deck-harold.md",
+    "./commands/deck-pdf.md",
+    "./commands/deck-publish.md"
+  ],
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/scripts/check-on-edit.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "plugin": "auto-theme",
-  "generated_at": "2026-10-23T10:39:08+00:00",
+  "generated_at": "2026-10-27T11:22:56+00:00",
   "source_of_truth": "claude-code",
   "decisions": {
     "skills_shared": true,

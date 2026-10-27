@@ -504,6 +504,37 @@ Asks before every `git push` the model runs, in Claude Code's own question dialo
 
 ---
 
+### Talk Deck
+
+Talk decks on top of the [Craft](https://github.com/IvanLutsenko/craft) skill: a fresh holiday theme per talk, the author's defaults, a themed Harold on the closing slide, a PDF for organizers and a card on the author's site.
+
+**What's New in 0.1.0:** First release: `/deck-new`, `/deck-harold`, `/deck-pdf`, `/deck-publish` and a static Craft check after every edit inside a deck.
+
+📚 **[Full Documentation](plugins/talk-deck/README.md)**
+
+**Installation:**
+```bash
+/plugin install talk-deck
+```
+
+**Quick Start:**
+```bash
+/deck-new CI/CD in a bank --date 2026-12-20     # themed deck for the nearest holiday
+/deck-harold                                    # brief for the themed Harold via drawbridge
+/deck-harold place                              # downloaded picture onto the closing slide
+/deck-pdf --final                               # PDF for organizers
+/deck-publish --event "Podlodka #17"            # card on the author's site, no push
+```
+
+**Status:** 🔨 Beta | **Version:** 0.1.0
+
+**Features:**
+- Needs the Craft skill; the plugin holds only commands and a hook
+- Settings via `~/.claude/talk-deck.local.md`: author, contact, language, site repo
+- PostToolUse hook runs the static Craft check after edits inside a deck (Claude Code only)
+
+---
+
 ## Setup
 
 After cloning, enable git hooks (runs plugin tests before push):

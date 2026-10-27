@@ -1,0 +1,19 @@
+{
+  "name": "talk-deck",
+  "version": "0.1.0",
+  "description": "Talk decks on top of the Craft skill: a fresh holiday theme per talk, the author's defaults, a themed Harold at the end, a PDF for organizers and a card on the author's site.",
+  "author": {
+    "name": "Ivan Lutsenko"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Talk Deck",
+    "shortDescription": "Talk decks on top of the Craft skill: a fresh holiday theme per talk, the author",
+    "developerName": "Ivan Lutsenko",
+    "category": "Development",
+    "capabilities": [
+      "Read",
+      "Write"
+    ]
+  }
+}

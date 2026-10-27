@@ -12,6 +12,7 @@
 - **auto-theme** (v1.1.2) — Syncs Claude Code + Codex themes with macOS light/dark; bundles gruvbox-light / sunset-drive
 - **nyan-progress** (v0.1.1) — Nyan Cat + full-width rainbow over the turn spinner (mod: function hooks); `/nyan gif|pixel|dots`
 - **push-gate** (v0.2.0) — Confirms every git push in a native dialog (mod: function hooks); runs the confirmed command itself, past a PreToolUse guard
+- **talk-deck** (v0.1.0) — Talk decks on top of the Craft skill: holiday theme per talk, themed Harold, `/deck-new`, `/deck-harold`, `/deck-pdf`, `/deck-publish`, static check hook
 
 ## Plugin Structure
 
