@@ -114,3 +114,58 @@ td_require() {
   [[ -n "$CHROMIUM" ]] || { echo "talk-deck: no Chromium; set CHROMIUM" >&2; return 1; }
   export CHROMIUM
 }
+
+# Web base of a git remote URL: git@host:group/repo.git, ssh://git@host[:port]/group/repo.git
+# or https://host/group/repo(.git) -> https://host/group/repo. Fails on anything else.
+td_remote_web() {
+  local url="$1" host path
+  case "$url" in
+    https://*|http://*) url="${url#*://}"; url="${url#*@}"; host="${url%%/*}"; path="${url#*/}" ;;
+    ssh://*) url="${url#ssh://}"; url="${url#*@}"; host="${url%%/*}"; host="${host%%:*}"; path="${url#*/}" ;;
+    *@*:*) url="${url#*@}"; host="${url%%:*}"; path="${url#*:}" ;;
+    *) return 1 ;;
+  esac
+  path="${path%.git}"; path="${path%/}"
+  [[ -n "$host" && "$path" == */* ]] || return 1
+  echo "https://$host/$path"
+}
+
+# Blob link of a file in its git repo on the remote's default branch.
+# GitHub uses /blob/, everything else is treated as GitLab (/-/blob/).
+td_blob_link() {
+  local file="$1" dir top rel remote web branch
+  dir="$(cd "$(dirname "$file")" && pwd -P)" || return 1
+  top="$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null)" || return 1
+  rel="${dir#"$top"}"; rel="${rel#/}"; rel="${rel:+$rel/}$(basename "$file")"
+  remote="$(git -C "$top" remote get-url origin 2>/dev/null)" || return 1
+  web="$(td_remote_web "$remote")" || return 1
+  branch="$(git -C "$top" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null)"
+  branch="${branch#origin/}"
+  if [[ -z "$branch" ]]; then
+    branch="$(git -C "$top" symbolic-ref --short HEAD 2>/dev/null)"
+    [[ -n "$branch" ]] && echo "talk-deck: origin/HEAD is not set, the link points to the current branch $branch (git remote set-head origin --auto fixes it)" >&2
+  fi
+  [[ -n "$branch" ]] || return 1
+  case "$web" in
+    https://github.com/*) echo "$web/blob/$branch/$rel" ;;
+    *) echo "$web/-/blob/$branch/$rel" ;;
+  esac
+}
+
+# Print every slide of a deck in its final frame to a PDF, one page per slide.
+# Uses Craft's own Chromium flags, so fonts and layout settle before printing.
+# Needs $craft and $CHROMIUM from td_require.
+td_print_final() {
+  python3 - "$craft" "$1" "$2" <<'PY'
+import subprocess, sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+from lib import chromium_args
+deck, pdf = Path(sys.argv[2]), sys.argv[3]
+page = (deck / "index.html").as_uri() + "?reveal=final&motion=static"
+# Chrome on macOS may exit non-zero on teardown after writing the file;
+# the caller checks the file instead.
+subprocess.run([*chromium_args(1280, 720), "--no-pdf-header-footer", f"--print-to-pdf={pdf}", page], capture_output=True)
+PY
+  [[ -s "$2" ]]
+}

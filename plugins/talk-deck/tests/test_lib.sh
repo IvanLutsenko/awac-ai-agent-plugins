@@ -57,4 +57,37 @@ CRAFT_HOME="$craft" CHROMIUM=/bin/true td_require nope 2>/dev/null; check "td_re
 printf -- '---\ncraft_home: ~/missing\n---\n' > "$HOME/.claude/talk-deck.local.md"
 td_craft_home >/dev/null 2>&1; check "a wrong craft_home is an error" "$?" "1"
 
+# Remote URLs -> web base, and the blob link of a file in a repo.
+check "gitlab ssh remote" "$(td_remote_web git@gitlab.example.kz:group/sub/repo.git)" "https://gitlab.example.kz/group/sub/repo"
+check "ssh:// remote with a port" "$(td_remote_web ssh://git@gitlab.example.kz:2222/group/repo.git)" "https://gitlab.example.kz/group/repo"
+check "https remote with a user" "$(td_remote_web https://user@github.com/owner/repo.git)" "https://github.com/owner/repo"
+check "https remote without .git" "$(td_remote_web https://github.com/owner/repo/)" "https://github.com/owner/repo"
+td_remote_web /local/path >/dev/null; check "a local path is not a web remote" "$?" "1"
+repo="$tmp/repo"; mkdir -p "$repo/docs/deck"
+git -C "$repo" init -q -b main && git -C "$repo" remote add origin git@gitlab.example.kz:group/repo.git
+touch "$repo/docs/deck/talk.pdf"
+check "gitlab blob link on the current branch" "$(td_blob_link "$repo/docs/deck/talk.pdf")" "https://gitlab.example.kz/group/repo/-/blob/main/docs/deck/talk.pdf"
+git -C "$repo" remote set-url origin https://github.com/owner/repo.git
+# A remote default branch other than the local one: origin/HEAD -> origin/trunk.
+git -C "$repo" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/trunk
+check "github blob link on the remote default branch" "$(td_blob_link "$repo/docs/deck/talk.pdf")" "https://github.com/owner/repo/blob/trunk/docs/deck/talk.pdf"
+td_blob_link "$HOME/.claude/talk-deck.local.md" >/dev/null; check "a file outside a repo has no link" "$?" "1"
+
+# frames.sh: names from the deck map, one PNG per PDF page, with stand-ins for Craft and poppler.
+printf 'import json\nprint(json.dumps([{"page":1,"key":"cover"},{"page":2,"key":"Why Now"}]))\n' > "$craft/scripts/deck_map.py"
+cat > "$craft/scripts/lib.py" <<'PY'
+def chromium_args(width, height):
+    code = "import sys; [open(a.split('=', 1)[1], 'w').write('pdf') for a in sys.argv if a.startswith('--print-to-pdf=')]"
+    return ["python3", "-c", code]
+PY
+mkdir -p "$tmp/bin"
+printf '#!/bin/bash\nfor i in 01 02; do : > "${@: -1}-$i.png"; done\n' > "$tmp/bin/pdftoppm"; chmod +x "$tmp/bin/pdftoppm"
+printf -- '---\nauthor: x\n---\n' > "$HOME/.claude/talk-deck.local.md"
+out="$(PATH="$tmp/bin:$PATH" CRAFT_HOME="$craft" CHROMIUM=/bin/true bash "$root/scripts/frames.sh" "$HOME/site/res/talk" "$tmp/frames" 2>&1)"
+check "frames.sh names files by page and key" "$(ls "$tmp/frames" | tr '\n' ' ')" "01-cover.png 02-why-now.png "
+check "frames.sh reports the count" "$(grep '^count=' <<<"$out")" "count=2"
+printf '#!/bin/bash\n: > "${@: -1}-1.png"\n' > "$tmp/bin/pdftoppm"
+err="$(PATH="$tmp/bin:$PATH" CRAFT_HOME="$craft" CHROMIUM=/bin/true bash "$root/scripts/frames.sh" "$HOME/site/res/talk" "$tmp/frames2" 2>&1 >/dev/null)"
+check "frames.sh fails when pages and map differ" "$(grep -o 'the PDF has 1 pages, the deck map 2' <<<"$err")" "the PDF has 1 pages, the deck map 2"
+
 exit $fail
