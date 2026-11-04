@@ -8,18 +8,21 @@ Custom AI agent plugins by Ivan Lutsenko
   - [Claude Code](#claude-code)
   - [Codex CLI](#codex-cli)
 - [Available Plugins](#available-plugins)
-  - [Crashlytics](#crashlytics) — Android/iOS crash analysis with git blame forensics
-  - [Obsidian Tracker](#obsidian-tracker) — projects, kanban, bugs, ADR and sessions in Obsidian
-  - [Combined Review](#combined-review) — multi-agent code review + CodeRabbit, PR/MR threads
-  - [Auto Theme](#auto-theme) — Claude Code and Codex theme follows macOS light/dark
-  - [Locale Notifications](#locale-notifications) — macOS notifications in your system language
-  - [Drawbridge](#drawbridge) — target-tuned prompts for image-gen web UIs
-  - [Plugin Cross Port](#plugin-cross-port) — Claude Code ↔ Codex plugin conversion
-  - [Clip Maker](#clip-maker) — vertical clips from talk recordings
-  - [Nyan Progress](#nyan-progress) — Nyan Cat over the turn spinner (mod)
-  - [Push Gate](#push-gate) — confirm every `git push` the model runs (mod)
-  - [Talk Deck](#talk-deck) — themed talk decks on top of Craft
-- [Setup](#setup)
+  - [Engineering quality](#engineering-quality)
+    - [Crashlytics](#crashlytics) — Android/iOS crash analysis with git blame forensics
+    - [Combined Review](#combined-review) — multi-agent code review + CodeRabbit, PR/MR threads
+  - [Workflow](#workflow)
+    - [Obsidian Tracker](#obsidian-tracker) — projects, kanban, bugs, ADR and sessions in Obsidian
+    - [Plugin Cross Port](#plugin-cross-port) — Claude Code ↔ Codex plugin conversion
+    - [Push Gate](#push-gate) — confirm every `git push` the model runs (mod)
+  - [Environment & media](#environment--media)
+    - [Auto Theme](#auto-theme) — Claude Code and Codex theme follows macOS light/dark
+    - [Locale Notifications](#locale-notifications) — macOS notifications in your system language
+    - [Drawbridge](#drawbridge) — target-tuned prompts for image-gen web UIs
+    - [Clip Maker](#clip-maker) — vertical clips from talk recordings
+    - [Talk Deck](#talk-deck) — themed talk decks on top of Craft
+    - [Nyan Progress](#nyan-progress) — Nyan Cat over the turn spinner (mod)
+- [Contributing](#contributing)
 - [Author](#author)
 - [License](#license)
 
@@ -70,7 +73,9 @@ The marketplace name is `awac-ai-agent-plugins` (the `name` field of
 
 ## Available Plugins
 
-### Crashlytics
+### Engineering quality
+
+#### Crashlytics
 
 Multi-platform crash analysis for Android & iOS with git blame forensics, code-level fixes, and a deterministic quality gate.
 
@@ -103,46 +108,10 @@ Multi-platform crash analysis for Android & iOS with git blame forensics, code-l
 - Multi-language reports (English headers + body in any language)
 - Configurable per-project settings
 
----
-
-### Obsidian Tracker
-
-Project tracking, task management with kanban boards, bug logging, decision records (ADR), and session management via Obsidian. **Auto-tracks sessions, actions, bugs, and commits via hooks.**
-
-📚 **[Full Documentation](plugins/obsidian-tracker/README.md)**
-
-**Installation:**
-```bash
-/plugin install obsidian-tracker   # MCP server builds itself on first run
-```
-
-**Quick Start:**
-```bash
-/track-start my-project     # Start auto-tracking session
-/projects                   # List all projects
-/project-new                # Create new project
-/task my-project "Fix bug"  # Create task on kanban board
-/done my-project 1          # Mark task as done
-/project-archive archive old-project  # Archive a project
-/track-stop                 # Save session to Obsidian
-```
-
-**Status:** ✅ Production Ready | **Version:** 4.5.4
-
-**What's New in 4.5.4:**
-- Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/obsidian-tracker/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.
-
-**Features:**
-- Auto-tracking via hooks (PreCompact, SessionStart, PostToolUse)
-- Project management with Obsidian as single source of truth
-- Kanban task board with auto-increment IDs
-- Project archiving and lifecycle management
-- Bug tracking with priority levels
-- Session logging (manual or automatic)
 
 ---
 
-### Combined Review
+#### Combined Review
 
 Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents — security included, no per-agent switches — plus CodeRabbit, a third-party reviewer that reads the same diff independently. CodeRabbit uploads the diff to its own servers; `coderabbit: off` keeps the review entirely local.
 
@@ -180,96 +149,48 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 - Findings filtered by scope map, evidence rule and falsifiability gate (`filter-findings.py`)
 - Optional agents: +comments, +types, +simplify
 
----
 
-### Auto Theme
+### Workflow
 
-Syncs Claude Code **and Codex** themes with macOS system appearance (light/dark) on every prompt. Bundles custom `gruvbox-light` / `sunset-drive` themes.
+#### Obsidian Tracker
 
-📚 **[Full Documentation](plugins/auto-theme/README.md)**
+Project tracking, task management with kanban boards, bug logging, decision records (ADR), and session management via Obsidian. **Auto-tracks sessions, actions, bugs, and commits via hooks.**
 
-**Installation:**
-```bash
-/plugin install auto-theme
-```
-
-**Status:** ✅ Production Ready | **Version:** 1.1.2
-
-**What's New in 1.1.2:**
-- `sync-theme` skill now resolves the script path correctly in both Claude Code and Codex
-- malformed config files and non-writable targets now emit `WARN:` instead of being skipped silently
-- unknown `custom:*` themes without a light/dark pair are preserved instead of being overwritten
-
-**How it works:**
-- Hooks into `UserPromptSubmit` — checks macOS appearance on every message
-- Detects dark/light via `defaults read -g AppleInterfaceStyle`
-- Claude Code: sets `theme` in `~/.claude/settings.json` (+ `~/.claude.json` mirror)
-- Codex: sets `[tui] theme` in `~/.codex/config.toml` (register the hook once in `~/.codex/hooks.json`)
-- Idempotent — no write when the theme already matches
-
----
-
-### Locale Notifications
-
-macOS notifications for Claude Code in your system language.
-
-📚 **[Full Documentation](plugins/locale-notifications/README.md)**
+📚 **[Full Documentation](plugins/obsidian-tracker/README.md)**
 
 **Installation:**
 ```bash
-/plugin install locale-notifications
-```
-
-**Status:** ✅ Production Ready | **Version:** 2.0.1
-
-**What's New in 2.0.1:**
-- Quoted custom messages no longer break the macOS notification call
-- Project-local config now resolves from the hook `cwd`
-- Notification hook manifest now includes `timeout: 10`
-
-**How it works:**
-- Hooks into Claude Code `Notification` events
-- Detects system locale via `defaults read -g AppleLocale`
-- Auto-translates and caches the notification message
-- Displays native macOS notification via `osascript`
-
----
-
-### Drawbridge
-
-Bridge between a short brief and image-gen web UIs (Gemini Imagen 3, ChatGPT DALL-E 3, Grok Aurora, Midjourney). Crafts a target-tuned prompt, copies it to clipboard, opens the target — no API keys, no payments.
-
-**What's New in 0.1.2:** Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/drawbridge/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.
-
-📚 **[Full Documentation](plugins/drawbridge/README.md)**
-
-**Installation:**
-```bash
-/plugin install drawbridge
+/plugin install obsidian-tracker   # MCP server builds itself on first run
 ```
 
 **Quick Start:**
 ```bash
-/draw закат на байкале с медведем у воды        # default target from config
-/draw -t midjourney cyberpunk samurai            # one-shot target override
-/redraw -t chatgpt                               # variation of last brief, different target
-/draw-prompt <brief>                             # prompt only, no browser open
-/draw-config show                                # view defaults
-/draw-config set default_target chatgpt          # change default
+/track-start my-project     # Start auto-tracking session
+/projects                   # List all projects
+/project-new                # Create new project
+/task my-project "Fix bug"  # Create task on kanban board
+/done my-project 1          # Mark task as done
+/project-archive archive old-project  # Archive a project
+/track-stop                 # Save session to Obsidian
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.1.2
+**Status:** ✅ Production Ready | **Version:** 4.5.4
+
+**What's New in 4.5.4:**
+- Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/obsidian-tracker/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.
 
 **Features:**
-- Per-target prompt fine-tuning (Imagen prose / DALL-E structure / Aurora density / MJ tag syntax)
-- Auto-translate brief to English (configurable)
-- Settings via `~/.claude/drawbridge.local.md` with project-local override
-- History of last 200 prompts for `/redraw`
-- macOS only in 0.1.2
+- Auto-tracking via hooks (PreCompact, SessionStart, PostToolUse)
+- Project management with Obsidian as single source of truth
+- Kanban task board with auto-increment IDs
+- Project archiving and lifecycle management
+- Bug tracking with priority levels
+- Session logging (manual or automatic)
+
 
 ---
 
-### Plugin Cross Port
+#### Plugin Cross Port
 
 Bridge between Claude Code and Codex plugin formats. One-shot conversion plus
 deterministic dual-target marketplace reconciliation.
@@ -310,9 +231,121 @@ python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/exa
 - Plugin-relative manual maintenance rules are honored in both directions
 - Standalone converter scripts remain available for one-shot conversion
 
+
 ---
 
-### Clip Maker
+#### Push Gate
+
+Asks before every `git push` the model runs, in Claude Code's own question dialog. A click confirms that one command; anything else refuses it. A mod: built on function hooks (early access).
+
+📚 **[Full Documentation](plugins/push-gate/README.md)**
+
+**Installation:**
+```bash
+/plugin install push-gate
+```
+
+**Status:** 🔨 Beta | **Version:** 0.2.0
+
+**Features:**
+- Catches every spelling of a push: `bash -c`, subshells, `/usr/bin/git`, `env`/`command` prefixes, global options (`-C`, `-c`), multi-line commands; `push` in a path or a grep pattern is not a push
+- Only asks, never allows: the auto mode classifier still judges the push
+- Optional one-shot token for a PreToolUse guard, so the guard stays safe when mods are off
+
+
+### Environment & media
+
+#### Auto Theme
+
+Syncs Claude Code **and Codex** themes with macOS system appearance (light/dark) on every prompt. Bundles custom `gruvbox-light` / `sunset-drive` themes.
+
+📚 **[Full Documentation](plugins/auto-theme/README.md)**
+
+**Installation:**
+```bash
+/plugin install auto-theme
+```
+
+**Status:** ✅ Production Ready | **Version:** 1.1.2
+
+**What's New in 1.1.2:**
+- `sync-theme` skill now resolves the script path correctly in both Claude Code and Codex
+- malformed config files and non-writable targets now emit `WARN:` instead of being skipped silently
+- unknown `custom:*` themes without a light/dark pair are preserved instead of being overwritten
+
+**How it works:**
+- Hooks into `UserPromptSubmit` — checks macOS appearance on every message
+- Detects dark/light via `defaults read -g AppleInterfaceStyle`
+- Claude Code: sets `theme` in `~/.claude/settings.json` (+ `~/.claude.json` mirror)
+- Codex: sets `[tui] theme` in `~/.codex/config.toml` (register the hook once in `~/.codex/hooks.json`)
+- Idempotent — no write when the theme already matches
+
+
+---
+
+#### Locale Notifications
+
+macOS notifications for Claude Code in your system language.
+
+📚 **[Full Documentation](plugins/locale-notifications/README.md)**
+
+**Installation:**
+```bash
+/plugin install locale-notifications
+```
+
+**Status:** ✅ Production Ready | **Version:** 2.0.1
+
+**What's New in 2.0.1:**
+- Quoted custom messages no longer break the macOS notification call
+- Project-local config now resolves from the hook `cwd`
+- Notification hook manifest now includes `timeout: 10`
+
+**How it works:**
+- Hooks into Claude Code `Notification` events
+- Detects system locale via `defaults read -g AppleLocale`
+- Auto-translates and caches the notification message
+- Displays native macOS notification via `osascript`
+
+
+---
+
+#### Drawbridge
+
+Bridge between a short brief and image-gen web UIs (Gemini Imagen 3, ChatGPT DALL-E 3, Grok Aurora, Midjourney). Crafts a target-tuned prompt, copies it to clipboard, opens the target — no API keys, no payments.
+
+**What's New in 0.1.2:** Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/drawbridge/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.
+
+📚 **[Full Documentation](plugins/drawbridge/README.md)**
+
+**Installation:**
+```bash
+/plugin install drawbridge
+```
+
+**Quick Start:**
+```bash
+/draw закат на байкале с медведем у воды        # default target from config
+/draw -t midjourney cyberpunk samurai            # one-shot target override
+/redraw -t chatgpt                               # variation of last brief, different target
+/draw-prompt <brief>                             # prompt only, no browser open
+/draw-config show                                # view defaults
+/draw-config set default_target chatgpt          # change default
+```
+
+**Status:** 🔨 Beta | **Version:** 0.1.2
+
+**Features:**
+- Per-target prompt fine-tuning (Imagen prose / DALL-E structure / Aurora density / MJ tag syntax)
+- Auto-translate brief to English (configurable)
+- Settings via `~/.claude/drawbridge.local.md` with project-local override
+- History of last 200 prompts for `/redraw`
+- macOS only in 0.1.2
+
+
+---
+
+#### Clip Maker
 
 Automated vertical clip creator for talks and presentations. Whisper + Claude + ffmpeg pipeline.
 
@@ -344,59 +377,10 @@ Automated vertical clip creator for talks and presentations. Whisper + Claude + 
 **What's New in 1.3.2:**
 - Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/clip-maker/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.
 
----
-
-### Nyan Progress
-
-Nyan Cat and a rainbow across the whole terminal width over Claude Code's turn spinner, while a turn runs. The real picture where the terminal draws images (kitty, Ghostty); a braille outline with dotted speed lines elsewhere, or colour pixels on request. A mod: built on function hooks (early access).
-
-![nyan-progress](plugins/nyan-progress/docs/gif.gif)
-
-📚 **[Full Documentation](plugins/nyan-progress/README.md)**
-
-**Installation:**
-```bash
-/plugin install nyan-progress
-```
-
-**Quick Start:**
-```bash
-/nyan            # show the current look
-/nyan gif        # the real picture, 2 rows (falls back to dots where images don't draw)
-/nyan pixel      # the sprite in colour cells, any truecolor terminal
-/nyan dots       # the outline in braille with rainbow-dotted speed lines, 5 rows
-```
-
-**Status:** 🔨 Beta | **Version:** 0.1.1
-
-**Features:**
-- The original gif's 12 frames, and a waving rainbow as wide as the terminal
-- Animation paced to the engine's spinner repaint cap, so it does not stutter at the start of a turn
-- Fan project: Nyan Cat © Chris Torres; MIT covers the code only
 
 ---
 
-### Push Gate
-
-Asks before every `git push` the model runs, in Claude Code's own question dialog. A click confirms that one command; anything else refuses it. A mod: built on function hooks (early access).
-
-📚 **[Full Documentation](plugins/push-gate/README.md)**
-
-**Installation:**
-```bash
-/plugin install push-gate
-```
-
-**Status:** 🔨 Beta | **Version:** 0.2.0
-
-**Features:**
-- Catches every spelling of a push: `bash -c`, subshells, `/usr/bin/git`, `env`/`command` prefixes, global options (`-C`, `-c`), multi-line commands; `push` in a path or a grep pattern is not a push
-- Only asks, never allows: the auto mode classifier still judges the push
-- Optional one-shot token for a PreToolUse guard, so the guard stays safe when mods are off
-
----
-
-### Talk Deck
+#### Talk Deck
 
 Talk decks on top of the [Craft](https://github.com/IvanLutsenko/craft) skill: a fresh holiday theme per talk, the author's defaults, a themed Harold on the closing slide, a PDF for organizers and a card on the author's site.
 
@@ -427,18 +411,60 @@ Talk decks on top of the [Craft](https://github.com/IvanLutsenko/craft) skill: a
 
 ---
 
-## Setup
+#### Nyan Progress
 
-After cloning, enable git hooks (runs plugin tests before push):
+Nyan Cat and a rainbow across the whole terminal width over Claude Code's turn spinner, while a turn runs. The real picture where the terminal draws images (kitty, Ghostty); a braille outline with dotted speed lines elsewhere, or colour pixels on request. A mod: built on function hooks (early access).
+
+![nyan-progress](plugins/nyan-progress/docs/gif.gif)
+
+📚 **[Full Documentation](plugins/nyan-progress/README.md)**
+
+**Installation:**
+```bash
+/plugin install nyan-progress
+```
+
+**Quick Start:**
+```bash
+/nyan            # show the current look
+/nyan gif        # the real picture, 2 rows (falls back to dots where images don't draw)
+/nyan pixel      # the sprite in colour cells, any truecolor terminal
+/nyan dots       # the outline in braille with rainbow-dotted speed lines, 5 rows
+```
+
+**Status:** 🔨 Beta | **Version:** 0.1.1
+
+**Features:**
+- The original gif's 12 frames, and a waving rainbow as wide as the terminal
+- Animation paced to the engine's spinner repaint cap, so it does not stutter at the start of a turn
+- Fan project: Nyan Cat © Chris Torres; MIT covers the code only
+
+
+## Contributing
+
+For working on the plugins in a clone of this repo; installing them needs
+none of this. Enable the repo's git hooks once after cloning:
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
+- `pre-commit` regenerates the Codex targets (`plugin-cross-port`) of the
+  plugins you changed and stages them.
+- `pre-push` runs the `obsidian-tracker` tests when that plugin is in the
+  push (bats and vitest; each is skipped with a warning when `bats` or
+  `mcp/node_modules` is missing) and refuses the push when a changed
+  `obsidian-tracker` source file has no test. Other plugins' tests are not
+  wired into the hook.
+
 ## Author
 
-Ivan Lutsenko
-GitHub: [@IvanLutsenko](https://github.com/IvanLutsenko)
+Ivan Lutsenko, Android Tech Lead at Bereke Bank
+
+- Site: [ivan.nullptr.party](https://ivan.nullptr.party)
+- Telegram: [@maliastra](https://t.me/maliastra)
+- LinkedIn: [ivan-lutsenko](https://www.linkedin.com/in/ivan-lutsenko/)
+- GitHub: [@IvanLutsenko](https://github.com/IvanLutsenko)
 
 ## License
 
