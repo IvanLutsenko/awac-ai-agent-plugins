@@ -253,7 +253,7 @@ If yes:
 curl -fsSL https://cli.coderabbit.ai/install.sh | sh
 ```
 
-If no — skip CodeRabbit and continue with the 4 agents. Offer to remember the refusal:
+If no — skip CodeRabbit and continue with the five agents. Offer to remember the refusal:
 `coderabbit: off` via `/review-config`, so the question doesn't come back every review.
 
 **If installed, check auth:**
@@ -263,7 +263,7 @@ coderabbit auth status 2>&1 | head -3
 
 If not authenticated:
 Tell the user: "CodeRabbit requires authentication. Run `! coderabbit auth login` in the prompt to log in via browser."
-Skip CodeRabbit for this run, continue with 4 agents.
+Skip CodeRabbit for this run, continue with the five agents.
 
 ## Step 4 — Launch agents
 
@@ -434,7 +434,7 @@ coderabbit review --base "<base-ref>" --dir feature > "$CRDIR/coderabbit-feature
 ```
 Pick bucket boundaries (a top-level dir, or a couple grouped together) so every run stays < 150. Note in the report which paths, if any, fell outside the buckets and were not CodeRabbit-reviewed.
 
-**If CodeRabbit aborts** — a non-zero `$CR_RC`, including a too-many-files error you chose not to split — do not fail the review: name the skip reason in the report (the last lines of `$CRDIR/coderabbit.log` usually say it) and continue with the 4 agents' output. (A worktree that couldn't be created is a different case: it already stopped the review back in "Repository root for agents".)
+**If CodeRabbit aborts** — a non-zero `$CR_RC`, including a too-many-files error you chose not to split — do not fail the review: name the skip reason in the report (the last lines of `$CRDIR/coderabbit.log` usually say it) and continue with the five agents' output. (A worktree that couldn't be created is a different case: it already stopped the review back in "Repository root for agents".)
 
 ### Optional agents (by request)
 
