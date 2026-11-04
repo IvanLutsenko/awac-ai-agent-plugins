@@ -74,7 +74,13 @@ check "github blob link on the remote default branch" "$(td_blob_link "$repo/doc
 td_blob_link "$HOME/.claude/talk-deck.local.md" >/dev/null; check "a file outside a repo has no link" "$?" "1"
 
 # frames.sh: names from the deck map, one PNG per PDF page, with stand-ins for Craft and poppler.
-printf 'import json\nprint(json.dumps([{"page":1,"key":"cover"},{"page":2,"key":"Why Now"}]))\n' > "$craft/scripts/deck_map.py"
+# The stand-in map gives final frames with --final and every reveal step without it.
+cat > "$craft/scripts/deck_map.py" <<'PY'
+import json, sys
+final = [{"page": 1, "key": "cover", "step": 0}, {"page": 2, "key": "Why Now", "step": 1}]
+steps = [{"page": 1, "key": "cover", "step": 0}, {"page": 2, "key": "Why Now", "step": 0}, {"page": 3, "key": "Why Now", "step": 1}]
+print(json.dumps(final if "--final" in sys.argv else steps))
+PY
 cat > "$craft/scripts/lib.py" <<'PY'
 def chromium_args(width, height):
     code = "import sys; [open(a.split('=', 1)[1], 'w').write('pdf') for a in sys.argv if a.startswith('--print-to-pdf=')]"
@@ -89,5 +95,14 @@ check "frames.sh reports the count" "$(grep '^count=' <<<"$out")" "count=2"
 printf '#!/bin/bash\n: > "${@: -1}-1.png"\n' > "$tmp/bin/pdftoppm"
 err="$(PATH="$tmp/bin:$PATH" CRAFT_HOME="$craft" CHROMIUM=/bin/true bash "$root/scripts/frames.sh" "$HOME/site/res/talk" "$tmp/frames2" 2>&1 >/dev/null)"
 check "frames.sh fails when pages and map differ" "$(grep -o 'the PDF has 1 pages, the deck map 2' <<<"$err")" "the PDF has 1 pages, the deck map 2"
+
+# --steps: one PNG per reveal step, named by page, key and step.
+printf '#!/bin/bash\nfor i in 1 2 3; do : > "${@: -1}-$i.png"; done\n' > "$tmp/bin/pdftoppm"
+out="$(PATH="$tmp/bin:$PATH" CRAFT_HOME="$craft" CHROMIUM=/bin/true bash "$root/scripts/frames.sh" "$HOME/site/res/talk" "$tmp/steps" --steps 2>&1)"
+check "frames.sh --steps names files by page, key and step" "$(ls "$tmp/steps" | tr '\n' ' ')" "001-cover-0.png 002-why-now-0.png 003-why-now-1.png "
+check "frames.sh --steps reports the count" "$(grep '^count=' <<<"$out")" "count=3"
+printf '#!/bin/bash\nfor i in 1 2; do : > "${@: -1}-$i.png"; done\n' > "$tmp/bin/pdftoppm"
+err="$(PATH="$tmp/bin:$PATH" CRAFT_HOME="$craft" CHROMIUM=/bin/true bash "$root/scripts/frames.sh" "$HOME/site/res/talk" "$tmp/steps2" --steps 2>&1 >/dev/null)"
+check "frames.sh --steps fails when pages and map differ" "$(grep -o 'the PDF has 2 pages, the deck map 3' <<<"$err")" "the PDF has 2 pages, the deck map 3"
 
 exit $fail

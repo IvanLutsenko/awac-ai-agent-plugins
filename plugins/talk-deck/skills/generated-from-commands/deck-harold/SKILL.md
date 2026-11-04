@@ -39,6 +39,7 @@ echo "craft=$(td_craft_home || echo MISSING)"
 
 ## Step 2: place
 
+0. Look at the picture before placing it (Read the file). Generators slip in the same defects: hands and fingers (count them and check their shape), objects (handles, straps, their length and symmetry), letters or captions on the picture, extra faces in the background. Found one → name it to the author with the place on the picture and offer a regeneration with a brief clarified for that defect (for example "five fingers on each hand, short bag handles"). Do not place a picture with a defect silently; place it only when the author says so.
 1. Store the picture:
 
 ```bash

@@ -1,12 +1,12 @@
 ---
 description: Put a talk deck into Google Slides — the final frame of every slide as a full-bleed picture in a new presentation, for organizers who stitch several speakers into one Slides file.
-argument-hint: "[deck] [--title name]"
+argument-hint: "[deck] [--title name] [--steps]"
 allowed-tools: Bash(bash:*), Bash(source:*), Bash(ls:*), Read, Edit, AskUserQuestion, mcp__google-workspace-unlimited__check_drive_auth, mcp__google-workspace-unlimited__upload_to_drive, mcp__google-workspace-unlimited__create_presentation, mcp__google-workspace-unlimited__make_drive_files_public, mcp__google-workspace-unlimited__update_slide_content, mcp__google-workspace-unlimited__get_presentation_info, mcp__google-workspace-unlimited__manage_drive_files
 ---
 
 # /deck-google-slides — the deck as a Google Slides presentation
 
-What the organizer gets: one slide per deck slide, each a 1920×1080 picture of its final frame. Reveal steps, counters and decor motion do not survive; the organizer can add Slides animations and memes on top.
+What the organizer gets: one slide per deck slide, each a 1920×1080 picture of its final frame. With `--steps`, one slide per reveal step instead, so clicking through Slides reveals the deck the way the talk does. Counters and decor motion do not survive either way; the organizer can add Slides animations and memes on top.
 
 Requires the `google-workspace-unlimited` MCP server, authorized for the author's Google account.
 
@@ -14,7 +14,7 @@ Requires the `google-workspace-unlimited` MCP server, authorized for the author'
 
 ## Arguments
 
-Parse `$ARGUMENTS`: `deck` (a slug, a path, or empty for the current folder), `--title name` (default: the deck's `<title>`).
+Parse `$ARGUMENTS`: `deck` (a slug, a path, or empty for the current folder), `--title name` (default: the deck's `<title>`). `--steps` — every reveal step as its own slide.
 
 ## 1. Account
 
@@ -29,10 +29,10 @@ No `google_email` → ask once for the Google account and add `google_email: <ad
 ## 2. Frames
 
 ```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/frames.sh <deck> "$(mktemp -d)/frames"
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/frames.sh <deck> "$(mktemp -d)/frames" [--steps]
 ```
 
-It prints `frames=<dir>` and `count=N`; the files are `NN-<key>.png` in slide order. Look at two or three of them before uploading: a broken frame in Slides is harder to notice than here.
+It prints `frames=<dir>` and `count=N`; the files are `NN-<key>.png` in slide order, or `NNN-<key>-<step>.png` with `--steps`. Look at two or three of them before uploading: a broken frame in Slides is harder to notice than here.
 
 ## 3. Upload
 

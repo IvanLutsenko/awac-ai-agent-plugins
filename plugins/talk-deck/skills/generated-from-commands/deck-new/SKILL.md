@@ -54,6 +54,8 @@ The target is `<decks_dir>/<slug>`. If it exists and is not empty, stop and say 
 python3 "<craft>/scripts/scaffold.py" "<decks_dir>/<slug>" --surface slides --title "<title>" --author "<author>" --lang <lang>
 ```
 
+Versions. If the deck folder is not inside another git repository (`git -C <deck> rev-parse` fails), run `git init` there and create an empty `.talk-deck` marker in the deck root, then commit the scaffold as `round 0: scaffold` in a separate command, never in one command with `git init` or a file edit. The marker tells the author's review gate that this is a local deck history, not code; a deck repo with a remote is gated as usual. A deck inside the site repo already has git: do nothing. Before every round of edits, commit `round N: <what changes>`; roll back with git, never by copying the folder (`d-1111-v2-before` and the like are what this replaces). A commit hook may refuse an agent commit (for example a review gate); then tell the author, and the round goes on uncommitted rather than around the hook.
+
 ## 3. Build with Craft
 
 Invoke the `craft` skill and follow it for the slides branch. Hand it these facts so it does not ask again: the topic, the date, the deck folder, the language, the author, the contact. Then, inside the Craft workflow:
