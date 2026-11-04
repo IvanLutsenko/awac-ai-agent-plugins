@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.16.0
+**Version:** 1.16.1
 
 ---
 
@@ -293,6 +293,11 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.16.1
+
+- `/review` no longer says it continues "with the 4 agents" when CodeRabbit is skipped, missing
+  its login, or aborts: five agents run since 1.14.0.
 
 ### 1.16.0
 

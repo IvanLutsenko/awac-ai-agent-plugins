@@ -136,14 +136,14 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.16.0
+**Status:** ✅ Production Ready | **Version:** 1.16.1
 
-**What's New in 1.16.0:**
-- `voice` config key: `+threads` rewords posted threads by a file describing how you write review comments — claim first, evidence kept. Off by default.
+**What's New in 1.16.1:**
+- `/review` no longer says it continues "with the 4 agents" when CodeRabbit is skipped or aborts: five agents run since 1.14.0.
 
 **Features:**
 - 5 agents always run: code-reviewer, git-historian, silent-failure-hunter, test-analyzer, security-reviewer
-- CodeRabbit CLI integration (auto-install; `coderabbit: off` keeps the review local)
+- CodeRabbit CLI integration (installed on consent; `coderabbit: off` keeps the review local)
 - Supports GitHub PR, GitLab MR (inline threads), branch diff, and uncommitted changes
 - `/rereview` follow-up: per-thread fixed/not-fixed verdicts, resolve + approve
 - Findings filtered by scope map, evidence rule and falsifiability gate (`filter-findings.py`)
