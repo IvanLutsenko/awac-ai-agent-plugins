@@ -2,6 +2,27 @@
 
 Custom AI agent plugins by Ivan Lutsenko
 
+## Contents
+
+- [Installation](#installation)
+  - [Claude Code](#claude-code)
+  - [Codex CLI](#codex-cli)
+- [Available Plugins](#available-plugins)
+  - [Crashlytics](#crashlytics) — Android/iOS crash analysis with git blame forensics
+  - [Obsidian Tracker](#obsidian-tracker) — projects, kanban, bugs, ADR and sessions in Obsidian
+  - [Combined Review](#combined-review) — multi-agent code review + CodeRabbit, PR/MR threads
+  - [Auto Theme](#auto-theme) — Claude Code and Codex theme follows macOS light/dark
+  - [Locale Notifications](#locale-notifications) — macOS notifications in your system language
+  - [Drawbridge](#drawbridge) — target-tuned prompts for image-gen web UIs
+  - [Plugin Cross Port](#plugin-cross-port) — Claude Code ↔ Codex plugin conversion
+  - [Clip Maker](#clip-maker) — vertical clips from talk recordings
+  - [Nyan Progress](#nyan-progress) — Nyan Cat over the turn spinner (mod)
+  - [Push Gate](#push-gate) — confirm every `git push` the model runs (mod)
+  - [Talk Deck](#talk-deck) — themed talk decks on top of Craft
+- [Setup](#setup)
+- [Author](#author)
+- [License](#license)
+
 ## Installation
 
 ### Claude Code
@@ -43,8 +64,9 @@ The marketplace name is `awac-ai-agent-plugins` (the `name` field of
 `skills/generated-from-commands/`, and agents become skills under
 `skills/generated-from-agents/`.
 
-> Codex-only caveat: `locale-notifications` is Claude Code-only (excluded from
-> the Codex target).
+> Codex caveat: `locale-notifications`, `nyan-progress` and `push-gate` are
+> Claude Code-only (excluded from the Codex target). The last two are mods built
+> on Claude Code function hooks.
 
 ## Available Plugins
 
@@ -66,19 +88,12 @@ Multi-platform crash analysis for Android & iOS with git blame forensics, code-l
 /crash-report-android               # Explicit Android
 /crash-report-ios                    # Explicit iOS
 /crash-config                       # Configure plugin settings
-/crashlytics:install-permissions    # Add read-only allowlist to settings.json
 ```
 
 **Status:** ✅ Production Ready | **Version:** 4.4.7
 
 **What's New in 4.4.7:**
 - Quality gate: the forensics agent writes its full report to a file, and the validator checks that file — the orchestrator no longer retypes the report. No manual pass on a failed validation. The validator now reads `**Assignee**: value` lines and `File.kt:77` stack lines, which failed full live reports.
-
-**What's New in 4.4.6:**
-- Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/crashlytics/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.
-
-**What's New in 4.4.5:**
-- Quality gate tightened: `git fetch` alone no longer counts as evidence that the agent inspected the code. Forensics agents run it as a mandatory pre-flight on every run, so it proved nothing — `chk_executed_commands` now requires `git blame`, `git log` or `git ls-tree`.
 
 **Features:**
 - 4-step multi-agent pipeline: classifier → fetcher → forensics → validate-report.py
@@ -117,24 +132,6 @@ Project tracking, task management with kanban boards, bug logging, decision reco
 **What's New in 4.5.4:**
 - Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/obsidian-tracker/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.
 
-**What's New in 4.5.3:**
-- Fix: `listProjects` returned an empty list when a project's dashboard could not be read. Any read error was treated as "not a project", so an unreadable vault (permissions, or iCloud-evicted `dataless` files) was indistinguishable from an empty one. Only `ENOENT` is silent now; everything else surfaces as a project with `status: "Unreadable"` and the error code.
-
-**What's New in 4.5.2:**
-- Fix: the `PreCompact` hook never ran — it was a `prompt` hook, and those are rejected outside the REPL, so tracking state silently failed to survive `/compact`. Now a command hook that feeds the state to the compaction summarizer.
-- Docs: hook table corrected against `plugin.json` (`Stop` and `SessionStart:clear` are command hooks; `PermissionRequest` was undocumented).
-
-**What's New in 4.5.1:**
-- Fix: MCP launcher installs deps when `dist/` ships prebuilt but `node_modules` is missing (was crashing the MCP server with -32000 / `ERR_MODULE_NOT_FOUND`).
-
-**What's New in 4.5.0:**
-- MCP server split into testable handler modules (83 vitest + 86 bats tests); auto-builds on first run — no manual `npm install && npm run build`.
-- Task ids zero-padded (`TASK-007`, legacy unpadded still resolve); race-safe id allocation; session entry format shared between TS and bash via contract tests.
-
-**What's New in 4.4.0:**
-- Obsidian-safe filenames: titles are sanitized before becoming note names / wiki-links (mobile Obsidian and Sync no longer complain); `scripts/normalize-vault.mjs` renames existing offenders and fixes links.
-- Board writes preserve `%% kanban:settings %%`, frontmatter, and custom sections; recursive `search`; several hook and parser fixes.
-
 **Features:**
 - Auto-tracking via hooks (PreCompact, SessionStart, PostToolUse)
 - Project management with Obsidian as single source of truth
@@ -164,8 +161,8 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 /review !22 +threads                       # GitLab MR + inline resolvable threads
 /review feature/X feature/Y               # Branch diff
 /review --base main                        # Current branch vs main
-/review feature/X feature/Y +security     # Add the security agent
-/review feature/X feature/Y +comments all # All agents
+/review feature/X feature/Y +comments     # Add an optional agent (+comments, +types, +simplify)
+/review feature/X feature/Y all           # All agents, optional ones included
 /review-config                             # Language, model, CodeRabbit
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
@@ -175,71 +172,12 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 **What's New in 1.16.0:**
 - `voice` config key: `+threads` rewords posted threads by a file describing how you write review comments — claim first, evidence kept. Off by default.
 
-**What's New in 1.15.0:**
-- `AGENTS.md` is read as repo policy alongside `CLAUDE.md` — in Codex the review was checking compliance against a file that wasn't there, silently. A review with no policy file now says so.
-
-**What's New in 1.14.1:**
-- README documents what CodeRabbit is and that it uploads the diff to a third-party service; the agent table lists all five agents.
-
-**What's New in 1.14.0:**
-- All five agents always run — the `security` key and the `+security` flag are gone. Five agents cost about five times the tokens of a single pass, so the lever for cost is `model`, not a shorter roster (on Codex the model is set for the whole session instead).
-
-**What's New in 1.12.2:**
-- `/review` states what to do when the runtime has no per-agent model, no interactive prompt, or fewer concurrency slots than agents — instead of assuming Claude Code.
-
-**What's New in 1.12.1:**
-- Codex port fixed: helper scripts ship inside the generated skill, so `/review` run from Codex in another repo can actually find them (it could not — verified live).
-
-**What's New in 1.12.0:**
-- `filter-findings.py`: the scope check runs as a script you can re-run, printing KEEP / MOVED / DROP-with-reason / unparsed per finding instead of the model reporting that it filtered.
-
-**What's New in 1.11.0:**
-- No more confidence threshold: findings were filtered on a number each agent gave its own guess, which nothing in the report could verify. The scope map, the evidence rule and the falsifiability gate do the filtering; the bar is now one sentence in each agent — report only what you can defend from lines you read.
-- Deduplication keeps the finding with the more specific evidence instead of the higher number.
-
-**What's New in 1.10.2:**
-- Findings must cite the line in the file, not a line of the diff — agents were quoting diff positions, which point past the end of short files.
-- A finding whose file is in the position map but whose line is wrong is re-anchored by grepping the quoted code, instead of being dropped as out of scope.
-
-**What's New in 1.10.1:**
-- The scope filter's position map is built by `python3` instead of `awk` — argument substitution in the command text turned `$0` into an argument value, so the map lost every file name and the review silently dropped all findings.
-- `[SEEN]` removed: an existing thread on a line blocks a second one whoever wrote it, so the author check and the ticket regex went with it.
-- `security-reviewer` now follows the report language setting like the other four agents.
-- The security agent is agent 5 and CodeRabbit agent 6 everywhere, as the config docs already said.
-
-**What's New in 1.10.0:**
-- GitHub parity: `+threads` posts inline resolvable review comments on a PR, and `/rereview` verifies, resolves (GraphQL `resolveReviewThread`) and approves a PR — previously GitLab-only.
-- GitHub PRs are now fetched by `refs/pull/<n>/head`, so a PR from a fork is diffed and read at the right revision instead of failing on a branch that isn't in `origin`.
-- Fixed three defects from 1.9.0: the scope filter no longer discards every finding when the position map can't be built, a worktree that can't be checked out stops the review instead of quietly reviewing cwd, and the documented MR fetch command now names a remote git actually accepts.
-
-**What's New in 1.9.0:**
-- GitLab MR review now fetches by ref (works for forks/cross-project MRs), reads the reviewed revision in a worktree instead of cwd, and dedupes/pins posted threads to that revision.
-- Dropped the Android-only assumptions (test convention, `gh` call, Kotlin-only examples); race findings now need a causal gate, not just a timing gap.
-
-**What's New in 1.8.0:**
-- `security-reviewer` agent — secrets, injection, authn/authz, insecure storage and transport, unsafe crypto; stack-agnostic, opt-in via `+security`.
-- `/review-config` — interactive setup for report language, subagent model, CodeRabbit and the security agent.
-- Config moved out of the plugin: `~/.claude/combined-review.md` (user-level) plus the existing project file, so settings survive updates.
-
-**What's New in 1.7.1:**
-- Docs: the GitLab project-path example no longer names a specific private project.
-
-**What's New in 1.7.0:**
-- Falsifiability gate on every Critical (safe / intended / already-mitigated / weak evidence) — findings must survive an attempt to refute them, not just an attempt to confirm them.
-- Out-of-diff claims must quote the caller or contract they rest on.
-
-**What's New in 1.6.0:**
-- `/rereview +agents` — one agent per file (auto above ~8 files); agents see the asks and the code, not the author's replies, so a plausible-looking diff can't pass as a fix by association.
-
-**What's New in 1.5.0:**
-- `/rereview` — verifies your unresolved GitLab MR threads against the code at the MR head, then (opt-in) resolves them and approves. Author replies and GitLab's "changed this line in version N" auto-note don't count as a fix.
-
 **Features:**
-- 4 default agents: code-reviewer, git-historian, silent-failure-hunter, test-analyzer
-- CodeRabbit CLI integration (auto-install)
+- 5 agents always run: code-reviewer, git-historian, silent-failure-hunter, test-analyzer, security-reviewer
+- CodeRabbit CLI integration (auto-install; `coderabbit: off` keeps the review local)
 - Supports GitHub PR, GitLab MR (inline threads), branch diff, and uncommitted changes
 - `/rereview` follow-up: per-thread fixed/not-fixed verdicts, resolve + approve
-- Confidence scoring (0-100) with false positive filtering
+- Findings filtered by scope map, evidence rule and falsifiability gate (`filter-findings.py`)
 - Optional agents: +comments, +types, +simplify
 
 ---
@@ -261,15 +199,6 @@ Syncs Claude Code **and Codex** themes with macOS system appearance (light/dark)
 - `sync-theme` skill now resolves the script path correctly in both Claude Code and Codex
 - malformed config files and non-writable targets now emit `WARN:` instead of being skipped silently
 - unknown `custom:*` themes without a light/dark pair are preserved instead of being overwritten
-
-**What's New in 1.1.1:**
-- `sync-theme` skill: explicit execution rules — macOS-only guard, stderr capture, write-protection and malformed-config errors, fixed 2-line response format
-
-**What's New in 1.1.0:**
-- Also themes Codex (`~/.codex/config.toml` `[tui] theme`), not just Claude Code
-- Bundles + installs custom themes (`gruvbox-light`, `sunset-drive`) on first run
-- Claude Code theme now read from `~/.claude/settings.json` (current CLI); `~/.claude.json` kept in sync
-- Light↔dark pairing: `light → gruvbox-light`, `dark → sunset-drive`
 
 **How it works:**
 - Hooks into `UserPromptSubmit` — checks macOS appearance on every message
@@ -297,11 +226,6 @@ macOS notifications for Claude Code in your system language.
 - Quoted custom messages no longer break the macOS notification call
 - Project-local config now resolves from the hook `cwd`
 - Notification hook manifest now includes `timeout: 10`
-
-**What's New in 2.0.0:**
-- Auto-translation via Google Translate API — any language supported
-- Local caching — one API call, then works offline
-- Custom message support via config file
 
 **How it works:**
 - Hooks into Claude Code `Notification` events
@@ -377,34 +301,6 @@ python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/exa
 **What's New in 0.12.2:**
 - `skills_authored` now covers agents too. A plugin whose Codex skills are hand-written got its agents generated as Codex skills anyway (only command skills were skipped), so they sat beside the authored ones and duplicated them. Both are skipped now, and the generated folders are removed.
 
-**What's New in 0.12.1:**
-- Its own Codex skill (`install-hook`) is rebuilt by the rules of 0.11–0.12: helper scripts bundled into the skill, plus the `## Codex differences` note. The converter itself is unchanged.
-
-**What's New in 0.12.0:**
-- Converted command skills end with a `## Codex differences` section listing the CC assumptions Codex cannot honour — per-agent model, true parallelism, interactive prompts.
-
-**What's New in 0.11.0:**
-- Generated Codex skills carry their helper scripts: `${CLAUDE_PLUGIN_ROOT}/scripts/...` became a path that only resolved inside this marketplace, so a converted skill run from Codex in another repo could not find its own helpers.
-
-**What's New in 0.10.1:**
-- Fixed hand-authored `plugin-cross-port` skill frontmatter names to use kebab-case identifiers matching their directories
-
-**What's New in 0.10.0:**
-- **Breaking:** state files renamed to match their JSON content — `.plugin-cross-port.yaml` → `.plugin-cross-port.json`, `.plugin-cross-port.marketplace.yaml` → `.plugin-cross-port.marketplace.json`, `adaptation-state.yaml` → `adaptation-state.json`. Rename existing state files when upgrading.
-
-**What's New in 0.9.0:**
-- Agents auto-convert to standalone Codex skills (`agents/*.md` → `skills/generated-from-agents/<name>/SKILL.md`); CC `<example>` trigger blocks stripped from descriptions
-- Fixed decision-file round-trip — `.plugin-cross-port.json` is written as JSON so re-runs no longer crash
-
-**What's New in 0.8.0:**
-- `skills_authored` marketplace flag — plugins whose Codex skills are hand-authored skip mechanical `commands/` → `skills/` generation (manifest + marketplace still synced)
-
-**What's New in 0.7.0:**
-- `plugin adapt` writes semantic adaptation plans and source snapshots
-- `plugin adapt --apply` applies approved plans atomically
-- Sync replays reproducible adaptation rules
-- Stale critical adaptations mark Codex targets as unavailable
-
 **Features:**
 - CC → Codex: manifest conversion, `commands/` → `skills/generated-from-commands/`
 - Codex → CC: manifest conversion, `skills/` → `commands/generated-from-codex-*/`
@@ -447,10 +343,6 @@ Automated vertical clip creator for talks and presentations. Whisper + Claude + 
 
 **What's New in 1.3.2:**
 - Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/clip-maker/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.
-
-**What's New in 1.3.1:**
-- Fixed dual-target agent naming for Claude Code pipeline calls
-- Hardened script argument quoting, path handling, and ffmpeg/Whisper error surfacing
 
 ---
 

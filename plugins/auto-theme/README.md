@@ -69,6 +69,15 @@ skill runs the same sync on demand.
 - `sync-theme.sh` now emits `WARN:` messages for malformed JSON and non-writable config files instead of failing silently
 - unknown `custom:*` themes without a `-light`/`-dark` pair are preserved and skipped with a warning
 
+### 1.1.1
+- `sync-theme` skill: explicit execution rules — macOS-only guard, stderr capture, write-protection and malformed-config errors, fixed 2-line response format
+
+### 1.1.0
+- Also themes Codex (`~/.codex/config.toml` `[tui] theme`), not just Claude Code
+- Bundles + installs custom themes (`gruvbox-light`, `sunset-drive`) on first run
+- Claude Code theme now read from `~/.claude/settings.json` (current CLI); `~/.claude.json` kept in sync
+- Light↔dark pairing: `light → gruvbox-light`, `dark → sunset-drive`
+
 ## Notes
 
 - macOS only (relies on `AppleInterfaceStyle`).

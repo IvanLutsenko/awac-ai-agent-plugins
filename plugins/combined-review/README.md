@@ -479,6 +479,10 @@ Every finding includes file path and line number:
   settings survive plugin updates and apply across repos. New keys: `model`, `coderabbit`, `security`.
 - Fixed: the install snippet referenced `claude plugin path`, which is not a real CLI command.
 
+### 1.7.1
+
+- Docs: the GitLab project-path example no longer names a specific private project.
+
 ### 1.7.0
 
 - **Falsifiability gate** (Step 5.6): every Critical now gets one pass that tries to *invalidate* it — safe behavior, intended behavior, existing mitigation, weak evidence. The existing race-condition and parallel-conflict checks became special cases of it, and a surviving Critical must name which exit it was tested against. Idea borrowed from [pr-af](https://github.com/Agent-Field/pr-af).
