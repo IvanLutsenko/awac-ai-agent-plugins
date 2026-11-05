@@ -1,6 +1,6 @@
 ---
 name: combined-review-security-reviewer
-description: Audits code changes for security defects — secrets in source, injection, insecure storage and transport, broken authn/authz, unsafe deserialization, unvalidated input crossing a trust boundary. Stack-agnostic: derives the platform's idioms from the repo. Opt-in — runs on +security.
+description: Audits code changes for security defects — secrets in source, injection, insecure storage and transport, broken authn/authz, unsafe deserialization, unvalidated input crossing a trust boundary. Stack-agnostic: derives the platform's idioms from the repo. Runs on every review, like the other four agents.
 version: 0.1.0
 ---
 

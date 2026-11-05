@@ -136,10 +136,10 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.16.1
+**Status:** ✅ Production Ready | **Version:** 1.16.2
 
-**What's New in 1.16.1:**
-- `/review` no longer says it continues "with the 4 agents" when CodeRabbit is skipped or aborts: five agents run since 1.14.0.
+**What's New in 1.16.2:**
+- `security-reviewer` no longer describes itself as opt-in behind `+security`: it runs on every review since 1.14.0.
 
 **Features:**
 - 5 agents always run: code-reviewer, git-historian, silent-failure-hunter, test-analyzer, security-reviewer

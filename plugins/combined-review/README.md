@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.16.1
+**Version:** 1.16.2
 
 ---
 
@@ -65,7 +65,6 @@ five agents.
 /review feature/X feature/Y +comments     # Add comment analysis
 /review feature/X feature/Y +types        # Add type design analysis
 /review feature/X feature/Y +simplify     # Add code simplification
-/review feature/X feature/Y +security     # Add the security agent
 /review feature/X feature/Y all           # Run all agents
 ```
 
@@ -293,6 +292,11 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.16.2
+
+- `security-reviewer` no longer calls itself opt-in behind `+security`: it runs on every review
+  since 1.14.0, and the flag is gone. The Quick Start line with `+security` is removed too.
 
 ### 1.16.1
 

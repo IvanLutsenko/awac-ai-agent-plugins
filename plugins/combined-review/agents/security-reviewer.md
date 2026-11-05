@@ -1,6 +1,6 @@
 ---
 name: security-reviewer
-description: "Audits code changes for security defects — secrets in source, injection, insecure storage and transport, broken authn/authz, unsafe deserialization, unvalidated input crossing a trust boundary. Stack-agnostic: derives the platform's idioms from the repo. Opt-in — runs on +security.\n\nExamples:\n<example>\nContext: Diff touches auth or payment code\nuser: \"Review this MR, it changes the token refresh\"\nassistant: \"I'll include the security-reviewer agent for the auth path.\"\n<commentary>\nUse security-reviewer when the diff crosses a trust boundary.\n</commentary>\n</example>"
+description: "Audits code changes for security defects — secrets in source, injection, insecure storage and transport, broken authn/authz, unsafe deserialization, unvalidated input crossing a trust boundary. Stack-agnostic: derives the platform's idioms from the repo. Runs on every review, like the other four agents.\n\nExamples:\n<example>\nContext: Diff touches auth or payment code\nuser: \"Review this MR, it changes the token refresh\"\nassistant: \"I'll include the security-reviewer agent for the auth path.\"\n<commentary>\nUse security-reviewer when the diff crosses a trust boundary.\n</commentary>\n</example>"
 tools: Read, Grep, Glob, Bash(git log:*), Bash(git blame:*), Bash(git diff:*), Bash(git show:*), Bash(grep:*), Bash(rg:*), Bash(find:*)
 model: sonnet
 color: red
