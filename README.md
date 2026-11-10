@@ -384,7 +384,7 @@ Automated vertical clip creator for talks and presentations. Whisper + Claude + 
 
 Talk decks on top of the [Craft](https://github.com/IvanLutsenko/craft) skill: a fresh holiday theme per talk, the author's defaults, a themed Harold on the closing slide, a PDF for organizers and a card on the author's site.
 
-**What's New in 0.4.0:** `/deck-rehearse` puts a rehearsal timer into the deck's controls panel: time per slide against a plan and a voice recording; `/deck-rehearse analyze` transcribes it locally and reviews the delivery slide by slide.
+**What's New in 0.5.0:** `/deck-google-slides` in 2x with counters as GIFs and `--update` in place, so transitions and the organizer's copy survive; `/deck-publish --hidden` for a deck reachable by link only.
 
 📚 **[Full Documentation](plugins/talk-deck/README.md)**
 
@@ -400,19 +400,19 @@ Talk decks on top of the [Craft](https://github.com/IvanLutsenko/craft) skill: a
 /deck-harold place                              # downloaded picture onto the closing slide
 /deck-pdf --final                               # PDF for organizers
 /deck-pdf --into docs/deck                      # PDF into a repo, with its GitLab/GitHub link
-/deck-google-slides [--steps]                   # final frames or every reveal step into Google Slides
+/deck-google-slides [--steps] [--update]        # 2x frames or every reveal step into Google Slides, update in place
 /deck-review                                    # roast by every agent, facts checked first
 /deck-rehearse 22                               # rehearsal timer, time per slide against the plan
-/deck-publish --event "Podlodka #17"            # card on the author's site, no push
+/deck-publish --event "Podlodka #17"            # card on the author's site, no push; --hidden for link-only
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.4.0
+**Status:** 🔨 Beta | **Version:** 0.5.0
 
 **Features:**
 - Needs the Craft skill; the plugin holds only commands and a hook
 - Settings via `~/.claude/talk-deck.local.md`: author, contact, language, site repo
 - PostToolUse hook runs the static Craft check after edits inside a deck (Claude Code only)
-- `/deck-google-slides` needs the `google-workspace-unlimited` MCP server; the PNGs are link-readable for the seconds of insertion, then deleted
+- `/deck-google-slides` needs the `google-workspace-unlimited` MCP server and `ffmpeg`; the files are link-readable for the seconds of insertion, then deleted; GIFs play only in a plain slideshow
 
 
 ---

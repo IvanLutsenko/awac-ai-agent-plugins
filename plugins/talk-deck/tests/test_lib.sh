@@ -126,4 +126,42 @@ check "report flags an overrun" "$(grep -c 'перебор' "$tmp/rh/run.md")" "
 check "report finds a pause" "$(grep -c 'Паузы: 0:10 (4 с)' "$tmp/rh/run.md")" "1"
 check "report finds silence before a slide change" "$(grep -c 'Паузы: 0:01 (7 с)' "$tmp/rh/run.md")" "1"
 
+# publish-release.sh: a deck outside the site lands in res/<slug>, hidden stays hidden on re-publish.
+printf -- '---\nsite_repo: ~/site\n---\n' > "$HOME/.claude/talk-deck.local.md"
+printf 'import sys\n' > "$craft/scripts/check_project.py"
+cat > "$craft/scripts/release.py" <<'PY'
+import sys, pathlib
+a = sys.argv
+out = pathlib.Path(a[a.index("--out") + 1]) / a[a.index("--name") + 1]
+out.mkdir(parents=True)
+(out / "index.html").write_text('<head>\n<meta name="viewport" content="width=device-width">\n</head>\n')
+(out / "README.txt").write_text("for the organizer")
+PY
+mkdir -p "$HOME/site/res/talk-x"; : > "$HOME/site/res/talk-x/stale.css"; : > "$HOME/site/res/talk-x/cover.jpg"
+CRAFT_HOME="$craft" CHROMIUM=/bin/true bash "$root/scripts/publish-release.sh" "$tmp/rh" --slug talk-x --hidden >/dev/null
+check "publish-release adds noindex when hidden" "$(grep -c 'noindex' "$HOME/site/res/talk-x/index.html")" "1"
+check "publish-release drops stale files, keeps the cover, skips the README" "$(ls "$HOME/site/res/talk-x" | tr '\n' ' ')" "cover.jpg index.html "
+out="$(CRAFT_HOME="$craft" CHROMIUM=/bin/true bash "$root/scripts/publish-release.sh" "$tmp/rh" --slug talk-x 2>&1)"
+check "a hidden deck stays hidden on re-publish" "$(grep -c 'noindex' "$HOME/site/res/talk-x/index.html") $(grep '^hidden=' <<<"$out")" "1 hidden=1"
+cat > "$craft/scripts/release.py" <<'PY'
+import sys, pathlib
+a = sys.argv
+out = pathlib.Path(a[a.index("--out") + 1]) / a[a.index("--name") + 1]
+(out / "media").mkdir(parents=True)
+(out / "index.html").write_text('<head>\n<meta name="robots" content="index, follow">\n</head>\n')
+(out / "media" / "cover.jpg").write_text("a picture of the deck")
+PY
+CRAFT_HOME="$craft" CHROMIUM=/bin/true bash "$root/scripts/publish-release.sh" "$tmp/rh" --slug talk-y --hidden >/dev/null
+check "hidden replaces an indexing robots meta" "$(grep -c 'content="noindex, nofollow"' "$HOME/site/res/talk-y/index.html") $(grep -c 'index, follow' "$HOME/site/res/talk-y/index.html")" "1 0"
+check "a nested cover.jpg is published" "$([[ -f "$HOME/site/res/talk-y/media/cover.jpg" ]] && echo yes)" "yes"
+CRAFT_HOME="$craft" CHROMIUM=/bin/true bash "$root/scripts/publish-release.sh" "$tmp/rh" --slug ../escape >/dev/null 2>&1
+check "a slug with a path is refused" "$?" "1"
+
+# slides-frames.sh: no flags must survive bash 3.2 under set -u; flags pass through to node.
+printf '#!/bin/bash\necho "node $*"\n' > "$tmp/bin/node"; chmod +x "$tmp/bin/node"
+out="$(PATH="$tmp/bin:$PATH" CRAFT_HOME="$craft" CHROMIUM=/bin/true /bin/bash "$root/scripts/slides-frames.sh" "$tmp/rh" "$tmp/sf" 2>&1)"
+check "slides-frames.sh runs with no flags" "$(grep -c "slides-frames.mjs $tmp/rh $tmp/sf\$" <<<"$out")" "1"
+out="$(PATH="$tmp/bin:$PATH" CRAFT_HOME="$craft" CHROMIUM=/bin/true /bin/bash "$root/scripts/slides-frames.sh" "$tmp/rh" "$tmp/sf" --only a,b 2>&1)"
+check "slides-frames.sh passes --only through" "$(grep -c -- "--only a,b\$" <<<"$out")" "1"
+
 exit $fail

@@ -2,9 +2,18 @@
 
 Talk decks on top of the [Craft](https://github.com/IvanLutsenko/craft) skill: a fresh holiday theme per talk, the author's defaults, a themed Harold on the closing slide, a PDF for organizers or a repo, a Google Slides copy, a roast by every agent and a card on the author's site. The plugin holds only commands and a hook; the design system, the samples and the checks stay in Craft.
 
-Version: 0.4.0
+Version: 0.5.0
 
-## What's New in 0.4.0
+## What's New in 0.5.0
+
+Lessons from shipping a deck to Kolesa AI Meetup:
+- `/deck-google-slides` renders frames at 2x through Chromium (1x looked soft on the projector), puts counting steps as GIF overlays recorded on the page's own clock, applies static decor from the deck's `gslides.css` without touching the deck, and gives every slide the deck's background so transitions do not flash white.
+- `/deck-google-slides --update [--only key,key]` replaces pictures in the existing presentation from `<deck>/gslides.json`: slides, transitions and the organizer's copy stay as they are.
+- The report says what Slides cannot do: transitions are set by hand, and GIFs play only in a plain slideshow, since presenter view plays them in its preview (a Drive video does not help either).
+- `/deck-publish --hidden [--slug name]` releases a deck kept outside the site repo into `res/<slug>` with `noindex` and no card; a hidden deck stays hidden on re-publish.
+- `/deck-rehearse`: press `Home` before `R` for a full run.
+
+## 0.4.0
 
 - `/deck-rehearse`: a stopwatch button in the deck's controls panel (`R`). A run times every slide against a plan from the talk length, records the voice, and ends with a table «слайд / факт / план / Δ», a JSON and the recording in Downloads. `/deck-rehearse analyze` transcribes the run locally with whisper and reviews the delivery slide by slide: overruns, what was and was not said, pace, filler words. `/deck-new` attaches it to a new deck.
 
@@ -29,7 +38,7 @@ Version: 0.4.0
 - The Craft skill, found in `craft_home` from the settings, `$CRAFT_HOME`, `~/.claude/skills/craft`, `~/.agents/skills/craft`, `~/.codex/skills/craft` or `~/projects/craft`.
 - Python 3, Node.js 22+ and Chromium or Google Chrome for the Craft checks; `qrencode` and `zbar` for QR codes.
 - Optional: the `drawbridge` plugin for the Harold brief, `cwebp` to store Harold as WebP.
-- `/deck-google-slides` and `/deck-review`: `pdftoppm` (`brew install poppler`) for the frames. `/deck-google-slides` also needs the `google-workspace-unlimited` MCP server; `/deck-review` uses the `auto-handoff` skill when it is installed.
+- `/deck-review`: `pdftoppm` (`brew install poppler`) for the frames. `/deck-google-slides`: `ffmpeg` for the GIFs and the `google-workspace-unlimited` MCP server; `/deck-review` uses the `auto-handoff` skill when it is installed.
 - macOS: the Harold step reads `~/Downloads` and uses `sips`.
 
 ## Installation
@@ -73,15 +82,17 @@ google_email:                # /deck-google-slides account, asked on first use
 /deck-pdf --into docs/deck                      # final frames into a repo folder, plus the blob link it gets once pushed
 /deck-google-slides                             # a new Google Slides file, one picture per slide
 /deck-google-slides --steps                     # one picture per reveal step, click through like the deck
+/deck-google-slides --update --only about       # replace one slide's pictures in place, transitions kept
 /deck-review                                    # roast by every agent: facts, story, slides, visuals
 /deck-rehearse 22                               # rehearsal timer in the controls panel, 22-minute plan
 /deck-rehearse analyze                          # newest run: transcript per slide, overruns, pace, fillers
 /deck-publish --event "Podlodka #17"            # full check, cover, a card on the site in every language
+/deck-publish --hidden --slug my-talk           # a deck kept elsewhere, by link only: noindex, no card
 ```
 
 A deck outside a repo gets its own git: commit `round N: <what>` before each round of edits and roll back with git instead of copying the folder. The deck root holds an empty `.talk-deck` marker: a review gate can skip repos with the marker and no remote, since this is a deck's history, not code. A commit hook that still refuses an agent commit is the author's call, not something to work around. A new deck closes with an `end` slide; `/deck-harold place` swaps it for the `harold` layout once the picture exists. `/deck-publish` never commits or pushes the site.
 
-`/deck-google-slides` is pictures only: no motion; reveal steps only with `--steps`. Edits go into the deck and the command runs again. The Slides API inserts a picture only from a public URL, so the PNGs are link-readable for the seconds between upload and insertion and then deleted for good; for a corporate deck that is the author's call.
+`/deck-google-slides` is pictures: reveal steps with `--steps`, counters as GIFs that play only in a plain slideshow, never in presenter view. Edits go into the deck, then `--update`. Static decor for Slides goes into the deck's `gslides.css`; `gslides.json` keeps the presentation id and object ids for updates. The Slides API inserts a picture only from a public URL, so the files are link-readable for the seconds between upload and insertion and then deleted for good; for a corporate deck that is the author's call.
 
 `/deck-rehearse` adds `rehearsal.js` to the deck. `R` or the stopwatch button starts and stops a run, `P` shows the last table. The plan is `data-talk-minutes` on `.deck` shared by reveal steps; `data-plan="<seconds>"` on a slide fixes its share. The script is inert until pressed, so it can stay in the published deck. The recording stays local: `analyze` needs `mlx-whisper` on Apple Silicon or `openai-whisper` (`uv tool install …`); the first run downloads the model.
 

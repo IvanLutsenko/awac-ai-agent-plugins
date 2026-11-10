@@ -121,7 +121,7 @@
     },
     {
       "name": "talk-deck",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "Talk decks on top of the Craft skill: a fresh holiday theme per talk, the author's defaults, a themed Harold at the end, a PDF for organizers or a repo, a Google Slides copy, a roast by every agent and a card on the author's site.",
       "author": {
         "name": "Ivan Lutsenko",

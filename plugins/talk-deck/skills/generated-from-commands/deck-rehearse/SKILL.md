@@ -24,7 +24,8 @@ The plan: a slide with `data-plan="<seconds>"` gets exactly that; the rest of th
 
 Report `minutes=` and how to use it:
 - `R` or the stopwatch button in the controls panel (`H`) starts a run; the clock in the top right shows elapsed time against where the talk should be by the end of the current slide, red when behind;
-- the browser asks for the microphone on the first run; with it the run is recorded (a red dot before the clock), without it only timed;
+- a run starts on the current slide: press `Home` first for a full run-through;
+- the browser asks for the microphone on the first run and the clock starts once it is answered; allowed, the run is recorded (a red dot before the clock), denied, only timed;
 - `R` again stops it: a table «слайд / факт / план / Δ» (over 115% of the plan in red), and in Downloads `rehearsal-<date>.json` plus `rehearsal-<date>.webm` with the voice; Chrome may ask once to allow several downloads;
 - `P` shows the last table again, `Esc` or a click closes it.
 
