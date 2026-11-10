@@ -384,7 +384,7 @@ Automated vertical clip creator for talks and presentations. Whisper + Claude + 
 
 Talk decks on top of the [Craft](https://github.com/IvanLutsenko/craft) skill: a fresh holiday theme per talk, the author's defaults, a themed Harold on the closing slide, a PDF for organizers and a card on the author's site.
 
-**What's New in 0.3.0:** `/deck-google-slides --steps` puts every reveal step on its own slide; `/deck-new` keeps a deck outside a repo under its own git, one commit per round of edits; `/deck-harold place` looks the picture over for generator defects first.
+**What's New in 0.4.0:** `/deck-rehearse` puts a rehearsal timer into the deck's controls panel: time per slide against a plan and a voice recording; `/deck-rehearse analyze` transcribes it locally and reviews the delivery slide by slide.
 
 📚 **[Full Documentation](plugins/talk-deck/README.md)**
 
@@ -402,10 +402,11 @@ Talk decks on top of the [Craft](https://github.com/IvanLutsenko/craft) skill: a
 /deck-pdf --into docs/deck                      # PDF into a repo, with its GitLab/GitHub link
 /deck-google-slides [--steps]                   # final frames or every reveal step into Google Slides
 /deck-review                                    # roast by every agent, facts checked first
+/deck-rehearse 22                               # rehearsal timer, time per slide against the plan
 /deck-publish --event "Podlodka #17"            # card on the author's site, no push
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.3.0
+**Status:** 🔨 Beta | **Version:** 0.4.0
 
 **Features:**
 - Needs the Craft skill; the plugin holds only commands and a hook

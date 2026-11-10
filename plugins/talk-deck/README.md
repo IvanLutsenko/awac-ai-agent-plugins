@@ -2,9 +2,13 @@
 
 Talk decks on top of the [Craft](https://github.com/IvanLutsenko/craft) skill: a fresh holiday theme per talk, the author's defaults, a themed Harold on the closing slide, a PDF for organizers or a repo, a Google Slides copy, a roast by every agent and a card on the author's site. The plugin holds only commands and a hook; the design system, the samples and the checks stay in Craft.
 
-Version: 0.3.0
+Version: 0.4.0
 
-## What's New in 0.3.0
+## What's New in 0.4.0
+
+- `/deck-rehearse`: a stopwatch button in the deck's controls panel (`R`). A run times every slide against a plan from the talk length, records the voice, and ends with a table «слайд / факт / план / Δ», a JSON and the recording in Downloads. `/deck-rehearse analyze` transcribes the run locally with whisper and reviews the delivery slide by slide: overruns, what was and was not said, pace, filler words. `/deck-new` attaches it to a new deck.
+
+## 0.3.0
 
 - `/deck-google-slides --steps`: every reveal step as its own slide, so clicking through Slides reveals the deck the way the talk does.
 - `/deck-new` puts a deck outside any repo under its own git and commits the scaffold; each round of edits is a commit `round N: <what>`, not a copy of the folder.
@@ -70,12 +74,16 @@ google_email:                # /deck-google-slides account, asked on first use
 /deck-google-slides                             # a new Google Slides file, one picture per slide
 /deck-google-slides --steps                     # one picture per reveal step, click through like the deck
 /deck-review                                    # roast by every agent: facts, story, slides, visuals
+/deck-rehearse 22                               # rehearsal timer in the controls panel, 22-minute plan
+/deck-rehearse analyze                          # newest run: transcript per slide, overruns, pace, fillers
 /deck-publish --event "Podlodka #17"            # full check, cover, a card on the site in every language
 ```
 
 A deck outside a repo gets its own git: commit `round N: <what>` before each round of edits and roll back with git instead of copying the folder. The deck root holds an empty `.talk-deck` marker: a review gate can skip repos with the marker and no remote, since this is a deck's history, not code. A commit hook that still refuses an agent commit is the author's call, not something to work around. A new deck closes with an `end` slide; `/deck-harold place` swaps it for the `harold` layout once the picture exists. `/deck-publish` never commits or pushes the site.
 
 `/deck-google-slides` is pictures only: no motion; reveal steps only with `--steps`. Edits go into the deck and the command runs again. The Slides API inserts a picture only from a public URL, so the PNGs are link-readable for the seconds between upload and insertion and then deleted for good; for a corporate deck that is the author's call.
+
+`/deck-rehearse` adds `rehearsal.js` to the deck. `R` or the stopwatch button starts and stops a run, `P` shows the last table. The plan is `data-talk-minutes` on `.deck` shared by reveal steps; `data-plan="<seconds>"` on a slide fixes its share. The script is inert until pressed, so it can stay in the published deck. The recording stays local: `analyze` needs `mlx-whisper` on Apple Silicon or `openai-whisper` (`uv tool install …`); the first run downloads the model.
 
 ## Hook
 

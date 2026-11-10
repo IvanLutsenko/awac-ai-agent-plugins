@@ -105,4 +105,25 @@ printf '#!/bin/bash\nfor i in 1 2; do : > "${@: -1}-$i.png"; done\n' > "$tmp/bin
 err="$(PATH="$tmp/bin:$PATH" CRAFT_HOME="$craft" CHROMIUM=/bin/true bash "$root/scripts/frames.sh" "$HOME/site/res/talk" "$tmp/steps2" --steps 2>&1 >/dev/null)"
 check "frames.sh --steps fails when pages and map differ" "$(grep -o 'the PDF has 2 pages, the deck map 3' <<<"$err")" "the PDF has 2 pages, the deck map 3"
 
+# rehearse.sh: one script tag after the last script, the length set once and replaced on request.
+mkdir -p "$tmp/rh"; : > "$tmp/rh/deck-theme.css"
+printf '<div class="deck" data-target="desktop">\n<script src="deck.js"></script>\n</body>\n' > "$tmp/rh/index.html"
+out="$(bash "$root/scripts/rehearse.sh" "$tmp/rh" 2>&1)"
+check "rehearse.sh default length" "$(grep '^minutes=' <<<"$out")" "minutes=20"
+bash "$root/scripts/rehearse.sh" "$tmp/rh" 25 >/dev/null
+check "rehearse.sh adds the script once" "$(grep -c 'src="rehearsal.js"' "$tmp/rh/index.html")" "1"
+check "rehearse.sh replaces the length" "$(grep -o 'data-talk-minutes="[0-9]*"' "$tmp/rh/index.html")" 'data-talk-minutes="25"'
+check "rehearse.sh copies the script" "$([[ -f "$tmp/rh/rehearsal.js" ]] && echo yes)" "yes"
+
+# rehearsal-report.py: speech split by the slide log, a cached transcript, no whisper needed.
+printf '%s' '{"date":"2026-11-06T08:00:00Z","total":20,"plan":60,"audio":"run.webm","slides":[{"slide":"a","title":"A","spent":8,"plan":10},{"slide":"b","title":"B","spent":12,"plan":5}],"log":[{"slide":"a","start":0,"end":8},{"slide":"b","start":8,"end":20}]}' > "$tmp/rh/run.json"
+: > "$tmp/rh/run.webm"
+printf '%s' '{"segments":[{"start":0,"end":2,"text":"","words":[{"start":0,"end":0.5,"word":" Ну"},{"start":0.6,"end":1,"word":" привет"}]},{"start":9,"end":15,"text":"","words":[{"start":9,"end":9.5,"word":" как"},{"start":9.6,"end":10,"word":" бы"},{"start":14,"end":14.5,"word":" да"}]}]}' > "$tmp/rh/run.whisper.json"
+python3 "$root/scripts/rehearsal-report.py" "$tmp/rh/run.json" >/dev/null
+check "report puts speech on its slide" "$(grep -c '^> Ну привет$' "$tmp/rh/run.md")" "1"
+check "report counts fillers" "$(grep -c '«как бы» ×1' "$tmp/rh/run.md")" "2"
+check "report flags an overrun" "$(grep -c 'перебор' "$tmp/rh/run.md")" "1"
+check "report finds a pause" "$(grep -c 'Паузы: 0:10 (4 с)' "$tmp/rh/run.md")" "1"
+check "report finds silence before a slide change" "$(grep -c 'Паузы: 0:01 (7 с)' "$tmp/rh/run.md")" "1"
+
 exit $fail

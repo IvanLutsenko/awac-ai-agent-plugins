@@ -63,6 +63,7 @@ Invoke the `craft` skill and follow it for the slides branch. Hand it these fact
 1. Theme: follow `references/slides/theme.md` — the holiday by the date, two or three samples, a fresh `deck-theme.css`, fonts through `scripts/fetch_font.py`. An emoji rain is optional; offer it only for a holiday.
 2. Outline: `references/slides/narrative.md`. Draft the skeleton with real content from the author; mark gaps instead of inventing facts.
 3. Closing: an `end` slide with `data-key="end"` and `QR_LINK` from `scripts/qr.py <contact> --link`. `/deck-harold` later swaps it for the `harold` layout once the picture exists.
+4. Rehearsal timer: `bash <this skill directory>/scripts/rehearse.sh <decks_dir>/<slug> [minutes]` with the talk length if the author gave it; see `/deck-rehearse`.
 
 ## 4. Check and report
 
