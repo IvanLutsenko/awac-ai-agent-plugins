@@ -1,6 +1,6 @@
 ---
 description: Publish a talk deck on the author's site — full Craft check, cover image, a presentation card in every site language, or a hidden page with no card. No commit or push.
-argument-hint: "[deck] [--event name] [--video youtube-id] [--hidden] [--slug name]"
+argument-hint: "[deck] [--event name] [--video youtube-id] [--hidden | --public] [--slug name]"
 allowed-tools: Bash(bash:*), Bash(git -C:*), Bash(open:*), Read, Edit, Skill, AskUserQuestion
 ---
 
@@ -8,17 +8,19 @@ allowed-tools: Bash(bash:*), Bash(git -C:*), Bash(open:*), Read, Edit, Skill, As
 
 A deck made in the site's `res/` folder (`decks_dir`) is already in place, so publishing is a check and a card. A deck kept elsewhere is first released into `<site>/res/<slug>`. Committing and pushing the site stays with the author.
 
-Parse `$ARGUMENTS`: `deck` (slug, path or empty for the current folder), `--event` (where it was presented), `--video` (a YouTube id, if there is a recording), `--hidden` (reachable by its link only: `noindex`, no card), `--slug` (the folder name on the site for a deck kept elsewhere; default: the deck folder's name).
+Parse `$ARGUMENTS`: `deck` (slug, path or empty for the current folder), `--event` (where it was presented), `--video` (a YouTube id, if there is a recording), `--hidden` (reachable by its link only: `noindex`, no card), `--public` (a deck published hidden before now goes on the site: `noindex` off, card on), `--slug` (the folder name on the site for a deck kept elsewhere; default: the deck folder's name).
 
 ## 0. A deck outside the site repo
 
 When the deck is not inside `site_repo` (or for any `--hidden` publish of such a deck):
 
 ```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/publish-release.sh <deck> [--slug name] [--hidden]
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/publish-release.sh <deck> [--slug name] [--hidden | --public]
 ```
 
-It runs the full check, builds Craft's release (only linked files, cache busters on CSS and scripts) and syncs it over `<site>/res/<slug>`, keeping the card's `cover.jpg`. A site copy that already had `noindex` keeps it, so a hidden deck stays hidden on every re-publish. It prints `deck=` (the site copy), `path=` and `hidden=`. With `hidden=1` skip the card: report the page URL on the site's domain (from the site's `CLAUDE.md`) and go to step 3. Otherwise continue with step 1 on the site copy.
+It runs the full check, builds Craft's release (only linked files, cache busters on CSS and scripts) and syncs it over `<site>/res/<slug>`, keeping the card's `cover.jpg`. A site copy that already had `noindex` keeps it, so a hidden deck stays hidden on every re-publish; `--public` drops it. It prints `deck=` (the site copy), `path=` and `hidden=`. With `hidden=1` skip the card: report the page URL on the site's domain (from the site's `CLAUDE.md`) and go to step 3. Otherwise continue with step 1 on the site copy.
+
+`--public` for a deck already inside the site repo: remove its robots meta and go on with step 1.
 
 `--hidden` for a deck already inside the site repo: add `<meta name="robots" content="noindex, nofollow">` after the viewport meta of its `index.html` (replace any other robots meta), run the full check, skip the card and go to step 3.
 

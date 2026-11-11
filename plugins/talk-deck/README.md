@@ -2,9 +2,13 @@
 
 Talk decks on top of the [Craft](https://github.com/IvanLutsenko/craft) skill: a fresh holiday theme per talk, the author's defaults, a themed Harold on the closing slide, a PDF for organizers or a repo, a Google Slides copy, a roast by every agent and a card on the author's site. The plugin holds only commands and a hook; the design system, the samples and the checks stay in Craft.
 
-Version: 0.5.0
+Version: 0.5.1
 
-## What's New in 0.5.0
+## What's New in 0.5.1
+
+- `/deck-publish --public` takes a deck published with `--hidden` onto the site: `noindex` off, card on. Before, a hidden deck stayed hidden on every re-publish with no way back.
+
+## 0.5.0
 
 Lessons from shipping a deck to Kolesa AI Meetup:
 - `/deck-google-slides` renders frames at 2x through Chromium (1x looked soft on the projector), puts counting steps as GIF overlays recorded on the page's own clock, applies static decor from the deck's `gslides.css` without touching the deck, and gives every slide the deck's background so transitions do not flash white.
@@ -88,6 +92,7 @@ google_email:                # /deck-google-slides account, asked on first use
 /deck-rehearse analyze                          # newest run: transcript per slide, overruns, pace, fillers
 /deck-publish --event "Podlodka #17"            # full check, cover, a card on the site in every language
 /deck-publish --hidden --slug my-talk           # a deck kept elsewhere, by link only: noindex, no card
+/deck-publish --public --slug my-talk           # the same deck goes public: noindex off, card on
 ```
 
 A deck outside a repo gets its own git: commit `round N: <what>` before each round of edits and roll back with git instead of copying the folder. The deck root holds an empty `.talk-deck` marker: a review gate can skip repos with the marker and no remote, since this is a deck's history, not code. A commit hook that still refuses an agent commit is the author's call, not something to work around. A new deck closes with an `end` slide; `/deck-harold place` swaps it for the `harold` layout once the picture exists. `/deck-publish` never commits or pushes the site.

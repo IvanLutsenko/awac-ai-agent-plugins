@@ -143,6 +143,10 @@ check "publish-release adds noindex when hidden" "$(grep -c 'noindex' "$HOME/sit
 check "publish-release drops stale files, keeps the cover, skips the README" "$(ls "$HOME/site/res/talk-x" | tr '\n' ' ')" "cover.jpg index.html "
 out="$(CRAFT_HOME="$craft" CHROMIUM=/bin/true bash "$root/scripts/publish-release.sh" "$tmp/rh" --slug talk-x 2>&1)"
 check "a hidden deck stays hidden on re-publish" "$(grep -c 'noindex' "$HOME/site/res/talk-x/index.html") $(grep '^hidden=' <<<"$out")" "1 hidden=1"
+out="$(CRAFT_HOME="$craft" CHROMIUM=/bin/true bash "$root/scripts/publish-release.sh" "$tmp/rh" --slug talk-x --public 2>&1)"
+check "--public makes a hidden deck indexable" "$(grep -c 'noindex' "$HOME/site/res/talk-x/index.html") $(grep '^hidden=' <<<"$out")" "0 hidden=0"
+CRAFT_HOME="$craft" CHROMIUM=/bin/true bash "$root/scripts/publish-release.sh" "$tmp/rh" --slug talk-x --hidden --public >/dev/null 2>&1
+check "--hidden with --public is refused" "$?" "1"
 cat > "$craft/scripts/release.py" <<'PY'
 import sys, pathlib
 a = sys.argv
@@ -154,6 +158,9 @@ PY
 CRAFT_HOME="$craft" CHROMIUM=/bin/true bash "$root/scripts/publish-release.sh" "$tmp/rh" --slug talk-y --hidden >/dev/null
 check "hidden replaces an indexing robots meta" "$(grep -c 'content="noindex, nofollow"' "$HOME/site/res/talk-y/index.html") $(grep -c 'index, follow' "$HOME/site/res/talk-y/index.html")" "1 0"
 check "a nested cover.jpg is published" "$([[ -f "$HOME/site/res/talk-y/media/cover.jpg" ]] && echo yes)" "yes"
+sed -i.bak 's/index, follow/noindex, nofollow/' "$craft/scripts/release.py"
+CRAFT_HOME="$craft" CHROMIUM=/bin/true bash "$root/scripts/publish-release.sh" "$tmp/rh" --slug talk-y --public >/dev/null
+check "--public strips a noindex the deck itself carries" "$(grep -c 'robots' "$HOME/site/res/talk-y/index.html")" "0"
 CRAFT_HOME="$craft" CHROMIUM=/bin/true bash "$root/scripts/publish-release.sh" "$tmp/rh" --slug ../escape >/dev/null 2>&1
 check "a slug with a path is refused" "$?" "1"
 
