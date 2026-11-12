@@ -130,6 +130,17 @@
       },
       "source": "./plugins/talk-deck",
       "category": "development"
+    },
+    {
+      "name": "android-verify",
+      "version": "0.1.0",
+      "description": "Verify Android changes on an emulator or device over plain adb — build identity check, a person signs in, scenario driven from uiautomator dumps, screenshots and backend responses in the report — and run Gradle with its output read through a summary instead of the raw log.",
+      "source": "./plugins/android-verify",
+      "author": {
+        "name": "kambaroff",
+        "url": "https://github.com/kambaroff"
+      },
+      "category": "development"
     }
   ]
 }

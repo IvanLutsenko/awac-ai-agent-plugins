@@ -1,0 +1,15 @@
+{
+  "name": "android-verify",
+  "description": "Verify Android changes on an emulator or device over plain adb — build identity check, a person signs in, scenario driven from uiautomator dumps, screenshots and backend responses in the report — and run Gradle with its output read through a summary instead of the raw log.",
+  "version": "0.1.0",
+  "author": {
+    "name": "kambaroff",
+    "url": "https://github.com/kambaroff"
+  },
+  "keywords": ["android", "adb", "emulator", "uiautomator", "gradle", "verification"],
+  "license": "MIT",
+  "commands": [
+    "./commands/emu-verify.md",
+    "./commands/gradle-run.md"
+  ]
+}

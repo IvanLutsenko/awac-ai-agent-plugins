@@ -11,6 +11,7 @@ Custom AI agent plugins by Ivan Lutsenko
   - [Engineering quality](#engineering-quality)
     - [Crashlytics](#crashlytics) — Android/iOS crash analysis with git blame forensics
     - [Combined Review](#combined-review) — multi-agent code review + CodeRabbit, PR/MR threads
+    - [Android Verify](#android-verify) — verify Android changes on an emulator over adb; Gradle through a log summary
   - [Workflow](#workflow)
     - [Obsidian Tracker](#obsidian-tracker) — projects, kanban, bugs, ADR and sessions in Obsidian
     - [Plugin Cross Port](#plugin-cross-port) — Claude Code ↔ Codex plugin conversion
@@ -148,6 +149,32 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 - `/rereview` follow-up: per-thread fixed/not-fixed verdicts, resolve + approve
 - Findings filtered by scope map, evidence rule and falsifiability gate (`filter-findings.py`)
 - Optional agents: +comments, +types, +simplify
+
+#### Android Verify
+
+Verify Android changes on an emulator or a device over plain `adb`, and run Gradle so the agent reads a summary of the build instead of its raw output. A person signs in at the device; the agent never types credentials.
+
+📚 **[Full Documentation](plugins/android-verify/README.md)**
+
+**Installation:**
+```bash
+/plugin install android-verify
+```
+
+**Quick Start:**
+```bash
+/emu-verify "open Settings, turn Dark theme on, the toolbar turns dark"   # scenario on the device
+/emu-verify "<scenario>" --no-install                                     # verify what is installed
+/gradle-run :app:assembleDebug                                            # build, read the summary
+```
+
+**Status:** 🔨 Beta | **Version:** 0.1.0
+
+**Features:**
+- Build identity check before testing (`versionName`, `lastUpdateTime`): a stale build is the usual false "verified"
+- Scenario driven from `uiautomator dump`: `scripts/ui-nodes.py` lists nodes with their tap centre
+- Screenshots pulled from the device, secure-window captures reported as such; backend responses from logcat
+- `/gradle-run`: output redirected to a log, `scripts/gradle-summary.py` prints result, failed tasks, errors, failed tests
 
 
 ### Workflow

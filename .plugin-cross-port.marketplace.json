@@ -45,6 +45,11 @@
       "path": "plugins/talk-deck",
       "source_of_truth": "claude-code",
       "status": "synced"
+    },
+    "android-verify": {
+      "path": "plugins/android-verify",
+      "source_of_truth": "claude-code",
+      "status": "synced"
     }
   },
   "codex_exclude": [

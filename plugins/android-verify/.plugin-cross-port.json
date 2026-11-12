@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "plugin": "android-verify",
+  "generated_at": "2026-11-12T07:00:50+00:00",
+  "source_of_truth": "claude-code",
+  "decisions": {
+    "skills_shared": false,
+    "commands_converted": true,
+    "agents_converted": false,
+    "hooks_converted": false
+  },
+  "warnings": [],
+  "manually_maintained": [],
+  "status": "synced"
+}
