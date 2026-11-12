@@ -517,9 +517,9 @@ for raw in sys.stdin:
    ```
    On `POSITION MAP EMPTY`: do **not** apply the scope filter at all. Report the findings as the agents returned them, and open the report with one line saying the position map could not be built for `<diff-spec>`, so scope filtering was skipped and the findings are unverified. Never print "No issues found" off an empty map — that sentence must mean "agents found nothing", not "I discarded everything they found".
 
-   **Findings on deleted lines.** A removal can be the defect — a dropped permission check, a deleted null guard. Report it, but anchor it to a line that still exists in the new file: the nearest surviving line of the same hunk, normally the line right after the deletion. Quote the removed code in the finding body so the reader sees what went away. A finding that can only be anchored to a line that no longer exists is reported in the terminal output only — it cannot be posted as a thread.
+   **Findings on deleted lines.** A removal can be the defect — a dropped permission check, a deleted null guard. Report it, but anchor it to a line that still exists in the new file: the nearest surviving line of the same hunk, normally the line right after the deletion. Quote the removed code in the finding body so the reader sees what went away. A finding with no surviving line to anchor to is posted on the removed line itself, on the old side of the diff.
 
-   Mechanically: if the hunk that removed the code also added lines, those lines are in the map — anchor to the nearest one. If it removed only (`@@ -a,b +c,0 @@`), the surviving neighbour in the new file is line `c + 1`; anchor there when that pair is in the map. When neither holds, keep the finding, mark it terminal-only, and skip it in Step 7.
+   Mechanically: if the hunk that removed the code also added lines, those lines are in the map — anchor to the nearest one. If it removed only (`@@ -a,b +c,0 @@`), the surviving neighbour in the new file is line `c + 1`; anchor there when that pair is in the map. When neither holds, the finding carries `old_line` into Step 7 instead of `line`: the removed line's number in the old file, read off that file's section of the map's own `git diff --unified=0 "<diff-spec>"` (no pathspec: with one, rename detection does not fire) — the hunk header's `-a` is the first `-` line, each further `-` line adds one. The path is the `--- a/` one; when it differs from the `+++ b/` path (a rename), carry it as `old_path` too. Only a finding whose removed line cannot be named that way is terminal-only.
 3. **Race conditions — causal gate, not timing.** Drop or downgrade a concurrency finding only when a causal gate makes the bad interleaving impossible: a guard the consumer waits on, an `await`/join on the producer, or a state transition the consumer observes before reading. A ratio of delays is not a happens-before relation — "the producer takes milliseconds and the user needs seconds to get there" sets severity, not existence. Without a causal gate the finding stands, at the severity the window justifies.
 4. **Parallel-conflict sanity check** — if a finding cites a parallel branch/commit as a conflict source, verify with `git merge-base --is-ancestor <commit> origin/<target>`. If the commit is already in target, drop the finding.
 5. **Falsifiability gate** — for every Critical, spend one pass trying to *invalidate* it instead of confirming it. Any one of these exits kills or downgrades the finding:
@@ -543,7 +543,7 @@ for raw in sys.stdin:
 ## Step 6 — Final report
 
 Before writing the report, do a last self-check on every Critical:
-- Is the cited `file:line` in the position map from Step 5 (`$CRDIR/positions.txt`)? Look it up there — do not `grep` the diff. A finding about removed code must already carry its re-anchored line, or be marked terminal-only.
+- Is the cited `file:line` in the position map from Step 5 (`$CRDIR/positions.txt`)? Look it up there — do not `grep` the diff. A finding about removed code must already carry its re-anchored line or its `old_line`, or be marked terminal-only.
 - Did it survive the falsifiability gate, and does the finding say which exit was checked?
 - Does every out-of-diff claim quote the caller/contract it depends on?
 - For concurrency findings: is there a causal gate that rules out the bad interleaving? If there is, it is dropped or downgraded; if there isn't, it stands.
@@ -596,7 +596,8 @@ branch-diff and `current` have nowhere to post to.
 
 Build a threads JSON from the findings you're posting (blockers + correctness + the test findings worth a thread). Each entry:
 - `path` — repo-relative path, exactly as in the diff (`new_path`)
-- `line` — line number in the **new** (post-change) file; the `(path, line)` pair must be in the position map from Step 5 (`$CRDIR/positions.txt`), else the forge rejects the position. A finding about removed code carries the line it was re-anchored to in Step 5; one that could not be re-anchored is terminal-only — do not post it
+- `line` — line number in the **new** (post-change) file; the `(path, line)` pair must be in the position map from Step 5 (`$CRDIR/positions.txt`), else the forge rejects the position. A finding about removed code carries the line it was re-anchored to in Step 5
+- `old_line` — instead of `line`, for a finding Step 5 left on the removed line itself: its number in the **old** file. Add `old_path` when the file was renamed. GitLab posts it on the old side of the diff, GitHub on the LEFT side. A finding with neither `line` nor `old_line` is terminal-only — do not post it
 - `body` — the finding text (markdown; keep it in the resolved report language). With `voice` set, rewrite it by
   the voice file instead: the claim first, in that person's words, then the evidence the author needs to act —
   the line or call that is wrong and the scenario that breaks. Cut headers and severity labels if the voice has
@@ -610,7 +611,8 @@ JSON, the flags and the printed outcomes are the same on both; only the API unde
 cat > "$CRDIR/threads.json" <<'JSON'
 [
   {"path": "core/.../Foo.kt", "line": 55, "body": "**Correctness.** ..."},
-  {"path": "feature/.../BarTest.kt", "line": 38, "body": "**Test.** ..."}
+  {"path": "feature/.../BarTest.kt", "line": 38, "body": "**Test.** ..."},
+  {"path": "core/.../Guard.kt", "old_line": 12, "body": "**Correctness.** ..."}
 ]
 JSON
 
@@ -632,7 +634,8 @@ compare the new head against itself. `--expected-head` guards against the author
 
 **Lines that already have a thread.** Before posting anything the helper reads the existing threads
 (paginated, so a PR/MR with 100+ of them doesn't hide the older ones) and matches each finding on
-path + line. What never matches: on GitLab a thread with `position: null` — a plain MR comment, not
+path + line, on the same side of the diff: a finding with `old_line` matches only threads on that
+removed line. What never matches: on GitLab a thread with `position: null` — a plain MR comment, not
 anchored to a line; on GitHub a reply (`in_reply_to_id` set), which belongs to a thread its own root
 already answered for. A GitHub comment that went outdated reports `line: null` and keeps its anchor in
 `original_line`, and is matched on that — otherwise one rebase makes every earlier thread invisible and

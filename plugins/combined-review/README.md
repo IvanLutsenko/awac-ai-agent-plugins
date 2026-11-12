@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.16.2
+**Version:** 1.17.0
 
 ---
 
@@ -292,6 +292,16 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.17.0
+
+- **A finding on removed code with no surviving neighbour is posted on the removed line.** Until now
+  such a finding — a dropped guard in a hunk that only deletes, whose next line is not in the
+  position map either — was terminal-only. The threads JSON takes `old_line` instead of `line`
+  (plus `old_path` for a renamed file): GitLab gets a position with `old_line` and no `new_line`,
+  GitHub a comment on the LEFT side. Both helpers dedup on the same side only and check that the
+  note came back on the removed line, not on an unchanged one with the same number. `/rereview`
+  keeps the old-side anchor of such a thread and verifies it through the hunk that removed the line.
 
 ### 1.16.2
 

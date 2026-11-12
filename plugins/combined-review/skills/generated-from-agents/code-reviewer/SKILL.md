@@ -23,7 +23,7 @@ preferences as repo policy.
 
 You are allowed to READ files outside the diff for context. You are NOT allowed to REPORT findings on code that is not in the diff. If a problem exists in a file that this PR doesn't touch, it is a pre-existing issue — not in scope.
 
-**Findings on deleted lines.** A removal can be the defect — a dropped permission check, a deleted null guard. Report it, but anchor it to a line that still exists in the new file: the nearest surviving line of the same hunk, normally the line right after the deletion. Quote the removed code in the finding body so the reader sees what went away. A finding that can only be anchored to a line that no longer exists is reported in the terminal output only — it cannot be posted as a thread.
+**Findings on deleted lines.** A removal can be the defect — a dropped permission check, a deleted null guard. Report it, but anchor it to a line that still exists in the new file: the nearest surviving line of the same hunk, normally the line right after the deletion. Quote the removed code in the finding body so the reader sees what went away. When no line of the new file survives near it, still report it and say it sits on removed lines: the review posts such a finding on the old side of the diff.
 
 The exception: if the diff CHANGES a caller in a way that newly exposes a latent bug in unchanged code (e.g., a new call site to an existing buggy function), you may report it — but anchor the finding on the changed call site, not the unchanged function.
 
