@@ -1,6 +1,6 @@
 ---
 description: "Combined code review: multi-agent analysis + CodeRabbit. Supports GitHub PR, GitLab MR, branch diff, uncommitted changes."
-argument-hint: "[PR#|!MR#] | [branch1 branch2] | [--base branch] | [+comments] [+types] [+simplify] [+threads] [all]"
+argument-hint: "[PR#|!MR#] | [branch1 branch2] | [--base branch] | [--since sha] [+comments] [+types] [+simplify] [+threads] [all]"
 allowed-tools: Bash(gh:*), Bash(glab:*), Bash(git:*), Bash(coderabbit:*), Bash(cr:*), Bash(curl:*), Bash(python3:*), Bash(which:*), Bash(wc:*), Bash(head:*), Bash(tail:*), Bash(cat:*), Bash(find:*), Bash(grep:*), Bash(rg:*), Bash(mktemp:*), Bash(rm:*), Bash(rmdir:*), Bash(awk:*), Bash(cut:*), Bash(sort:*), Bash(uniq:*), Bash(sed:*), Bash(pwd:*), Bash(echo:*), Bash(umask:*), Agent, Read, Glob, Grep
 ---
 
@@ -105,6 +105,8 @@ Branch-like: contains `/`, or starts with `feature/`, `fix/`, `release/`, `hotfi
 - `+simplify` — add code simplification
 - `+threads` — after the report, post findings as inline resolvable threads on the PR/MR (GitHub PR and GitLab MR modes; see Step 7). Opt-in — never post without this flag or an explicit request.
 - `all` — run all agents including optional
+- `--since <sha>` — PR/MR modes only: review what was pushed after `<sha>`, the head of an earlier
+  review, instead of the whole PR/MR (see "Delta" in Step 2). `/review-sweep` passes it.
 
 ## Step 2 — Gather diff and context
 
@@ -158,6 +160,32 @@ git rev-parse "mr/<iid>"                              # the revision under revie
 Read `source`/`target` from the `glab mr view` output (`<source> -> <target>`). The working tree is usually on a *different* branch than the MR — do not read file context from cwd; a detached worktree at the MR head (`mr/<iid>`) is created before agents launch (see Step 4, "Repository root for agents") and agents read context from there.
 
 `<diff-spec>` = `origin/<target>...mr/<iid>`, `<source-ref>` = `mr/<iid>`.
+
+**Delta — `--since <sha>`** (after the GitHub PR / GitLab MR branch above has run — its fetches and
+its `<source-ref>` are needed; `<base-ref>` below is that branch's `origin/<base>` / `origin/<target>`):
+```bash
+git cat-file -e "<sha>^{commit}" 2>/dev/null || git fetch origin "<sha>"
+git cat-file -e "<sha>^{commit}" 2>/dev/null && echo "since: present" || echo "SINCE GONE"
+```
+Only on `since: present`:
+```bash
+git diff "<sha>..<source-ref>" > "$CRDIR/delta.diff"
+git log "<sha>..<source-ref>" --oneline
+```
+- **`SINCE GONE`** — the revision is not in this clone and the forge no longer serves it: a rebase or
+  a force-push rewrote it away. There is nothing to diff from. Open the report with one line saying
+  so and review the whole PR/MR as if `--since` had not been passed. An unreadable `<sha>` is never
+  an empty delta: "nothing new" printed over a rewritten branch is the worst answer this mode can give.
+- **Present** — `<diff-spec>` becomes `<sha>..<source-ref>`, and `delta.diff` is the diff the agents
+  get. The two-dot form compares the two trees, so it holds even when `<sha>` is no longer an
+  ancestor of the head. `<source-ref>`, the worktree and the policy files (still read from the
+  **target** revision) stay as the PR/MR branch fixed them. CodeRabbit gets `--base-commit "<sha>"`
+  in place of `--base "<base-ref>"`.
+- **Lines that came in with the target branch are not the author's.** A push that merged the target
+  in puts other people's code into `<sha>..<source-ref>`. Step 5 removes it per line — it intersects
+  the delta's position map with the PR/MR's own. Do not filter by file name instead: a file touched
+  on both sides would keep every merged-in line.
+- An empty `delta.diff` with `<sha>` present means nothing was pushed since: say so and stop.
 
 **Branch diff:**
 Source = first argument, target = second. Resolve each side **once** — the remote-tracking ref when it
@@ -478,6 +506,16 @@ for raw in sys.stdin:
    done | python3 -c '...same script...' | sort -u >> "$CRDIR/positions.txt"
    ```
    `--unified=0` is what makes the map exact: with no context lines, every `+` line in a hunk is a line the change introduced, counted from the hunk header's new-side start. A finding whose `file:line` is not in the map is out of scope — drop it, however many agents reported it. Reading-for-context is fine; reporting-on-unchanged-code is not.
+
+   **With `--since`** the map is the intersection of two: lines the delta added **and** lines the
+   PR/MR itself adds. Build the delta map with the script above from `<sha>..<source-ref>` into
+   `$CRDIR/positions-delta.txt`, the PR/MR's own from `<base-ref>...<source-ref>` into
+   `$CRDIR/positions-own.txt`, then:
+   ```bash
+   grep -Fxf "$CRDIR/positions-own.txt" "$CRDIR/positions-delta.txt" > "$CRDIR/positions.txt"
+   ```
+   A line that reached the branch through a merge of the target is in the first map and not in the
+   second, so it drops out; a finding on it was never this PR/MR's to answer for.
 
    **Run the check, don't promise it.** Write the agents' finding lines to a file, one per line, and
    let the shipped script place them against the map. It is the same rule as below, executed instead

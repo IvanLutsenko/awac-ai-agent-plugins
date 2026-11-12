@@ -32,6 +32,11 @@ class CodexSkillPathsTest(unittest.TestCase):
         for skill in sorted(GENERATED.glob("*/SKILL.md")):
             self.assertNotIn("plugins/combined-review/scripts/", skill.read_text(), skill.name)
 
+    def test_no_skill_must_read_a_command_file(self):
+        """Codex ships skills/, not commands/: a skill that stops when it cannot read one never runs."""
+        for name in ("review-sweep", "author-sweep"):
+            self.assertNotIn("plugins/combined-review/commands/", (GENERATED / name / "SKILL.md").read_text(), name)
+
     def test_referenced_helpers_exist_next_to_the_skill(self):
         for skill_dir in skills_with_scripts():
             text = (skill_dir / "SKILL.md").read_text()

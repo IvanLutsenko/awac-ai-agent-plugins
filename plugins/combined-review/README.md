@@ -108,11 +108,23 @@ and "исправил" is a claim, not evidence.
 ```
 
 `/review-sweep` sorts each PR/MR by what it needs: an untouched one gets `/review`; one where you have
-threads gets `/rereview`, and when code was pushed after your last note, a review of just that delta.
-It re-reads every reply in your open threads on every run, holds drafts and very large PRs/MRs with a
-reason, and keeps the last report in `${XDG_STATE_HOME:-~/.local/state}/combined-review/sweeps/`, so
-the next run knows which head it reviewed and which findings were never posted. Nothing goes to the
-forge without `+post` and your confirmation.
+open threads gets `/rereview`, and when commits were pushed after the head you reviewed,
+`/review --since <that head>` — a review of just that delta, minus whatever came in with a merge of
+the target. "The head you reviewed" is what the forge recorded (your approval, the commit your threads
+were opened against), not the time of your last reply. A reply from the author while you were waiting
+puts the PR/MR back on your list; drafts and very large ones are held with a reason; every PR/MR ends
+up in exactly one bucket of the report.
+
+Each review runs as its own headless session (`claude -p`), three at a time, so it keeps its five
+agents and needs no terminal multiplexer. A session that crashed or timed out is reported as "not
+reviewed", never as "no findings". Without `claude` on PATH the sweep runs the same steps one after
+another in the current session. Nothing goes to the forge without `+post` and your confirmation.
+`/review-sweep +panes` (herdr only) opens the same reviews as interactive sessions in panes instead,
+three per workspace; their reports stay in the panes.
+
+```bash
+/review 123 --since <sha>   # the same delta review, by hand
+```
 
 `/author-sweep` is the other side: per unresolved thread on your own PRs/MRs — unanswered and
 unfixed, fixed without a reply, waiting on the reviewer (with its age), or pushed back — checked
@@ -318,11 +330,16 @@ Every finding includes file path and line number:
 - **`/review-sweep` and `/author-sweep`: every open PR/MR in one pass.** `/review` and `/rereview` work
   on one PR/MR you name; keeping up with a team meant running them by hand over a list and remembering
   what you saw last time. `/review-sweep` takes every open PR/MR where you are a reviewer, sorts it —
-  untouched, threads waiting, new code since your last note, held — and runs `/review`, `/rereview` or
-  a review of just the delta accordingly; the report is saved in a state directory so the next run
-  starts from the head it reviewed and the findings it never posted. `/author-sweep` sorts the
+  untouched, threads open, new commits since the head you reviewed, waiting on the author, held — and
+  runs `/review`, `/rereview` or a review of just the delta accordingly, each as its own headless
+  session so the five agents still run. The sorting is a tested script (`scripts/review-sweep.py`)
+  reading the forge's own record of what you reviewed. `/author-sweep` sorts the
   unresolved threads on your own PRs/MRs by what they need from you and drafts the fix or the reply.
   Both are report-only unless you confirm; neither resolves what is not yours to resolve.
+- **`/review <N> --since <sha>`: review only what was pushed after an earlier review.** The position
+  map is the delta's intersected with the PR/MR's own, so lines that arrived with a merge of the
+  target are not reviewed as the author's. A `<sha>` that a rebase or force-push rewrote away falls
+  back to a full review and says so — it is never read as "nothing new".
 
 ### 1.16.2
 
