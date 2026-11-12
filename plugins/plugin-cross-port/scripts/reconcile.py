@@ -531,17 +531,21 @@ class Reconciler:
 
     def _write_json(self, path: Path, payload: dict[str, Any]) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        path.write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
 
     def _rel(self, path: Path) -> str:
-        return str(path.resolve().relative_to(self.repo_root))
+        return path.resolve().relative_to(self.repo_root).as_posix()
 
 
 def _file_hashes(root: Path) -> dict[str, str]:
     hashes = {}
     for path in sorted(root.rglob("*")):
         if path.is_file() and ".git" not in path.parts:
-            hashes[str(path.relative_to(root))] = hashlib.sha256(
+            hashes[path.relative_to(root).as_posix()] = hashlib.sha256(
                 _stable_file_bytes(path)
             ).hexdigest()
     return hashes

@@ -18,7 +18,17 @@ from plugin_state import new_plugin_state, save as save_state
 from reconcile import ReconcileReport, Reconciler
 
 
+def utf8_console() -> None:
+    """Windows consoles default to a legacy code page that cannot encode the
+    report's symbols; print them as UTF-8 instead of failing the conversion."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8", errors="replace")
+
+
 def main(argv: list[str] | None = None) -> int:
+    utf8_console()
     parser = build_parser()
     args = parser.parse_args(argv)
     repo_root = Path(args.repo_root).resolve()
@@ -144,7 +154,7 @@ def plugin_attach(args: argparse.Namespace, repo_root: Path) -> ReconcileReport:
     plugin_state = new_plugin_state(name, args.source)
     save_state(plugin_path / ".plugin-cross-port.json", plugin_state)
     state.setdefault("plugins", {})[name] = {
-        "path": str(plugin_path.relative_to(repo_root)),
+        "path": plugin_path.relative_to(repo_root).as_posix(),
         "source_of_truth": args.source,
         "status": "synced",
     }
@@ -197,6 +207,7 @@ def append_to_canonical(
     canonical_path.write_text(
         json.dumps(canonical, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
 
 
