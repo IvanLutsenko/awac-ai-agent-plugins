@@ -136,7 +136,10 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.17.1
+**Status:** ✅ Production Ready | **Version:** 1.18.0
+
+**What's New in 1.18.0:**
+- A finding on removed code with no surviving line nearby is posted on the removed line itself: `old_line` in the threads JSON, the old side on GitLab, the LEFT side on GitHub. It used to stay terminal-only.
 
 **What's New in 1.17.1:**
 - `/review` and `/rereview` end the report with the PR/MR author and a link to it, so a review running in a side pane says whom the findings go to and where.

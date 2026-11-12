@@ -88,7 +88,8 @@ Filter `notes[0]` by:
 - `resolved == false` — **strictly false**. `null`/absent means a plain MR comment that GitLab
   can't resolve at all; count them separately and say so, don't try to resolve them.
 
-For each thread keep: `id`, `position.new_path`, `position.new_line`, `position.head_sha`
+For each thread keep: `id`, `position.new_path`, `position.new_line` — or, for a thread on a
+removed line (`new_line` null), `position.old_path` + `position.old_line` — `position.head_sha`
 (the revision the comment was anchored to), `original_position` (the fallback anchor when
 `head_sha` is unreachable — see Step 3), your body, and all replies.
 
@@ -106,7 +107,7 @@ query($owner:String!, $name:String!, $number:Int!, $endCursor:String) {
       reviewThreads(first: 100, after: $endCursor) {
         pageInfo { hasNextPage endCursor }
         nodes {
-          id isResolved isOutdated path line originalLine
+          id isResolved isOutdated path line originalLine diffSide
           comments(first: 50) {
             nodes { author { login } body originalCommit { oid } }
           }
@@ -121,8 +122,9 @@ Filter `nodes` by `isResolved == false` and `comments.nodes[0].author.login` == 
 
 For each thread keep: `id` (a **node id**, the only thing `resolveReviewThread` accepts — not the REST
 comment id), `path`, `line` (the line at the current head; `null` once the thread went outdated),
-`originalLine`, `isOutdated`, `comments.nodes[0].originalCommit.oid` (the revision the comment was
-anchored to), your body, and all replies.
+`originalLine`, `diffSide` (`LEFT` = a thread on a removed line), `isOutdated`,
+`comments.nodes[0].originalCommit.oid` (the revision the comment was anchored to), your body, and
+all replies.
 
 PR-level comments are a different endpoint (`repos/<owner>/<repo>/issues/<number>/comments`) and are
 not resolvable — the GitHub counterpart of GitLab's plain MR comments. Count them separately too.
@@ -191,6 +193,11 @@ points at a revision that no longer matches. Only then read the code as it is no
 ```bash
 git show "<head_sha>:<new_path>" | sed -n '<start>,<head_line+15>p'
 ```
+
+A thread on a removed line (GitLab `old_line` with `new_line` null, GitHub `diffSide: LEFT`) has no
+line at head to map. Find the hunk that removed it in Step 3's diff, then read the code at head where
+that hunk sits: the ask is met if the removed code is back, or if its concern is handled in what
+replaced it — not because the line is still gone.
 
 `<start>` is `head_line - 15` **clamped to 1**: `sed` rejects address `0` and anything negative, so a
 finding on one of a file's first 15 lines errors out instead of printing.
