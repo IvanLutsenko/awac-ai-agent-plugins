@@ -130,6 +130,17 @@
       },
       "source": "./plugins/talk-deck",
       "category": "development"
+    },
+    {
+      "name": "plan-gate",
+      "version": "0.1.0",
+      "description": "Plan, approve, execute, verify: the plan is written and shown first, nothing changes until a person approves it, an executor agent on a cheaper model carries it out, and the diff is checked against the plan before the report.",
+      "source": "./plugins/plan-gate",
+      "author": {
+        "name": "kambaroff",
+        "url": "https://github.com/kambaroff"
+      },
+      "category": "productivity"
     }
   ]
 }

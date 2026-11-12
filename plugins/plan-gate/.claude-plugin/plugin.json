@@ -1,0 +1,17 @@
+{
+  "name": "plan-gate",
+  "description": "Plan, approve, execute, verify: the plan is written and shown first, nothing changes until a person approves it, an executor agent on a cheaper model carries it out, and the diff is checked against the plan before the report.",
+  "version": "0.1.0",
+  "author": {
+    "name": "kambaroff",
+    "url": "https://github.com/kambaroff"
+  },
+  "keywords": ["planning", "approval", "execution", "subagent", "workflow"],
+  "license": "MIT",
+  "commands": [
+    "./commands/plan-gate.md"
+  ],
+  "agents": [
+    "./agents/executor.md"
+  ]
+}

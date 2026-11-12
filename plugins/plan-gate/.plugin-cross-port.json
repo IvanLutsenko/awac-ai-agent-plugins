@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "plugin": "plan-gate",
+  "generated_at": "2026-11-12T07:02:39+00:00",
+  "source_of_truth": "claude-code",
+  "decisions": {
+    "skills_shared": false,
+    "commands_converted": true,
+    "agents_converted": true,
+    "hooks_converted": false
+  },
+  "warnings": [],
+  "manually_maintained": [],
+  "status": "synced"
+}

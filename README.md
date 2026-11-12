@@ -15,6 +15,7 @@ Custom AI agent plugins by Ivan Lutsenko
     - [Obsidian Tracker](#obsidian-tracker) — projects, kanban, bugs, ADR and sessions in Obsidian
     - [Plugin Cross Port](#plugin-cross-port) — Claude Code ↔ Codex plugin conversion
     - [Push Gate](#push-gate) — confirm every `git push` the model runs (mod)
+    - [Plan Gate](#plan-gate) — plan → approval → cheaper executor → verified against the plan
   - [Environment & media](#environment--media)
     - [Auto Theme](#auto-theme) — Claude Code and Codex theme follows macOS light/dark
     - [Locale Notifications](#locale-notifications) — macOS notifications in your system language
@@ -251,6 +252,32 @@ Asks before every `git push` the model runs, in Claude Code's own question dialo
 - Catches every spelling of a push: `bash -c`, subshells, `/usr/bin/git`, `env`/`command` prefixes, global options (`-C`, `-c`), multi-line commands; `push` in a path or a grep pattern is not a push
 - Only asks, never allows: the auto mode classifier still judges the push
 - Optional one-shot token for a PreToolUse guard, so the guard stays safe when mods are off
+
+#### Plan Gate
+
+Plan, approve, execute, verify. The plan is written and shown first, nothing in the repository changes until a person approves it, an `executor` agent on a cheaper model carries it out, and the diff is checked against the plan before the report.
+
+📚 **[Full Documentation](plugins/plan-gate/README.md)**
+
+**Installation:**
+```bash
+/plugin install plan-gate
+```
+
+**Quick Start:**
+```bash
+/plan-gate "add a retry banner to the upload screen on timeout"   # task text, any tracker
+/plan-gate docs/specs/export-csv.md                               # or a spec file
+/plan-gate --resume <plan file>                                   # continue from the gate
+```
+
+**Status:** 🔨 Beta | **Version:** 0.1.0
+
+**Features:**
+- Plan file outside the repository: goal, scope, steps with files, tests, verify commands, slicing by `max_change`, what not to touch, open questions
+- Only an explicit approval passes the gate; a non-interactive run stops after the plan
+- `executor` agent changes only what the plan names and stops at the first step it cannot do as written
+- Verification runs the plan's commands and reviews the diff (`/review` with combined-review, inline otherwise), two fix rounds at most
 
 
 ### Environment & media

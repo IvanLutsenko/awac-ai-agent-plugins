@@ -45,6 +45,11 @@
       "path": "plugins/talk-deck",
       "source_of_truth": "claude-code",
       "status": "synced"
+    },
+    "plan-gate": {
+      "path": "plugins/plan-gate",
+      "source_of_truth": "claude-code",
+      "status": "synced"
     }
   },
   "codex_exclude": [

@@ -1,0 +1,19 @@
+{
+  "name": "plan-gate",
+  "version": "0.1.0",
+  "description": "Plan, approve, execute, verify: the plan is written and shown first, nothing changes until a person approves it, an executor agent on a cheaper model carries it out, and the diff is checked against the plan before the report.",
+  "author": {
+    "name": "kambaroff"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Plan Gate",
+    "shortDescription": "Plan, approve, execute, verify: the plan is written and shown first, nothing cha",
+    "developerName": "kambaroff",
+    "category": "Development",
+    "capabilities": [
+      "Read",
+      "Write"
+    ]
+  }
+}

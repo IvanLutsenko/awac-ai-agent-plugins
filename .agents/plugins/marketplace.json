@@ -99,6 +99,18 @@
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"
       }
+    },
+    {
+      "name": "plan-gate",
+      "source": {
+        "source": "local",
+        "path": "./plugins/plan-gate"
+      },
+      "category": "Development",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
     }
   ]
 }
