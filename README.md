@@ -132,14 +132,14 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 /review --base main                        # Current branch vs main
 /review feature/X feature/Y +comments     # Add an optional agent (+comments, +types, +simplify)
 /review feature/X feature/Y all           # All agents, optional ones included
-/review-config                             # Language, model, CodeRabbit
+/review-config                             # Language, model, CodeRabbit, voice, rules
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.16.2
+**Status:** ✅ Production Ready | **Version:** 1.18.0
 
-**What's New in 1.16.2:**
-- `security-reviewer` no longer describes itself as opt-in behind `+security`: it runs on every review since 1.14.0.
+**What's New in 1.18.0:**
+- `rules` config key: a file of review rules kept outside the repository, passed to the agents beside `CLAUDE.md`/`AGENTS.md`; the repo policy wins where they disagree.
 
 **Features:**
 - 5 agents always run: code-reviewer, git-historian, silent-failure-hunter, test-analyzer, security-reviewer

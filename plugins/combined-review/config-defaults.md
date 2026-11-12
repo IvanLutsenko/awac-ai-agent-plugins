@@ -7,6 +7,7 @@ language: system
 model: sonnet
 coderabbit: auto
 voice:
+rules:
 ---
 
 # Combined Review config
@@ -37,6 +38,13 @@ own, and `coderabbit auth status` shows them.
 `+threads` reads it: before posting, each thread is reworded by that file — claim first in your words,
 then the evidence. What gets found and the terminal report stay as they are. It is personal, so keep it
 in the user-level file.
+
+**`rules`** — empty (default) or a path to a file of review rules kept outside the repository: limits
+stricter than the linter, conventions a team follows that the repo's `CLAUDE.md`/`AGENTS.md` do not
+(yet) carry. `~` expands; a relative path is read from the repository root. The agents get it beside the
+repo policy files and cite it as reviewer rules; where the two disagree, the repo policy wins and the
+report says so. It comes from your config, not from the branch under review, so an MR author cannot
+change it. Usually per project, so it belongs in the project-level file.
 
 **There is no key for the agents.** All five run on every review, security included — which agent
 turns out to be the useful one changes per diff, and one that reports nothing has still ruled things

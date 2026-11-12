@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.16.2
+**Version:** 1.18.0
 
 ---
 
@@ -136,6 +136,7 @@ language: system    # system | en | ru | uk
 model: sonnet       # sonnet | opus | haiku | inherit
 coderabbit: auto    # auto | off
 voice:              # empty | path to a style file (used by +threads only)
+rules:              # empty | path to a file of review rules kept outside the repo
 ---
 ```
 
@@ -152,6 +153,11 @@ voice:              # empty | path to a style file (used by +threads only)
   (e.g. `~/.claude/skills/my-voice/SKILL.md`) and `+threads` rewords every posted thread by it:
   the claim first in your words, then the line and scenario as evidence. What is found and the
   terminal report don't change. Personal, so keep it in the user-level file.
+- **`rules`** — empty by default. Set it to a file of review rules the repo's `CLAUDE.md`/`AGENTS.md`
+  don't carry — limits stricter than the linter, an MR size budget, team conventions. `~` expands, a
+  relative path is read from the repository root. The agents check the diff against it and cite it as
+  reviewer rules; the repo policy wins where the two disagree. Usually per project, so it belongs in
+  `.claude/combined-review.local.md`.
 There is no key for the agents: all five run on every review, security included. Which one pays off
 changes per diff — in two runs on this plugin's own code the decisive finding came from a different
 agent each time, and the one that reported nothing had spent its pass disproving four claims that
@@ -292,6 +298,15 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.18.0
+
+- **`rules` config key: review rules kept outside the repository.** A team often reviews by rules the
+  repo's `CLAUDE.md`/`AGENTS.md` don't carry — complexity limits stricter than the linter, an MR size
+  budget, conventions the repo owners haven't adopted. Until now the only way in was to paste them into
+  each request. `rules` points at a file (`~` or a path from the repository root); `/review` passes it to
+  the agents beside the policy files, `code-reviewer` cites it as reviewer rules, and the repo policy
+  wins where the two disagree. It is read from the config, never from the branch under review.
 
 ### 1.16.2
 
