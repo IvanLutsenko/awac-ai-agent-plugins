@@ -22,13 +22,17 @@ Usage:
   --threads        JSON file: [{"path": "...", "line": 42, "body": "..."}, ...]
                     `line` is the line number in the NEW (post-change) file; it must be
                     an added or in-hunk line of the PR diff, or GitHub rejects it.
+                    A finding on a line the PR removed carries `old_line` instead of
+                    `line`: its number in the OLD (pre-change) file, posted on the LEFT
+                    side. `old_path` is accepted for parity with GitLab and ignored: a
+                    review comment names the file by its path in the PR on either side.
   --expected-head  SHA the findings were analyzed against. Required: compared against
                     the PR's live head.sha before posting anything; if the branch moved
                     since analysis, nothing is posted and the script exits non-zero.
                     That SHA is also the comments' `commit_id`.
 
 Before posting, reads the PR's existing review comments and skips findings whose
-`path` + `line` already carry a thread — anyone's: `[DUP]`. Whose it is does not
+`path` + `line` + side already carry a thread — anyone's: `[DUP]`. Whose it is does not
 change what to do (never pile a second thread onto a discussed line), so the author
 is not read at all. A skip is not a failure — exit code is non-zero only if a thread
 that was actually attempted failed to anchor.
@@ -94,14 +98,24 @@ def get_review_comments(repo, pr):
         sys.exit(f"cannot read review comments for {repo}#{pr}: {(out + err)[:300]}")
 
 
-def match_thread(comments, path, line):
+def anchor_of(t):
+    """("RIGHT", line) for a thread entry, or ("LEFT", old_line) for a removed line.
+    An entry with both `line` and `old_line` is refused."""
+    if t.get("old_line") is not None:
+        if t.get("line") is not None:
+            sys.exit(f"{t['path']}: a thread takes `line` or `old_line`, not both")
+        return "LEFT", int(t["old_line"])
+    return "RIGHT", int(t["line"])
+
+
+def match_thread(comments, path, line, side="RIGHT"):
     """Is this finding's line already covered by an existing thread?
 
-    Match is on the thread-starting comment's `path` + `line` on the RIGHT side.
+    Match is on the thread-starting comment's `path` + `line` on the same side.
     A reply (`in_reply_to_id` set) is part of a thread that already matched on its
-    own root, so replies are skipped. So is a LEFT-side comment: it sits on the
-    pre-change line of that number, which is a different place in the file from
-    the RIGHT-side line `post_thread` posts to. An outdated comment reports `line: null` and
+    own root, so replies are skipped. So is a comment on the other side: a LEFT
+    line of that number is the pre-change line, a different place in the file from
+    the RIGHT-side line of the same number. An outdated comment reports `line: null` and
     keeps the anchor in `original_line` — match on that, otherwise a rebase makes
     every earlier thread invisible and the next run posts them all again.
 
@@ -112,7 +126,7 @@ def match_thread(comments, path, line):
     for c in comments:
         if c.get("in_reply_to_id"):
             continue
-        if (c.get("side") or "RIGHT") != "RIGHT":
+        if (c.get("side") or "RIGHT") != side:
             continue
         anchor = c.get("line")
         if anchor is None:
@@ -123,13 +137,13 @@ def match_thread(comments, path, line):
     return "post", None
 
 
-def post_thread(repo, pr, head_sha, path, line, body):
+def post_thread(repo, pr, head_sha, path, line, body, side="RIGHT"):
     payload = {
         "body": body,
         "commit_id": head_sha,
         "path": path,
         "line": line,
-        "side": "RIGHT",
+        "side": side,
     }
     fd, fn = tempfile.mkstemp(suffix=".json")
     os.write(fd, json.dumps(payload).encode())
@@ -145,8 +159,12 @@ def post_thread(repo, pr, head_sha, path, line, body):
         os.unlink(fn)
     try:
         c = json.loads(out)
-        ok = c.get("path") == path and c.get("line") == line
-        return ok, f"{c['id']} path={c.get('path')} line={c.get('line')}"
+        ok = (
+            c.get("path") == path
+            and c.get("line") == line
+            and (c.get("side") or "RIGHT") == side
+        )
+        return ok, f"{c['id']} path={c.get('path')} line={c.get('line')} side={c.get('side')}"
     except Exception:
         return False, (out + err)[:300]
 
@@ -171,15 +189,16 @@ def main():
 
     ok = tried = skipped = 0
     for t in threads:
-        path, line = t["path"], int(t["line"])
-        short = f"{path.split('/')[-1]}:{line}"
-        outcome, cid = match_thread(comments, path, line)
+        side, line = anchor_of(t)
+        path = t["path"]
+        short = f"{path.split('/')[-1]}:{line}" + (" (removed)" if side == "LEFT" else "")
+        outcome, cid = match_thread(comments, path, line, side)
         if outcome == "dup":
             skipped += 1
             print(f"[DUP] {short} -> thread {cid} already on that line, not posted")
             continue
         tried += 1
-        good, msg = post_thread(a.repo, a.pr, head_sha, path, line, t["body"])
+        good, msg = post_thread(a.repo, a.pr, head_sha, path, line, t["body"], side)
         print(f"[{'OK ' if good else 'ERR'}] {short} -> {msg}")
         ok += 1 if good else 0
     print(f"--- {ok}/{tried} inline threads posted, {skipped} skipped as already covered ---")
