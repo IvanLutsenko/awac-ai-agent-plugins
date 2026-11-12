@@ -52,7 +52,12 @@ def make_gh_api(head_sha, comments=(), comments_raw=None, sent_payloads=None):
                 sent_payloads.append(sent)
             return (
                 json.dumps(
-                    {"id": 111, "path": sent["path"], "line": sent["line"]}
+                    {
+                        "id": 111,
+                        "path": sent["path"],
+                        "line": sent["line"],
+                        "side": sent["side"],
+                    }
                 ),
                 "",
             )
@@ -214,6 +219,46 @@ class PostGithubPrThreadsTest(unittest.TestCase):
         self.assertEqual(len(posts), 1)
         self.assertEqual(sent_payloads[0]["side"], "RIGHT")
 
+    def test_removed_line_is_posted_on_the_left_side(self):
+        module = load_module()
+        self.write_threads([{"path": "foo.py", "old_line": 7, "body": "nit"}])
+        sent_payloads = []
+        fake = make_gh_api(ANALYZED_SHA, sent_payloads=sent_payloads)
+        with patch.object(module, "gh_api", side_effect=fake):
+            exc = self.run_main(module)
+
+        self.assertEqual(exc.code, 0)
+        self.assertEqual(sent_payloads[0]["side"], "LEFT")
+        self.assertEqual(sent_payloads[0]["line"], 7)
+
+    def test_left_comment_on_the_removed_line_is_not_posted_again(self):
+        module = load_module()
+        self.write_threads([{"path": "foo.py", "old_line": 7, "body": "nit"}])
+        left = make_comment(7, "foo.py", 7, "someone")
+        left["side"] = "LEFT"
+        with patch.object(
+            module, "gh_api", side_effect=make_gh_api(ANALYZED_SHA, [left])
+        ) as mock_api:
+            exc = self.run_main(module)
+
+        self.assertEqual(exc.code, 0)
+        self.assertEqual(
+            [c for c in mock_api.call_args_list if c.kwargs.get("method") == "POST"], []
+        )
+
+    def test_thread_with_both_line_and_old_line_is_refused(self):
+        module = load_module()
+        self.write_threads([{"path": "foo.py", "line": 3, "old_line": 7, "body": "nit"}])
+        with patch.object(
+            module, "gh_api", side_effect=make_gh_api(ANALYZED_SHA)
+        ) as mock_api:
+            exc = self.run_main(module)
+
+        self.assertNotEqual(exc.code, 0)
+        self.assertEqual(
+            [c for c in mock_api.call_args_list if c.kwargs.get("method") == "POST"], []
+        )
+
     def test_paginated_call_that_fails_midway_aborts(self):
         module = load_module()
         # Page 1 arrived, page 2 died: stdout is valid JSON but incomplete.
@@ -259,8 +304,8 @@ class MatchThreadTest(unittest.TestCase):
         self.mine = make_comment(1, "foo.py", 3, "me")
         self.theirs = make_comment(2, "foo.py", 3, "someone")
 
-    def match(self, comments, path="foo.py", line=3):
-        return self.module.match_thread(comments, path, line)
+    def match(self, comments, path="foo.py", line=3, side="RIGHT"):
+        return self.module.match_thread(comments, path, line, side)
 
     def test_no_threads_at_all(self):
         self.assertEqual(self.match([]), ("post", None))
@@ -281,6 +326,14 @@ class MatchThreadTest(unittest.TestCase):
         c = make_comment(5, "foo.py", 3, "someone")
         c["side"] = "LEFT"
         self.assertEqual(self.match([c]), ("post", None))
+
+    def test_left_side_finding_matches_a_left_comment(self):
+        c = make_comment(5, "foo.py", 3, "someone")
+        c["side"] = "LEFT"
+        self.assertEqual(self.match([c], side="LEFT"), ("dup", 5))
+
+    def test_left_side_finding_ignores_a_right_comment(self):
+        self.assertEqual(self.match([self.mine], side="LEFT"), ("post", None))
 
     def test_a_reply_never_matches_on_its_own(self):
         reply = make_comment(6, "foo.py", 3, "someone")
