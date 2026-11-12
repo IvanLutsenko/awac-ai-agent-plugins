@@ -134,18 +134,21 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 /review feature/X feature/Y all           # All agents, optional ones included
 /review-config                             # Language, model, CodeRabbit
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
+/review-sweep                              # Every open PR/MR you review: what needs what
+/author-sweep                              # Every open PR/MR you authored: fixes and replies owed
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.16.2
+**Status:** ✅ Production Ready | **Version:** 1.19.0
 
-**What's New in 1.16.2:**
-- `security-reviewer` no longer describes itself as opt-in behind `+security`: it runs on every review since 1.14.0.
+**What's New in 1.19.0:**
+- `/review-sweep` goes over every open PR/MR where you are a reviewer — `/review`, `/rereview` or a delta review as each needs — and `/author-sweep` over the unresolved threads on your own. Report-only unless you confirm.
 
 **Features:**
 - 5 agents always run: code-reviewer, git-historian, silent-failure-hunter, test-analyzer, security-reviewer
 - CodeRabbit CLI integration (installed on consent; `coderabbit: off` keeps the review local)
 - Supports GitHub PR, GitLab MR (inline threads), branch diff, and uncommitted changes
 - `/rereview` follow-up: per-thread fixed/not-fixed verdicts, resolve + approve
+- `/review-sweep` / `/author-sweep`: every open PR/MR you review or authored, in one pass
 - Findings filtered by scope map, evidence rule and falsifiability gate (`filter-findings.py`)
 - Optional agents: +comments, +types, +simplify
 
