@@ -69,7 +69,7 @@ def analyze(repo_root: Path, plugin_path: Path) -> AdaptationReport:
 
     plan_path = adaptation_state.plan_path(plugin)
     plan_path.parent.mkdir(parents=True, exist_ok=True)
-    plan_path.write_text(plan_text, encoding="utf-8")
+    plan_path.write_text(plan_text, encoding="utf-8", newline="\n")
     adaptation_state.save(plugin, payload)
 
     return AdaptationReport(
@@ -308,7 +308,7 @@ def _append_text(
         if text in existing:
             continue
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(existing + text, encoding="utf-8")
+        path.write_text(existing + text, encoding="utf-8", newline="\n")
         changed.append(path)
     return changed
 
@@ -382,7 +382,7 @@ def _write_review_stub(plugin: Path, item: dict[str, Any]) -> list[Path]:
         if path.exists():
             continue
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
+        path.write_text(text, encoding="utf-8", newline="\n")
         changed.append(path)
     return changed
 
