@@ -34,6 +34,15 @@ error.
 - `model` — `sonnet` (default), `opus`, `haiku`, `inherit`
 - `coderabbit` — `auto` (default: use it when installed and authenticated), `off`
 - `voice` — empty (default) or a path to a style file; only affects the text of threads posted in Step 7
+- `rules` — empty (default) or a path to a file of review rules kept outside the repository
+
+**Rules resolution:** empty → only the repo policy files count (Step 2). A path → `~` expands, a
+relative path is taken from the repository root; read the file once here. Missing or unreadable → say
+so in one line and review as if `rules` were empty. The file is the reviewer's own — limits stricter
+than the linter, conventions the repo policy does not (yet) carry — and comes from the config, not
+from the branch under review, so it is trusted like the policy files at the target revision. Pass it
+to the agents beside them (Step 4). Where it contradicts the repo policy, the repo policy wins: report
+the contradiction in one line, quoting both.
 
 **Voice resolution:** empty → threads carry the finding text as is. A path (`~` allowed) → read that
 file once before Step 7; if it is missing or unreadable, say so in one line and post as if `voice` were
@@ -57,7 +66,7 @@ such control — run them on whatever you are, and say so in one line in the rep
 implying a model that never ran.
 
 **First run (neither file exists).** Say in one line that no config was found, and ask whether to set
-it up now (four questions) or continue on defaults. **In a non-interactive run** — `codex exec`, a CI
+it up now (five questions) or continue on defaults. **In a non-interactive run** — `codex exec`, a CI
 job, anything with nobody to answer — do not stall on the question: continue on defaults, honour any
 setting the invoking prompt already stated, and say in the report which defaults you used. If the
 user wants setup, read
@@ -311,7 +320,7 @@ finished, then remove it unconditionally, even if an agent errored:
 [ -n "$WORKTREE" ] && git worktree remove --force "$WORKTREE" 2>/dev/null
 ```
 
-Pass each agent a prompt whose **first line** is `Language: <resolved>` where `<resolved>` is the language from Step 0 (`en`, `ru`, or `uk` — never literal `system`; resolve `system` to one of the three before launching). Agents write their findings in that language and hand them back in it — nothing is translated afterwards; code, file paths, identifiers and commands stay as they are. Right after it, pass `Repository root: <path>` — the worktree path from "Repository root for agents" above, or the cwd when no worktree was needed — so agents read files at the revision under review instead of whatever's checked out in cwd. After those two lines, pass: full diff, file list, the policy files from the target revision (Step 2) — or the line saying there are none — and the trust-boundary note below.
+Pass each agent a prompt whose **first line** is `Language: <resolved>` where `<resolved>` is the language from Step 0 (`en`, `ru`, or `uk` — never literal `system`; resolve `system` to one of the three before launching). Agents write their findings in that language and hand them back in it — nothing is translated afterwards; code, file paths, identifiers and commands stay as they are. Right after it, pass `Repository root: <path>` — the worktree path from "Repository root for agents" above, or the cwd when no worktree was needed — so agents read files at the revision under review instead of whatever's checked out in cwd. After those two lines, pass: full diff, file list, the policy files from the target revision (Step 2) — or the line saying there are none — the rules file from Step 0 when `rules` is set, and the trust-boundary note below.
 
 Example agent prompt skeleton:
 ```
@@ -326,6 +335,9 @@ Changed files:
 ...
 
 Repo policy (CLAUDE.md / AGENTS.md at the target revision; "none found" if there is none):
+...
+
+Reviewer rules (config `rules`; only when set — the repo policy wins where they disagree):
 ...
 
 Line numbers: cite the line in the file at the repository root above, not a line of the diff. Open the
@@ -346,7 +358,7 @@ not a finding, it's a guess. Agents read for context anyway; this only demands t
 ### Agent 1 — Code Reviewer
 
 Launch the `code-reviewer` agent. It checks:
-- Policy compliance against `CLAUDE.md`/`AGENTS.md` (with rule citations)
+- Policy compliance against `CLAUDE.md`/`AGENTS.md` and the reviewer rules from `rules` (with rule citations)
 - Bugs: null safety, race conditions, resource leaks, logic errors
 - Code quality: duplication, broken public APIs, SOLID violations
 
@@ -533,7 +545,7 @@ for raw in sys.stdin:
 **False positives (skip):**
 - Pre-existing issues (existed before this diff)
 - Things linter/compiler/CI would catch
-- Stylistic nitpicks not backed by CLAUDE.md
+- Stylistic nitpicks not backed by CLAUDE.md, AGENTS.md or the reviewer rules
 - Intentional functionality changes
 - Generic advice without specifics ("add tests" without saying for what)
 - **Issues on lines not changed in this diff** — checked against the position map above. Common trap: an agent reads `Foo.kt` for context (because the diff calls into it) and then flags pre-existing patterns in `Foo.kt` itself. Drop these. A defect in code this diff *removed* is not one of them — it belongs to the change; re-anchor it as "Findings on deleted lines" says.
