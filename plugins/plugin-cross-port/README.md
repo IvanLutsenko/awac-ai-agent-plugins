@@ -6,7 +6,7 @@ Converts individual plugins in either direction and reconciles dual-target
 Claude Code and Codex marketplaces. A repository chooses one canonical
 marketplace, while each plugin keeps its own `source_of_truth`.
 
-**Version:** 0.12.3
+**Version:** 0.12.4
 
 ---
 
@@ -200,6 +200,14 @@ available and emit a warning.
 ---
 
 ## Changelog
+
+### 0.12.4
+- **Fixed:** A run on Windows writes what a run on macOS or Linux writes. The pre-commit hook regenerated every
+  Codex file with CRLF line ends and `\` in paths (`./plugins\crashlytics` in the Codex marketplace,
+  `plugins\<name>` inside generated skills), so a commit from Windows rewrote the whole Codex side; and
+  a `✅` in the report crashed the conversion on a console with a legacy code page. Files are now
+  written with `\n` line ends, relative paths are always `/`-separated, and the report is printed as
+  UTF-8. Pinned by `tests/test_platform_neutral_output.py`.
 
 ### 0.12.3
 - **Fixed:** the generated Codex manifest declares `"commands": []`. Codex turns every `commands/*.md` it can parse into a `source-command-*` skill of its own at install time — the ones without `$ARGUMENTS` or `${CLAUDE_PLUGIN_ROOT}` — so a plugin whose commands were converted to skills offered each of those twice (obsidian-tracker: 17 duplicates). An explicit empty list switches the migration off; checked on codex 0.166 by installing with and without it. Found by `scripts/codex-smoke.py`.
