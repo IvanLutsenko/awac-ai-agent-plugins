@@ -132,11 +132,14 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 /review --base main                        # Current branch vs main
 /review feature/X feature/Y +comments     # Add an optional agent (+comments, +types, +simplify)
 /review feature/X feature/Y all           # All agents, optional ones included
-/review-config                             # Language, model, CodeRabbit
+/review-config                             # Language, model, CodeRabbit, voice, rules
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.17.1
+**Status:** ✅ Production Ready | **Version:** 1.18.0
+
+**What's New in 1.18.0:**
+- `rules` config key: a file of review rules kept outside the repository, passed to the agents beside `CLAUDE.md`/`AGENTS.md`; the repo policy wins where they disagree.
 
 **What's New in 1.17.1:**
 - `/review` and `/rereview` end the report with the PR/MR author and a link to it, so a review running in a side pane says whom the findings go to and where.
