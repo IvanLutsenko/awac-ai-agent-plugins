@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.16.2
+**Version:** 1.19.0
 
 ---
 
@@ -98,6 +98,26 @@ version N of the diff"* auto-note and GitHub's `isOutdated` both fire on any lin
 and "исправил" is a claim, not evidence.
 
 ---
+
+### Sweeps: `/review-sweep` and `/author-sweep`
+
+```bash
+/review-sweep          # every open PR/MR where you are a reviewer: report only
+/review-sweep +post    # ...and post what you confirm (threads, replies, resolves, approvals)
+/author-sweep          # every open PR/MR you authored: what needs a fix, a reply, or waits on the reviewer
+```
+
+`/review-sweep` sorts each PR/MR by what it needs: an untouched one gets `/review`; one where you have
+threads gets `/rereview`, and when code was pushed after your last note, a review of just that delta.
+It re-reads every reply in your open threads on every run, holds drafts and very large PRs/MRs with a
+reason, and keeps the last report in `${XDG_STATE_HOME:-~/.local/state}/combined-review/sweeps/`, so
+the next run knows which head it reviewed and which findings were never posted. Nothing goes to the
+forge without `+post` and your confirmation.
+
+`/author-sweep` is the other side: per unresolved thread on your own PRs/MRs — unanswered and
+unfixed, fixed without a reply, waiting on the reviewer (with its age), or pushed back — checked
+against the code at the head, with the fix or the reply drafted. It never resolves a thread on your
+own PR/MR.
 
 ## Default Agents (5)
 
@@ -292,6 +312,17 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.19.0
+
+- **`/review-sweep` and `/author-sweep`: every open PR/MR in one pass.** `/review` and `/rereview` work
+  on one PR/MR you name; keeping up with a team meant running them by hand over a list and remembering
+  what you saw last time. `/review-sweep` takes every open PR/MR where you are a reviewer, sorts it —
+  untouched, threads waiting, new code since your last note, held — and runs `/review`, `/rereview` or
+  a review of just the delta accordingly; the report is saved in a state directory so the next run
+  starts from the head it reviewed and the findings it never posted. `/author-sweep` sorts the
+  unresolved threads on your own PRs/MRs by what they need from you and drafts the fix or the reply.
+  Both are report-only unless you confirm; neither resolves what is not yours to resolve.
 
 ### 1.16.2
 
