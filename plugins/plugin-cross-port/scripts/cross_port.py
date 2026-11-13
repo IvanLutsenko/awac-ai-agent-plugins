@@ -10,21 +10,13 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import adaptation
+from console import utf8_console
 from convert_cc_to_codex import Converter
 from convert_codex_to_cc import ReverseConverter
 from marketplace_sync import plugin_source_path, upsert_cc_entry, upsert_codex_entry
 from plugin_state import load as load_state
 from plugin_state import new_plugin_state, save as save_state
 from reconcile import ReconcileReport, Reconciler
-
-
-def utf8_console() -> None:
-    """Windows consoles default to a legacy code page that cannot encode the
-    report's symbols; print them as UTF-8 instead of failing the conversion."""
-    for stream in (sys.stdout, sys.stderr):
-        reconfigure = getattr(stream, "reconfigure", None)
-        if reconfigure is not None:
-            reconfigure(encoding="utf-8", errors="replace")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -204,10 +196,8 @@ def append_to_canonical(
         upsert_cc_entry(canonical, manifest, source_path, "development")
     else:
         upsert_codex_entry(canonical, manifest, source_path, "synced", "Development")
-    canonical_path.write_text(
-        json.dumps(canonical, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-        newline="\n",
+    canonical_path.write_bytes(
+        (json.dumps(canonical, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
     )
 
 

@@ -207,7 +207,9 @@ available and emit a warning.
   `plugins\<name>` inside generated skills), so a commit from Windows rewrote the whole Codex side; and
   a `✅` in the report crashed the conversion on a console with a legacy code page. Files are now
   written with `\n` line ends, relative paths are always `/`-separated, and the report is printed as
-  UTF-8. Pinned by `tests/test_platform_neutral_output.py`.
+  UTF-8. Pinned by `tests/test_platform_neutral_output.py`. A checkout with `core.autocrlf=true` still
+  turns generated files into CRLF and `marketplace check` reports them stale; pin them with `eol=lf` in
+  `.gitattributes`, as this repository does.
 
 ### 0.12.2
 - **Fixed:** `skills_authored` now covers agents too. A plugin whose Codex skills are hand-written got its agents generated as Codex skills anyway (only command skills were skipped), so they sat beside the authored ones and duplicated them. Both are skipped now, and the generated folders are removed.

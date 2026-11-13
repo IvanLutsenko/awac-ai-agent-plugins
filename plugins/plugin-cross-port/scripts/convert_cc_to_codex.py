@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from console import utf8_console
 from plugin_state import load as load_state, dumps as dump_state
 
 # ---------------------------------------------------------------------------
@@ -207,7 +208,7 @@ class Converter:
             self.created.append(self._rel(path))
             return True
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content, encoding='utf-8', newline='\n')
+        path.write_bytes(content.encode('utf-8'))
         self.created.append(self._rel(path))
         return True
 
@@ -645,6 +646,7 @@ class Converter:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    utf8_console()
     parser = argparse.ArgumentParser(
         description='Convert a Claude Code plugin to Codex format.',
         formatter_class=argparse.RawDescriptionHelpFormatter,
