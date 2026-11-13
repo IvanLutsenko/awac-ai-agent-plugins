@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from console import utf8_console
 from plugin_state import load as load_state, dumps as dump_state
 
 
@@ -169,9 +170,9 @@ class ReverseConverter:
 
     def _rel(self, path: Path) -> str:
         try:
-            return str(path.relative_to(self.repo_root))
+            return path.relative_to(self.repo_root).as_posix()
         except ValueError:
-            return str(path)
+            return path.as_posix()
 
     def _write(self, path: Path, content: str, *, overwrite: bool = False) -> bool:
         if path.exists() and not overwrite and not self.force:
@@ -182,12 +183,12 @@ class ReverseConverter:
             self.created.append(self._rel(path))
             return True
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content, encoding='utf-8')
+        path.write_bytes(content.encode('utf-8'))
         self.created.append(self._rel(path))
         return True
 
     def _plugin_rel(self, path: Path) -> str:
-        return str(path.relative_to(self.plugin_path))
+        return path.relative_to(self.plugin_path).as_posix()
 
     def _is_manually_maintained(self, path: Path, entries: list[str]) -> bool:
         return self._plugin_rel(path) in entries
@@ -433,6 +434,7 @@ class ReverseConverter:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    utf8_console()
     parser = argparse.ArgumentParser(
         description='Convert a Codex plugin to Claude Code format.',
         formatter_class=argparse.RawDescriptionHelpFormatter,

@@ -217,10 +217,10 @@ python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/exa
 python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/example --apply
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.12.2
+**Status:** 🔨 Beta | **Version:** 0.12.3
 
-**What's New in 0.12.2:**
-- `skills_authored` now covers agents too. A plugin whose Codex skills are hand-written got its agents generated as Codex skills anyway (only command skills were skipped), so they sat beside the authored ones and duplicated them. Both are skipped now, and the generated folders are removed.
+**What's New in 0.12.3:**
+- Runs on Windows produce the same files as on macOS/Linux: LF line ends, `/` in every generated path, and a report that no longer crashes on a legacy console code page.
 
 **Features:**
 - CC → Codex: manifest conversion, `commands/` → `skills/generated-from-commands/`

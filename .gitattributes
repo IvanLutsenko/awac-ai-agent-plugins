@@ -1,0 +1,7 @@
+.agents/plugins/marketplace.json text eol=lf
+.claude-plugin/marketplace.json text eol=lf
+.plugin-cross-port.marketplace.json text eol=lf
+plugins/*/.codex-plugin/plugin.json text eol=lf
+plugins/*/.plugin-cross-port.json text eol=lf
+plugins/*/skills/generated-from-commands/*/SKILL.md text eol=lf
+plugins/*/skills/generated-from-agents/*/SKILL.md text eol=lf

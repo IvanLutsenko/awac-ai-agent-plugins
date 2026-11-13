@@ -8,7 +8,7 @@
 - **combined-review** (v1.16.2) — Multi-agent code review + CodeRabbit CLI; GitHub PR + GitLab MR with inline resolvable threads on both; `/rereview` verifies + resolves + approves on both; all five agents on every review, no per-agent switches; `/review-config` for language/model/CodeRabbit/voice
 - **clip-maker** (v1.3.2) — Automated vertical clip creator (whisper + Claude + ffmpeg)
 - **drawbridge** (v0.1.2) — Bridge briefs to image-gen web UIs (Gemini/ChatGPT/Grok/Midjourney), per-target prompt tuning
-- **plugin-cross-port** (v0.12.2) — Bidirectional CC ↔ Codex plugin conversion (agents → standalone Codex skills)
+- **plugin-cross-port** (v0.12.3) — Bidirectional CC ↔ Codex plugin conversion (agents → standalone Codex skills)
 - **auto-theme** (v1.1.2) — Syncs Claude Code + Codex themes with macOS light/dark; bundles gruvbox-light / sunset-drive
 - **nyan-progress** (v0.1.1) — Nyan Cat + full-width rainbow over the turn spinner (mod: function hooks); `/nyan gif|pixel|dots`
 - **push-gate** (v0.2.0) — Confirms every git push in a native dialog (mod: function hooks); runs the confirmed command itself, past a PreToolUse guard

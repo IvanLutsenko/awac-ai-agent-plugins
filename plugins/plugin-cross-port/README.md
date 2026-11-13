@@ -6,7 +6,7 @@ Converts individual plugins in either direction and reconciles dual-target
 Claude Code and Codex marketplaces. A repository chooses one canonical
 marketplace, while each plugin keeps its own `source_of_truth`.
 
-**Version:** 0.12.2
+**Version:** 0.12.3
 
 ---
 
@@ -200,6 +200,16 @@ available and emit a warning.
 ---
 
 ## Changelog
+
+### 0.12.3
+- **Fixed:** A run on Windows writes what a run on macOS or Linux writes. The pre-commit hook regenerated every
+  Codex file with CRLF line ends and `\` in paths (`./plugins\crashlytics` in the Codex marketplace,
+  `plugins\<name>` inside generated skills), so a commit from Windows rewrote the whole Codex side; and
+  a `✅` in the report crashed the conversion on a console with a legacy code page. Files are now
+  written with `\n` line ends, relative paths are always `/`-separated, and the report is printed as
+  UTF-8. Pinned by `tests/test_platform_neutral_output.py`. A checkout with `core.autocrlf=true` still
+  turns generated files into CRLF and `marketplace check` reports them stale; pin them with `eol=lf` in
+  `.gitattributes`, as this repository does.
 
 ### 0.12.2
 - **Fixed:** `skills_authored` now covers agents too. A plugin whose Codex skills are hand-written got its agents generated as Codex skills anyway (only command skills were skipped), so they sat beside the authored ones and duplicated them. Both are skipped now, and the generated folders are removed.
