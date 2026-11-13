@@ -207,7 +207,9 @@ available and emit a warning.
   `plugins\<name>` inside generated skills), so a commit from Windows rewrote the whole Codex side; and
   a `✅` in the report crashed the conversion on a console with a legacy code page. Files are now
   written with `\n` line ends, relative paths are always `/`-separated, and the report is printed as
-  UTF-8. Pinned by `tests/test_platform_neutral_output.py`.
+  UTF-8. Pinned by `tests/test_platform_neutral_output.py`. A checkout with `core.autocrlf=true` still
+  turns generated files into CRLF and `marketplace check` reports them stale; pin them with `eol=lf` in
+  `.gitattributes`, as this repository does.
 
 ### 0.12.3
 - **Fixed:** the generated Codex manifest declares `"commands": []`. Codex turns every `commands/*.md` it can parse into a `source-command-*` skill of its own at install time — the ones without `$ARGUMENTS` or `${CLAUDE_PLUGIN_ROOT}` — so a plugin whose commands were converted to skills offered each of those twice (obsidian-tracker: 17 duplicates). An explicit empty list switches the migration off; checked on codex 0.166 by installing with and without it. Found by `scripts/codex-smoke.py`.
