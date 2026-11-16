@@ -174,10 +174,10 @@ Project tracking, task management with kanban boards, bug logging, decision reco
 /track-stop                 # Save session to Obsidian
 ```
 
-**Status:** ✅ Production Ready | **Version:** 4.5.4
+**Status:** ✅ Production Ready | **Version:** 4.5.5
 
-**What's New in 4.5.4:**
-- Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/obsidian-tracker/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.
+**What's New in 4.5.5:**
+- Codex: no more duplicate skills. Codex turns every `commands/*.md` it can parse into a `source-command-*` skill of its own at install time, so 17 of the 19 commands showed up twice, next to the skill generated from the same command. The Codex manifest now declares `"commands": []`, which switches that migration off. Claude Code behaviour is unchanged.
 
 **Features:**
 - Auto-tracking via hooks (PreCompact, SessionStart, PostToolUse)
@@ -217,10 +217,10 @@ python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/exa
 python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/example --apply
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.12.2
+**Status:** 🔨 Beta | **Version:** 0.12.3
 
-**What's New in 0.12.2:**
-- `skills_authored` now covers agents too. A plugin whose Codex skills are hand-written got its agents generated as Codex skills anyway (only command skills were skipped), so they sat beside the authored ones and duplicated them. Both are skipped now, and the generated folders are removed.
+**What's New in 0.12.3:**
+- The generated Codex manifest declares `"commands": []`. Codex turns every `commands/*.md` it can parse into a `source-command-*` skill of its own at install time; with the commands already converted to skills, each of those appeared twice. Found by `scripts/codex-smoke.py`.
 
 **Features:**
 - CC → Codex: manifest conversion, `commands/` → `skills/generated-from-commands/`
@@ -266,12 +266,10 @@ Syncs Claude Code **and Codex** themes with macOS system appearance (light/dark)
 /plugin install auto-theme
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.1.2
+**Status:** ✅ Production Ready | **Version:** 1.1.3
 
-**What's New in 1.1.2:**
-- `sync-theme` skill now resolves the script path correctly in both Claude Code and Codex
-- malformed config files and non-writable targets now emit `WARN:` instead of being skipped silently
-- unknown `custom:*` themes without a light/dark pair are preserved instead of being overwritten
+**What's New in 1.1.3:**
+- Codex: the `sync-theme` skill finds its script. It fell back to `${CODEX_PLUGIN_ROOT}`, which Codex does not set, so the command became `bash /sync-theme.sh`. The fallback is now the skill's own directory.
 
 **How it works:**
 - Hooks into `UserPromptSubmit` — checks macOS appearance on every message
@@ -384,7 +382,7 @@ Automated vertical clip creator for talks and presentations. Whisper + Claude + 
 
 Talk decks on top of the [Craft](https://github.com/IvanLutsenko/craft) skill: a fresh holiday theme per talk, the author's defaults, a themed Harold on the closing slide, a PDF for organizers and a card on the author's site.
 
-**What's New in 0.5.1:** `/deck-publish --public` takes a deck published with `--hidden` onto the site. 0.5.0: `/deck-google-slides` in 2x with counters as GIFs and `--update` in place, so transitions and the organizer's copy survive; `/deck-publish --hidden` for a deck reachable by link only.
+**What's New in 0.5.2:** Codex no longer lists `/deck-harold` twice (its own `source-command-deck-harold` next to the generated skill). 0.5.1: `/deck-publish --public` takes a deck published with `--hidden` onto the site. 0.5.0: `/deck-google-slides` in 2x with counters as GIFs and `--update` in place, so transitions and the organizer's copy survive; `/deck-publish --hidden` for a deck reachable by link only.
 
 📚 **[Full Documentation](plugins/talk-deck/README.md)**
 
@@ -406,7 +404,7 @@ Talk decks on top of the [Craft](https://github.com/IvanLutsenko/craft) skill: a
 /deck-publish --event "Podlodka #17"            # card on the author's site, no push; --hidden for link-only
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.5.1
+**Status:** 🔨 Beta | **Version:** 0.5.2
 
 **Features:**
 - Needs the Craft skill; the plugin holds only commands and a hook

@@ -1,13 +1,20 @@
 {
   "name": "talk-deck",
   "description": "Talk decks on top of the Craft skill: a fresh holiday theme per talk, the author's defaults, a themed Harold at the end, a PDF for organizers or a repo, a Google Slides copy, a roast by every agent and a card on the author's site.",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "author": {
     "name": "Ivan Lutsenko",
     "email": "ivan@lutsenko.com",
     "url": "https://github.com/IvanLutsenko"
   },
-  "keywords": ["slides", "presentation", "talk", "craft", "html", "pdf"],
+  "keywords": [
+    "slides",
+    "presentation",
+    "talk",
+    "craft",
+    "html",
+    "pdf"
+  ],
   "license": "MIT",
   "commands": [
     "./commands/deck-new.md",

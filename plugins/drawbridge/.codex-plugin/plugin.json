@@ -6,6 +6,7 @@
     "name": "Ivan Lutsenko"
   },
   "skills": "./skills/",
+  "commands": [],
   "interface": {
     "displayName": "Drawbridge",
     "shortDescription": "Bridge between a short brief and image-gen web UIs (Gemini, ChatGPT, Grok, Midjo",

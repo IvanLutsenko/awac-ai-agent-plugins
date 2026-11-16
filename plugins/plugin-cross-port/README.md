@@ -6,7 +6,7 @@ Converts individual plugins in either direction and reconciles dual-target
 Claude Code and Codex marketplaces. A repository chooses one canonical
 marketplace, while each plugin keeps its own `source_of_truth`.
 
-**Version:** 0.12.2
+**Version:** 0.12.3
 
 ---
 
@@ -200,6 +200,9 @@ available and emit a warning.
 ---
 
 ## Changelog
+
+### 0.12.3
+- **Fixed:** the generated Codex manifest declares `"commands": []`. Codex turns every `commands/*.md` it can parse into a `source-command-*` skill of its own at install time — the ones without `$ARGUMENTS` or `${CLAUDE_PLUGIN_ROOT}` — so a plugin whose commands were converted to skills offered each of those twice (obsidian-tracker: 17 duplicates). An explicit empty list switches the migration off; checked on codex 0.166 by installing with and without it. Found by `scripts/codex-smoke.py`.
 
 ### 0.12.2
 - **Fixed:** `skills_authored` now covers agents too. A plugin whose Codex skills are hand-written got its agents generated as Codex skills anyway (only command skills were skipped), so they sat beside the authored ones and duplicated them. Both are skipped now, and the generated folders are removed.

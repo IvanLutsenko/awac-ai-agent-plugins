@@ -26,8 +26,12 @@ It also installs the bundled themes on first run (`~/.claude/themes/`,
 5. Response Format: Output a 2-line bulleted summary detailing: Line 1: Detected OS appearance, Line 2: The exact themes written to both files. Do not include conversational filler.
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT}}/sync-theme.sh"
+bash "${CLAUDE_PLUGIN_ROOT:-<this skill directory>/../..}/sync-theme.sh"
 ```
+
+Replace `<this skill directory>` with the absolute path of the directory this SKILL.md is in before
+running. Claude Code sets `CLAUDE_PLUGIN_ROOT`, so the fallback is never used there; Codex sets no
+plugin-root variable at all, and without the fallback the command becomes `bash /sync-theme.sh`.
 
 ## Automatic switching (one-time setup)
 

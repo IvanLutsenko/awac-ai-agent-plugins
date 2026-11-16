@@ -277,6 +277,10 @@ class Converter:
             'description': description,
             'author': {'name': author_name} if author_name else {},
             'skills': './skills/',
+            # Codex turns every commands/*.md it can parse into a `source-command-*` skill of its
+            # own at install time. The skills above already are those commands, so the user got
+            # each one twice. An explicit empty list switches the migration off (codex 0.166).
+            'commands': [],
             'interface': {
                 'displayName': display_name,
                 'shortDescription': short,

@@ -3,16 +3,16 @@
 ## Active Plugins
 
 - **crashlytics** (v4.4.7) — Multi-platform crash analysis with git blame forensics
-- **obsidian-tracker** (v4.5.4) — Project tracking, task management, session logging via Obsidian
+- **obsidian-tracker** (v4.5.5) — Project tracking, task management, session logging via Obsidian
 - **locale-notifications** (v2.0.1) — macOS notifications in system language
 - **combined-review** (v1.16.2) — Multi-agent code review + CodeRabbit CLI; GitHub PR + GitLab MR with inline resolvable threads on both; `/rereview` verifies + resolves + approves on both; all five agents on every review, no per-agent switches; `/review-config` for language/model/CodeRabbit/voice
 - **clip-maker** (v1.3.2) — Automated vertical clip creator (whisper + Claude + ffmpeg)
 - **drawbridge** (v0.1.2) — Bridge briefs to image-gen web UIs (Gemini/ChatGPT/Grok/Midjourney), per-target prompt tuning
-- **plugin-cross-port** (v0.12.2) — Bidirectional CC ↔ Codex plugin conversion (agents → standalone Codex skills)
-- **auto-theme** (v1.1.2) — Syncs Claude Code + Codex themes with macOS light/dark; bundles gruvbox-light / sunset-drive
+- **plugin-cross-port** (v0.12.3) — Bidirectional CC ↔ Codex plugin conversion (agents → standalone Codex skills)
+- **auto-theme** (v1.1.3) — Syncs Claude Code + Codex themes with macOS light/dark; bundles gruvbox-light / sunset-drive
 - **nyan-progress** (v0.1.1) — Nyan Cat + full-width rainbow over the turn spinner (mod: function hooks); `/nyan gif|pixel|dots`
 - **push-gate** (v0.2.0) — Confirms every git push in a native dialog (mod: function hooks); runs the confirmed command itself, past a PreToolUse guard
-- **talk-deck** (v0.5.1) — Talk decks on top of the Craft skill: holiday theme per talk, themed Harold, `/deck-new`, `/deck-harold`, `/deck-pdf` (`--into` a repo with a share link), `/deck-google-slides`, `/deck-review`, `/deck-rehearse`, `/deck-publish`, static check hook
+- **talk-deck** (v0.5.2) — Talk decks on top of the Craft skill: holiday theme per talk, themed Harold, `/deck-new`, `/deck-harold`, `/deck-pdf` (`--into` a repo with a share link), `/deck-google-slides`, `/deck-review`, `/deck-rehearse`, `/deck-publish`, static check hook
 
 ## Plugin Structure
 

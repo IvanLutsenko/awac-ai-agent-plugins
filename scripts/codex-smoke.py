@@ -62,6 +62,7 @@ def check_installed(plugin, root):
             continue
         names.append(meta["name"])
         # used as a path, also as ${CLAUDE_PLUGIN_ROOT:-...}/; a skill may still talk about the variable
+        # A fallback to "<this skill directory>/.." has spaces in it and does not match: that form is fine.
         if re.search(r"\$\{CLAUDE_PLUGIN_ROOT[^\s\"'`]*\}/", text):
             fails.append(f"{rel}: a ${{CLAUDE_PLUGIN_ROOT}}/ path is left in the text - Codex has no such variable")
         for helper in sorted(set(re.findall(r"<this skill directory>/(scripts/[\w./-]+)", text))):

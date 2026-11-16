@@ -50,6 +50,16 @@ class ConverterTest(unittest.TestCase):
         self.assertEqual(converter.run(), 0)
         self.assertFalse(stale.exists())
 
+    def test_cc_to_codex_switches_off_codex_own_command_migration(self):
+        """Without it Codex adds a `source-command-*` skill next to each converted command."""
+        plugin = self.make_cc_plugin()
+
+        self.assertEqual(
+            cc_to_codex.Converter(plugin, self.repo_root, False, False, False).run(), 0
+        )
+
+        self.assertEqual(read_json(plugin / ".codex-plugin/plugin.json")["commands"], [])
+
     def test_cc_to_codex_points_script_references_at_the_skills_own_copy(self):
         """A marketplace-relative path resolves only when Codex runs inside the
         marketplace — never, for a skill acting on another repository."""
