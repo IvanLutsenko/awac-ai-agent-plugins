@@ -64,6 +64,9 @@ skill runs the same sync on demand.
 
 ## Changelog
 
+### 1.1.3
+- Codex: the `sync-theme` skill finds its script. The command fell back to `${CODEX_PLUGIN_ROOT}`, a variable Codex does not set, and ran `bash /sync-theme.sh`. The fallback is now the skill's own directory (`<this skill directory>/../..`); Claude Code still goes through `CLAUDE_PLUGIN_ROOT`.
+
 ### 1.1.2
 - `sync-theme` skill now resolves the script path in both Claude Code and Codex environments
 - `sync-theme.sh` now emits `WARN:` messages for malformed JSON and non-writable config files instead of failing silently

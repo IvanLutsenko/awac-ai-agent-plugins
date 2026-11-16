@@ -6,6 +6,7 @@
     "name": "Ivan Lutsenko"
   },
   "skills": "./skills/",
+  "commands": [],
   "interface": {
     "displayName": "Combined Review",
     "shortDescription": "Combined code review: multi-agent analysis (code-reviewer, git-historian, silent",

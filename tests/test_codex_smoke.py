@@ -43,6 +43,10 @@ class CheckInstalledTest(unittest.TestCase):
         body = 'bash "${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT}}/sync-theme.sh"'
         self.assertEqual(len(self.installed({"a": ("demo-a", body, [])})[0]), 1)
 
+    def test_plugin_root_falling_back_to_the_skill_directory_is_fine(self):
+        body = 'bash "${CLAUDE_PLUGIN_ROOT:-<this skill directory>/../..}/sync-theme.sh"'
+        self.assertEqual(self.installed({"a": ("demo-a", body, [])})[0], [])
+
     def test_quoted_name_is_read_without_the_quotes(self):
         with tempfile.TemporaryDirectory() as d:
             skill = Path(d) / "skills/a"

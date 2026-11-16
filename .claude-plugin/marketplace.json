@@ -21,7 +21,7 @@
     },
     {
       "name": "obsidian-tracker",
-      "version": "4.5.4",
+      "version": "4.5.5",
       "description": "Project tracking, task management with kanban boards, bug logging, decision records (ADR), session management, and engineering traceability via Obsidian",
       "source": "./plugins/obsidian-tracker",
       "author": {
@@ -43,7 +43,7 @@
     },
     {
       "name": "auto-theme",
-      "version": "1.1.2",
+      "version": "1.1.3",
       "description": "Syncs Claude Code and Codex themes with macOS system appearance (light/dark) on every prompt. Bundles custom gruvbox-light / sunset-drive themes and installs them on first run.",
       "source": "./plugins/auto-theme",
       "author": {
@@ -88,7 +88,7 @@
     },
     {
       "name": "plugin-cross-port",
-      "version": "0.12.2",
+      "version": "0.12.3",
       "description": "Bidirectional conversion between Claude Code and Codex plugin formats. CC → Codex and Codex → CC, one-shot or continuous. Auto-converts agents to standalone Codex skills.",
       "source": "./plugins/plugin-cross-port",
       "author": {
@@ -121,7 +121,7 @@
     },
     {
       "name": "talk-deck",
-      "version": "0.5.1",
+      "version": "0.5.2",
       "description": "Talk decks on top of the Craft skill: a fresh holiday theme per talk, the author's defaults, a themed Harold at the end, a PDF for organizers or a repo, a Google Slides copy, a roast by every agent and a card on the author's site.",
       "author": {
         "name": "Ivan Lutsenko",

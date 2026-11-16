@@ -243,9 +243,12 @@ To disable auto-allow entirely, disable the plugin or remove the `PermissionRequ
 
 ## Version
 
-4.5.4
+4.5.5
 
 ## Changelog
+
+### 4.5.5
+- **Fixed:** Codex: no more duplicate skills. Codex turns every `commands/*.md` it can parse into a `source-command-*` skill of its own at install time, so 17 of the 19 commands showed up twice, next to the skill generated from the same command. The Codex manifest now declares `"commands": []`, which switches that migration off. Claude Code behaviour is unchanged.
 
 ### 4.5.4
 - **Changed:** Codex: the generated skills are rebuilt by the current converter. Helper scripts now ship inside each skill and are called as `<this skill directory>/scripts/...`, not through repo-relative `plugins/obsidian-tracker/scripts/...` paths that do not exist once the plugin is installed. Command skills end with a `## Codex differences` note. Claude Code behaviour is unchanged.

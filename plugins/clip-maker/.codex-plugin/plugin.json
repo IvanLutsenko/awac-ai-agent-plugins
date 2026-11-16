@@ -6,6 +6,7 @@
     "name": "Ivan Lutsenko"
   },
   "skills": "./skills/",
+  "commands": [],
   "interface": {
     "displayName": "Clip Maker",
     "shortDescription": "Automated vertical clip creator for talks and presentations",
