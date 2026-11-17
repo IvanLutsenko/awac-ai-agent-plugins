@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.16.2
+**Version:** 1.16.3
 
 ---
 
@@ -292,6 +292,17 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.16.3
+
+- Posted threads can no longer act as you. Before a finding goes to the PR/MR, both posting helpers
+  put a zero-width space after a `/` that starts a line (a GitLab quick action such as `/merge` or
+  `/approve`, run with your rights) and after `@name` (a ping). Closed code blocks and one-line inline code stay
+  byte-exact. Self-check: `python3 scripts/test_neutralize.py`.
+- Agents get the diff and the PR/MR description in tags with a per-run random suffix, so a `</diff>`
+  in the code no longer closes the block.
+- `/rereview`: a "resolve" or "approve" go-ahead comes only from the user, never from a reply,
+  description or commit message on the PR/MR.
 
 ### 1.16.2
 
