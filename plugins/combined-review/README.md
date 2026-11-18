@@ -154,10 +154,12 @@ rules:              # empty | path to a file of review rules kept outside the re
   the claim first in your words, then the line and scenario as evidence. What is found and the
   terminal report don't change. Personal, so keep it in the user-level file.
 - **`rules`** — empty by default. Set it to a file of review rules the repo's `CLAUDE.md`/`AGENTS.md`
-  don't carry — limits stricter than the linter, an MR size budget, team conventions. `~` expands, a
-  relative path is read from the repository root. The agents check the diff against it and cite it as
-  reviewer rules; the repo policy wins where the two disagree. Usually per project, so it belongs in
-  `.claude/combined-review.local.md`.
+  don't carry — limits stricter than the linter, an MR size budget, team conventions. The path is `~/…`
+  or absolute and must lie outside the repository; a relative path or a file inside the checkout is
+  refused, since the branch under review could rewrite it. The key is read from the user-level file, or
+  from the project file only while git doesn't track it. `code-reviewer` checks the diff against the
+  file and every agent cites it as reviewer rules; the repo policy wins where the two disagree. The
+  report names the file used, or why it was not applied, and lists the contradictions.
 There is no key for the agents: all five run on every review, security included. Which one pays off
 changes per diff — in two runs on this plugin's own code the decisive finding came from a different
 agent each time, and the one that reported nothing had spent its pass disproving four claims that
@@ -304,9 +306,11 @@ Every finding includes file path and line number:
 - **`rules` config key: review rules kept outside the repository.** A team often reviews by rules the
   repo's `CLAUDE.md`/`AGENTS.md` don't carry — complexity limits stricter than the linter, an MR size
   budget, conventions the repo owners haven't adopted. Until now the only way in was to paste them into
-  each request. `rules` points at a file (`~` or a path from the repository root); `/review` passes it to
-  the agents beside the policy files, `code-reviewer` cites it as reviewer rules, and the repo policy
-  wins where the two disagree. It is read from the config, never from the branch under review.
+  each request. `rules` points at a file outside the repository (`~/…` or absolute); `/review` passes it
+  to the agents beside the policy files, `code-reviewer` checks the diff against it, and the repo policy
+  wins where the two disagree. Neither the key nor the file can come from the branch under review: a
+  relative path, a file inside the checkout and `rules` in a tracked project config are refused, and
+  the report says which file was applied or why none was.
 
 ### 1.16.2
 
