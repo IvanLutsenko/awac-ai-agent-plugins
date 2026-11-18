@@ -1,7 +1,7 @@
 ---
 description: "Set up combined-review: language, subagent model, CodeRabbit, voice, reviewer rules. Writes a config that survives plugin updates."
 argument-hint: "[--project] [--show]"
-allowed-tools: Bash(head:*), Bash(coderabbit:*), Bash(cat:*), Bash(ls:*), Bash(mkdir:*), Bash(which:*), Read, Write, AskUserQuestion
+allowed-tools: Bash(head:*), Bash(coderabbit:*), Bash(cat:*), Bash(ls:*), Bash(mkdir:*), Bash(which:*), Bash(git ls-files:*), Bash(git rev-parse:*), Read, Write, AskUserQuestion
 ---
 
 # Combined Review — config
@@ -50,9 +50,12 @@ Stop here.
    file describing how the user writes review comments, e.g. `~/.claude/skills/my-voice/SKILL.md`.
    Only `+threads` uses it. Personal by nature — put it in the user-level file, not a shared project one.
 5. **Reviewer rules** — empty (default) or a path to a file of review rules kept outside the repo:
-   limits stricter than the linter, conventions the repo policy doesn't carry. `~` expands, a relative
-   path is read from the repository root. Usually per project — suggest `--project` for it. The repo's
-   own `CLAUDE.md`/`AGENTS.md` win where the two disagree.
+   limits stricter than the linter, conventions the repo policy doesn't carry. `~/…` or absolute, and
+   outside the repository (`git rev-parse --show-toplevel`) — `/review` refuses a relative path or a file
+   inside the checkout. Per-project rules can go to `--project`, but only while that file is untracked
+   (`git ls-files --error-unmatch .claude/combined-review.local.md` fails): `/review` ignores `rules`
+   from a tracked project file. If it is tracked, say so and offer the user-level file instead. The
+   repo's own `CLAUDE.md`/`AGENTS.md` win where the two disagree.
 
 The agents themselves have no setting: all five run on every review. If the user asks to switch one
 off, say that the roster is fixed on purpose — which agent pays off changes per diff — and that
@@ -62,13 +65,19 @@ Accept the defaults without ceremony if the user says so — the answer to all f
 
 ## Step 3 — Write
 
-Create the directory if needed, then write the file with only the keys the user chose:
+Before writing a `voice` or `rules` path, check that it exists with `ls`; if it doesn't, say so and
+ask again rather than writing a path every review would then reject.
+
+Create the directory if needed, then write the file with only the keys the user chose — the template
+shows every key; drop the ones left at their default:
 
 ```markdown
 ---
 language: system
 model: sonnet
 coderabbit: auto
+voice: ~/.claude/skills/my-voice/SKILL.md
+rules: ~/.config/review-rules/my-team.md
 ---
 
 # Combined Review config

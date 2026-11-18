@@ -21,8 +21,8 @@ none, skip this dimension and say so in one line; do not invent rules, and do no
 preferences as repo policy.
 
 Reviewer rules, when given, are checked the same way and cited as such ("reviewer rules: …"), never as
-repo policy. Where they contradict a policy file, the policy file wins: report the contradiction in one
-line and judge by the policy file.
+repo policy. Where they contradict a policy file, judge by the policy file and do not report the
+contradiction — the orchestrator lists those in the report.
 
 ### Scope discipline (read carefully)
 
