@@ -477,7 +477,7 @@ for raw in sys.stdin:
      git diff --no-index --unified=0 -- /dev/null "$f"
    done | python3 -c '...same script...' | sort -u >> "$CRDIR/positions.txt"
    ```
-   `--unified=0` is what makes the map exact: with no context lines, every `+` line in a hunk is a line the change introduced, counted from the hunk header's new-side start. A finding whose `file:line` is not in the map is out of scope — drop it, however many agents reported it. Reading-for-context is fine; reporting-on-unchanged-code is not.
+   `--unified=0` is what makes the map exact: with no context lines, every `+` line in a hunk is a line the change introduced, counted from the hunk header's new-side start. A finding whose `file:line` is not in the map is out of scope — drop it, however many agents reported it — unless it is about code the change removed, which the map cannot hold (see "Findings on deleted lines" below). Reading-for-context is fine; reporting-on-unchanged-code is not.
 
    **Run the check, don't promise it.** Write the agents' finding lines to a file, one per line, and
    let the shipped script place them against the map. It is the same rule as below, executed instead
@@ -492,6 +492,14 @@ for raw in sys.stdin:
    when no `file:line` could be parsed at all. A non-zero exit means something was left unplaced —
    read it, don't ignore it. Carry the `[MOVED]` line numbers into the report and into Step 7; a
    `[DROP ]` reason is what you say if the user asks why a finding vanished.
+
+   **`[DROP ]` on removed code is not a verdict.** The map holds added lines only, so the script
+   cannot place a finding whose code the change removed: it prints `[DROP ]` with `quoted code not
+   found in the file`, or `file untouched by this diff` when the file only lost lines or was deleted.
+   Before dropping such a finding, look for its quoted code on a `-` line of
+   `git diff --unified=0 "<diff-spec>"`. If it is there, the finding stays and goes through
+   "Findings on deleted lines" below — re-anchored to a surviving line, or carried as `old_line`.
+   If it is on neither side of the diff, the `[DROP ]` stands.
 
    **A wrong line is not the same as out of scope** — which is what the script implements, and why
    you don't do this by eye. Agents do miscount, and the usual failure is quoting a position inside
@@ -513,7 +521,7 @@ for raw in sys.stdin:
 
    **Findings on deleted lines.** A removal can be the defect — a dropped permission check, a deleted null guard. Report it, but anchor it to a line that still exists in the new file: the nearest surviving line of the same hunk, normally the line right after the deletion. Quote the removed code in the finding body so the reader sees what went away. A finding with no surviving line to anchor to is posted on the removed line itself, on the old side of the diff.
 
-   Mechanically: if the hunk that removed the code also added lines, those lines are in the map — anchor to the nearest one. If it removed only (`@@ -a,b +c,0 @@`), the surviving neighbour in the new file is line `c + 1`; anchor there when that pair is in the map. When neither holds, the finding carries `old_line` into Step 7 instead of `line`: the removed line's number in the old file, read off that file's section of the map's own `git diff --unified=0 "<diff-spec>"` (no pathspec: with one, rename detection does not fire) — the hunk header's `-a` is the first `-` line, each further `-` line adds one. The path is the `--- a/` one; when it differs from the `+++ b/` path (a rename), carry it as `old_path` too. Only a finding whose removed line cannot be named that way is terminal-only.
+   Mechanically: if the hunk that removed the code also added lines, those lines are in the map — anchor to the nearest one. If it removed only (`@@ -a,b +c,0 @@`), the surviving neighbour in the new file is line `c + 1`; anchor there when that pair is in the map. When neither holds, the finding carries `old_line` into Step 7 instead of `line`: the removed line's number in the old file, read off that file's section of the map's own `git diff --unified=0 "<diff-spec>"` (no pathspec: with one, rename detection does not fire) — the hunk header's `-a` is the first `-` line, each further `-` line adds one. `path` stays the `+++ b/` path, as for any other finding; when the `--- a/` path differs from it (a rename), carry that one as `old_path`. A file the change deletes outright has `+++ /dev/null` and no new path: there `path` is the `--- a/` path, with no `old_path`. Only a finding whose removed line cannot be named that way is terminal-only.
 3. **Race conditions — causal gate, not timing.** Drop or downgrade a concurrency finding only when a causal gate makes the bad interleaving impossible: a guard the consumer waits on, an `await`/join on the producer, or a state transition the consumer observes before reading. A ratio of delays is not a happens-before relation — "the producer takes milliseconds and the user needs seconds to get there" sets severity, not existence. Without a causal gate the finding stands, at the severity the window justifies.
 4. **Parallel-conflict sanity check** — if a finding cites a parallel branch/commit as a conflict source, verify with `git merge-base --is-ancestor <commit> origin/<target>`. If the commit is already in target, drop the finding.
 5. **Falsifiability gate** — for every Critical, spend one pass trying to *invalidate* it instead of confirming it. Any one of these exits kills or downgrades the finding:
@@ -589,9 +597,9 @@ Only when `+threads` was passed or the user explicitly asks. GitHub PR and GitLa
 branch-diff and `current` have nowhere to post to.
 
 Build a threads JSON from the findings you're posting (blockers + correctness + the test findings worth a thread). Each entry:
-- `path` — repo-relative path, exactly as in the diff (`new_path`)
+- `path` — repo-relative path, exactly as in the diff (`new_path`); for a file the change deletes, its old path — there is no new one
 - `line` — line number in the **new** (post-change) file; the `(path, line)` pair must be in the position map from Step 5 (`$CRDIR/positions.txt`), else the forge rejects the position. A finding about removed code carries the line it was re-anchored to in Step 5
-- `old_line` — instead of `line`, for a finding Step 5 left on the removed line itself: its number in the **old** file. Add `old_path` when the file was renamed. GitLab posts it on the old side of the diff, GitHub on the LEFT side. A finding with neither `line` nor `old_line` is terminal-only — do not post it
+- `old_line` — instead of `line`, for a finding Step 5 left on the removed line itself: its number in the **old** file. Add `old_path` — the file's old name — when the file was renamed; `path` stays the new one. GitLab posts it on the old side of the diff, GitHub on the LEFT side. A finding with neither `line` nor `old_line` is terminal-only — do not post it: the helper refuses the whole file over one entry with neither, or with both
 - `body` — the finding text (markdown; keep it in the resolved report language). With `voice` set, rewrite it by
   the voice file instead: the claim first, in that person's words, then the evidence the author needs to act —
   the line or call that is wrong and the scenario that breaks. Cut headers and severity labels if the voice has
