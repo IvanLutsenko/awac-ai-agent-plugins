@@ -136,10 +136,10 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.16.2
+**Status:** ✅ Production Ready | **Version:** 1.17.0
 
-**What's New in 1.16.2:**
-- `security-reviewer` no longer describes itself as opt-in behind `+security`: it runs on every review since 1.14.0.
+**What's New in 1.17.0:**
+- A finding on removed code with no surviving line nearby is posted on the removed line itself: `old_line` in the threads JSON, the old side on GitLab, the LEFT side on GitHub. It used to stay terminal-only.
 
 **Features:**
 - 5 agents always run: code-reviewer, git-historian, silent-failure-hunter, test-analyzer, security-reviewer

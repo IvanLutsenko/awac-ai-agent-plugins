@@ -1,7 +1,9 @@
 import importlib.util
+import io
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from types import SimpleNamespace
 from pathlib import Path
 from unittest.mock import patch
@@ -31,6 +33,28 @@ def make_discussion(disc_id, path, line, author, body="see MR", position=True):
     note = {"author": {"username": author}, "body": body}
     note["position"] = {"new_path": path, "new_line": line} if position else None
     return {"id": disc_id, "notes": [note]}
+
+
+def make_old_discussion(disc_id, old_path, old_line, new_line=None):
+    position = {"old_path": old_path, "old_line": old_line, "new_line": new_line}
+    return {"id": disc_id, "notes": [{"author": {"username": "someone"}, "position": position}]}
+
+
+def make_echo_glab_api(head_sha, sent, discussions=(), echo=None):
+    """Fake glab_api whose POST answers with the position it was sent (or `echo`)."""
+    base = None
+
+    def fake(path, method=None, headers=None, input_file=None, paginate=False):
+        if method == "POST":
+            payload = json.loads(Path(input_file).read_text())
+            sent.append(payload)
+            position = echo if echo is not None else payload["position"]
+            note = {"type": "DiffNote", "position": position}
+            return json.dumps({"id": "1234567890abcdef", "notes": [note]}), ""
+        return base(path, method, headers, input_file, paginate)
+
+    base = make_glab_api(head_sha, discussions)
+    return fake
 
 
 def make_glab_api(head_sha, discussions=()):
@@ -239,6 +263,136 @@ class PostGitlabMrThreadsTest(unittest.TestCase):
         self.assertNotEqual(cm.exception.code, 0)
         self.assertEqual(len(seen), 2)
 
+    def run_main(self, module):
+        with patch(
+            "sys.argv",
+            [
+                "post-gitlab-mr-threads.py",
+                "--repo", "group/project", "--mr", "1",
+                "--threads", str(self.threads_file),
+                "--expected-head", ANALYZED_SHA,
+            ],
+        ):
+            with self.assertRaises(SystemExit) as cm:
+                module.main()
+        return cm.exception
+
+    def write_threads(self, threads):
+        self.threads_file.write_text(json.dumps(threads), encoding="utf-8")
+
+    def test_removed_line_is_posted_on_old_line_without_new_line(self):
+        module = load_module()
+        self.write_threads([{"path": "foo.py", "old_line": 7, "body": "nit"}])
+        sent = []
+        with patch.object(module, "glab_api", side_effect=make_echo_glab_api(ANALYZED_SHA, sent)):
+            exc = self.run_main(module)
+
+        self.assertEqual(exc.code, 0)
+        position = sent[0]["position"]
+        self.assertEqual(position["old_line"], 7)
+        self.assertNotIn("new_line", position)
+        self.assertEqual(position["old_path"], "foo.py")
+        self.assertEqual(position["new_path"], "foo.py")
+
+    def test_removed_line_in_a_renamed_file_sends_the_old_path(self):
+        module = load_module()
+        self.write_threads(
+            [{"path": "src/new/foo.py", "old_path": "src/old/foo.py", "old_line": 7, "body": "nit"}]
+        )
+        sent = []
+        with patch.object(module, "glab_api", side_effect=make_echo_glab_api(ANALYZED_SHA, sent)):
+            exc = self.run_main(module)
+
+        self.assertEqual(exc.code, 0)
+        self.assertEqual(sent[0]["position"]["old_path"], "src/old/foo.py")
+        self.assertEqual(sent[0]["position"]["new_path"], "src/new/foo.py")
+
+    def test_removed_line_that_lands_on_an_unchanged_line_is_a_failure(self):
+        module = load_module()
+        self.write_threads([{"path": "foo.py", "old_line": 7, "body": "nit"}])
+        # GitLab answered with both numbers: the note sits on a context line, not the removed one.
+        echo = {"old_path": "foo.py", "old_line": 7, "new_line": 8}
+        with patch.object(
+            module, "glab_api", side_effect=make_echo_glab_api(ANALYZED_SHA, [], echo=echo)
+        ):
+            exc = self.run_main(module)
+
+        self.assertNotEqual(exc.code, 0)
+
+    def test_thread_on_the_removed_line_is_not_posted_again(self):
+        module = load_module()
+        self.write_threads([{"path": "foo.py", "old_line": 7, "body": "nit"}])
+        sent = []
+        existing = [make_old_discussion("d1", "foo.py", 7)]
+        with patch.object(
+            module, "glab_api", side_effect=make_echo_glab_api(ANALYZED_SHA, sent, existing)
+        ):
+            exc = self.run_main(module)
+
+        self.assertEqual(exc.code, 0)
+        self.assertEqual(sent, [])
+
+    def test_removed_line_that_lands_in_another_file_is_a_failure(self):
+        module = load_module()
+        self.write_threads(
+            [{"path": "src/new/foo.py", "old_path": "src/old/foo.py", "old_line": 7, "body": "nit"}]
+        )
+        # Right number, right side, but GitLab put the note under the new name.
+        echo = {"old_path": "src/new/foo.py", "old_line": 7, "new_line": None}
+        with patch.object(
+            module, "glab_api", side_effect=make_echo_glab_api(ANALYZED_SHA, [], echo=echo)
+        ):
+            exc = self.run_main(module)
+
+        self.assertNotEqual(exc.code, 0)
+
+    def test_thread_on_the_removed_line_of_a_renamed_file_is_not_posted_again(self):
+        module = load_module()
+        self.write_threads(
+            [{"path": "src/new/foo.py", "old_path": "src/old/foo.py", "old_line": 7, "body": "nit"}]
+        )
+        sent = []
+        existing = [make_old_discussion("d1", "src/old/foo.py", 7)]
+        out = io.StringIO()
+        with patch.object(
+            module, "glab_api", side_effect=make_echo_glab_api(ANALYZED_SHA, sent, existing)
+        ), redirect_stdout(out):
+            exc = self.run_main(module)
+
+        self.assertEqual(exc.code, 0)
+        self.assertEqual(sent, [])
+        self.assertIn("[DUP] foo.py:7 (removed) -> thread d1", out.getvalue())
+
+    def test_malformed_second_thread_stops_the_run_before_the_first_is_posted(self):
+        module = load_module()
+        for bad in (
+            {"path": "bar.py", "line": 3, "old_line": 7, "body": "nit"},
+            {"path": "bar.py", "body": "nit"},
+            {"path": "bar.py", "line": "soon", "body": "nit"},
+            {"line": 3, "body": "nit"},
+        ):
+            with self.subTest(bad=bad):
+                self.write_threads([{"path": "foo.py", "line": 3, "body": "nit"}, bad])
+                sent = []
+                with patch.object(
+                    module, "glab_api", side_effect=make_echo_glab_api(ANALYZED_SHA, sent)
+                ) as mock_api:
+                    exc = self.run_main(module)
+
+                self.assertIn("threads[2]", str(exc.code))
+                self.assertIn("nothing posted", str(exc.code))
+                self.assertEqual(mock_api.call_args_list, [])
+
+    def test_thread_with_both_line_and_old_line_is_refused(self):
+        module = load_module()
+        self.write_threads([{"path": "foo.py", "line": 3, "old_line": 7, "body": "nit"}])
+        sent = []
+        with patch.object(module, "glab_api", side_effect=make_echo_glab_api(ANALYZED_SHA, sent)):
+            exc = self.run_main(module)
+
+        self.assertNotEqual(exc.code, 0)
+        self.assertEqual(sent, [])
+
     def test_paginated_call_that_fails_midway_aborts(self):
         module = load_module()
         # Page 1 arrived, page 2 died: stdout is valid JSON but incomplete.
@@ -315,6 +469,25 @@ class MatchThreadTest(unittest.TestCase):
 
     def test_same_path_other_line(self):
         d = make_discussion("d1", "foo.py", 4, "me")
+        self.assertEqual(self.match([d]), ("post", None))
+
+    def match_old(self, discussions, old_path="foo.py", old_line=7):
+        return load_module().match_thread(discussions, old_path, old_line, "old")
+
+    def test_removed_line_thread_on_the_same_old_line(self):
+        d = make_old_discussion("d1", "foo.py", 7)
+        self.assertEqual(self.match_old([d]), ("dup", "d1"))
+
+    def test_new_side_thread_with_that_number_does_not_block_a_removed_line(self):
+        d = make_discussion("d1", "foo.py", 7, "me")
+        self.assertEqual(self.match_old([d]), ("post", None))
+
+    def test_unchanged_line_thread_does_not_block_a_removed_line(self):
+        d = make_old_discussion("d1", "foo.py", 7, new_line=8)
+        self.assertEqual(self.match_old([d]), ("post", None))
+
+    def test_removed_line_thread_does_not_block_a_new_side_line(self):
+        d = make_old_discussion("d1", "foo.py", 3)
         self.assertEqual(self.match([d]), ("post", None))
 
 
