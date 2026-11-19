@@ -136,10 +136,10 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.16.3
+**Status:** ✅ Production Ready | **Version:** 1.17.0
 
-**What's New in 1.16.3:**
-- Posted threads can't run GitLab quick actions (`/merge`, `/approve`) or ping `@people` copied from the diff; diff and PR/MR description reach agents in tags the author can't close; `/rereview` takes resolve/approve only from the user.
+**What's New in 1.17.0:**
+- `/review` sends findings on generated lines to the generator, not the author; `/rereview` flags threads whose reply says "fixed" while the code says not (🚩), first in the report and blocking resolve/approve.
 
 **Features:**
 - 5 agents always run: code-reviewer, git-historian, silent-failure-hunter, test-analyzer, security-reviewer

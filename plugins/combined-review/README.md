@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.16.3
+**Version:** 1.17.0
 
 ---
 
@@ -292,6 +292,20 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.17.0
+
+- `/review`: findings on generated lines go to the generator, not the author. Step 5 gets a
+  "Generated lines" gate: a header marker, `linguist-generated`, a lockfile or build output, or a
+  script in the repo that writes the file. If the generator is in the diff, the finding moves to its
+  line; otherwise it stays terminal-only and names where the fix belongs, never a thread on the
+  generated file.
+- `/rereview`: a new verdict, 🚩 *claimed, not there* — the reply says "fixed", the code at head says
+  not. It opens the report as its own group, since it means the author's other replies need a second
+  look, and it blocks resolve and approve like ❌. Before, such a thread fell between ❌ (which
+  required the reply not to claim a fix) and nothing.
+- `/rereview`: a side note spotted in the new revision goes through the same generated-lines check
+  before it is offered as a thread.
 
 ### 1.16.3
 
