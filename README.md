@@ -138,9 +138,12 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 /author-sweep                              # Every open PR/MR you authored: fixes and replies owed
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.19.0
+**Status:** ✅ Production Ready | **Version:** 1.19.1
 
-**What's New in 1.19.0:**
+**What's New in 1.19.1:**
+- `/review-sweep` runs its reviews in the background, finds new commits by the commit graph, sweeps GitLab MRs you approved, and works on Windows with Cyrillic and Kazakh text.
+
+**1.19.0:**
 - `/review-sweep` goes over every open PR/MR where you are a reviewer — `/review`, `/rereview` or a delta review as each needs — and `/author-sweep` over the unresolved threads on your own. Report-only unless you confirm.
 
 **What's New in 1.17.1:**

@@ -59,7 +59,7 @@ a push does not make that push reviewed.
 | `review` | you never looked, or the head you reviewed is gone (rebase, force-push) | `/review` |
 | `delta` | new commits since the head you reviewed — whoever's turn the forge says it is | `/rereview` if your threads are open, then `/review --since <that head>` |
 | `rereview` | your threads are open and it is your turn, or the author replied while you were waiting | `/rereview`, read-only |
-| `merge_only` | only merges of the target since your review | nothing — listed |
+| `merge_only` | only merges of the target since your review — a merged side branch is new code, a `delta` | nothing — listed |
 | `waiting` | the author's turn: nothing pushed, no reply in your threads | nothing — listed |
 | `hold` | a draft, or more than 300 changed files | nothing — ask the user |
 | `done` | approved at the current head | nothing — listed |
@@ -75,13 +75,20 @@ pass the rest to Step 2 with `--only`.
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/review-sweep.py" run "<plan.json>"      # --only 12,15  --jobs 3
 ```
 
+**Start it in the background** (`run_in_background: true` on the Bash call) and wait for the
+notification that it exited — do not poll. A foreground call dies at the shell tool's timeout (two
+minutes by default, ten at most), and the reviews die with it: three `/review` runs of five agents
+each take far longer. A shell without a background mode runs `run --only <N>` once per PR/MR, with
+the call's own timeout set above the script's `--timeout`.
+
 Each step of each PR/MR runs as its own headless session (`claude -p "/combined-review:review 12"`),
 three at a time. That is deliberate: `/review` launches five agents, and only a main session can — a
 subagent cannot start agents of its own, so a review handed to one silently shrinks to a single pass.
 Headless sessions need no terminal multiplexer and work the same in any terminal.
 
-The script prints, per step, `ok` or `failed` and the path of the report file, and exits non-zero if
-any step failed. **`failed` is not "no findings"**: a session that crashed, timed out, printed
+The script prints the report directory first, then `ok` or `failed` and the report file of each
+step as it finishes, and exits non-zero if any step failed. If the run was stopped, the reports
+finished by then are in that directory; the sessions still running were killed with it. **`failed` is not "no findings"**: a session that crashed, timed out, printed
 nothing or ended without a report is a review that did not happen. That PR/MR is listed under "not
 reviewed" in Step 3 — never under approvals. Sessions share this clone, so a fetch can lose a ref
 lock to its neighbour; rerun such a step with `--only <N>`, or the whole sweep with `--jobs 1`.

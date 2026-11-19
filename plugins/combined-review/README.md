@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.19.0
+**Version:** 1.19.1
 
 ---
 
@@ -324,6 +324,19 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.19.1
+
+- **`/review-sweep` runs in the background.** The reviews outlast any foreground shell call, so `run`
+  is started in the background and reports as each step finishes; a stopped sweep keeps the reports
+  it has and kills the sessions still running, with everything they started.
+- **New commits are found by the commit graph, not by list order.** A side branch merged after your
+  review is new code even when its commits are dated before it; only merges of the target count as
+  `merge_only`.
+- **GitLab: MRs you approved are swept too**, after you left their reviewers — as `reviewed-by:@me`
+  does on GitHub.
+- **Windows:** the script reads and writes UTF-8 everywhere, so Cyrillic and Kazakh titles and
+  replies no longer stop it; a timed-out session is killed with its node process.
 
 ### 1.19.0
 
