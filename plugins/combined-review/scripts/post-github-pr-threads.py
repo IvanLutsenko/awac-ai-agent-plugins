@@ -26,6 +26,8 @@ Usage:
                     `line`: its number in the OLD (pre-change) file, posted on the LEFT
                     side. `old_path` is accepted for parity with GitLab and ignored: a
                     review comment names the file by its path in the PR on either side.
+                    An entry with both `line` and `old_line`, or with neither,
+                    stops the run before anything is posted.
   --expected-head  SHA the findings were analyzed against. Required: compared against
                     the PR's live head.sha before posting anything; if the branch moved
                     since analysis, nothing is posted and the script exits non-zero.
@@ -131,12 +133,28 @@ def get_review_comments(repo, pr):
 
 def anchor_of(t):
     """("RIGHT", line) for a thread entry, or ("LEFT", old_line) for a removed line.
-    An entry with both `line` and `old_line` is refused."""
+    Raises ValueError for an entry with both `line` and `old_line`, or with neither."""
     if t.get("old_line") is not None:
         if t.get("line") is not None:
-            sys.exit(f"{t['path']}: a thread takes `line` or `old_line`, not both")
+            raise ValueError("a thread takes `line` or `old_line`, not both")
         return "LEFT", int(t["old_line"])
+    if t.get("line") is None:
+        raise ValueError("a thread needs `line` or `old_line`")
     return "RIGHT", int(t["line"])
+
+
+def resolve_anchors(threads):
+    """Anchors of all entries, in order. Exits on the first malformed one, so a bad
+    entry stops the run before anything is posted, not halfway through it."""
+    anchors = []
+    for i, t in enumerate(threads, 1):
+        try:
+            if not t.get("path"):
+                raise ValueError("a thread needs `path`")
+            anchors.append(anchor_of(t))
+        except (ValueError, TypeError) as e:
+            sys.exit(f"threads[{i}] {t.get('path') or '<no path>'}: {e} - nothing posted")
+    return anchors
 
 
 def match_thread(comments, path, line, side="RIGHT"):
@@ -209,6 +227,7 @@ def main():
     a = ap.parse_args()
 
     threads = json.load(open(a.threads))
+    anchors = resolve_anchors(threads)
     head_sha = get_head_sha(a.repo, a.pr)
 
     if head_sha != a.expected_head:
@@ -219,8 +238,7 @@ def main():
     comments = get_review_comments(a.repo, a.pr)
 
     ok = tried = skipped = 0
-    for t in threads:
-        side, line = anchor_of(t)
+    for t, (side, line) in zip(threads, anchors):
         path = t["path"]
         short = f"{path.split('/')[-1]}:{line}" + (" (removed)" if side == "LEFT" else "")
         outcome, cid = match_thread(comments, path, line, side)

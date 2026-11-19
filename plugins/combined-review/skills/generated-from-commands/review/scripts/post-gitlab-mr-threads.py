@@ -22,6 +22,8 @@ Usage:
                     `line`: its number in the OLD (pre-change) file, a `-` line of the
                     diff. Add `old_path` when the file was renamed and its old name
                     differs from `path`.
+                    An entry with both `line` and `old_line`, or with neither,
+                    stops the run before anything is posted.
   --expected-head  SHA the findings were analyzed against. Required: compared against
                     the MR's live diff_refs.head_sha before posting anything; if the
                     branch moved since analysis, nothing is posted and the script exits
@@ -127,12 +129,29 @@ def get_discussions(proj, mr):
 
 def anchor_of(t):
     """("new", path, line) for a thread entry, or ("old", old_path, old_line) for a
-    removed line. An entry with both `line` and `old_line` is refused."""
+    removed line. Raises ValueError for an entry with both `line` and `old_line`, or
+    with neither."""
     if t.get("old_line") is not None:
         if t.get("line") is not None:
-            sys.exit(f"{t['path']}: a thread takes `line` or `old_line`, not both")
+            raise ValueError("a thread takes `line` or `old_line`, not both")
         return "old", t.get("old_path") or t["path"], int(t["old_line"])
+    if t.get("line") is None:
+        raise ValueError("a thread needs `line` or `old_line`")
     return "new", t["path"], int(t["line"])
+
+
+def resolve_anchors(threads):
+    """Anchors of all entries, in order. Exits on the first malformed one, so a bad
+    entry stops the run before anything is posted, not halfway through it."""
+    anchors = []
+    for i, t in enumerate(threads, 1):
+        try:
+            if not t.get("path"):
+                raise ValueError("a thread needs `path`")
+            anchors.append(anchor_of(t))
+        except (ValueError, TypeError) as e:
+            sys.exit(f"threads[{i}] {t.get('path') or '<no path>'}: {e} - nothing posted")
+    return anchors
 
 
 def match_thread(discussions, path, line, side="new"):
@@ -202,10 +221,14 @@ def post_thread(proj, mr, refs, path, line, body, side="new", old_path=None):
         if side == "old":
             ok = (
                 n.get("type") == "DiffNote"
+                and pos.get("old_path") == (old_path or path)
                 and pos.get("old_line") == line
                 and pos.get("new_line") is None
             )
-            return ok, f"{d['id'][:10]} type={n.get('type')} old_line={pos.get('old_line')}"
+            return ok, (
+                f"{d['id'][:10]} type={n.get('type')} "
+                f"old_path={pos.get('old_path')} old_line={pos.get('old_line')}"
+            )
         ok = n.get("type") == "DiffNote" and pos.get("new_line") == line
         return ok, f"{d['id'][:10]} type={n.get('type')} line={pos.get('new_line')}"
     except Exception:
@@ -222,6 +245,7 @@ def main():
 
     proj = a.repo if a.repo.isdigit() else quote(a.repo, safe="")
     threads = json.load(open(a.threads))
+    anchors = resolve_anchors(threads)
     refs = get_diff_refs(proj, a.mr)
 
     if refs["head_sha"] != a.expected_head:
@@ -232,8 +256,7 @@ def main():
     discussions = get_discussions(proj, a.mr)
 
     ok = tried = skipped = 0
-    for t in threads:
-        side, at_path, line = anchor_of(t)
+    for t, (side, at_path, line) in zip(threads, anchors):
         path = t["path"]
         short = f"{path.split('/')[-1]}:{line}" + (" (removed)" if side == "old" else "")
         outcome, did = match_thread(discussions, at_path, line, side)

@@ -1,7 +1,9 @@
 import importlib.util
+import io
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from types import SimpleNamespace
 from pathlib import Path
 from unittest.mock import patch
@@ -329,6 +331,57 @@ class PostGitlabMrThreadsTest(unittest.TestCase):
 
         self.assertEqual(exc.code, 0)
         self.assertEqual(sent, [])
+
+    def test_removed_line_that_lands_in_another_file_is_a_failure(self):
+        module = load_module()
+        self.write_threads(
+            [{"path": "src/new/foo.py", "old_path": "src/old/foo.py", "old_line": 7, "body": "nit"}]
+        )
+        # Right number, right side, but GitLab put the note under the new name.
+        echo = {"old_path": "src/new/foo.py", "old_line": 7, "new_line": None}
+        with patch.object(
+            module, "glab_api", side_effect=make_echo_glab_api(ANALYZED_SHA, [], echo=echo)
+        ):
+            exc = self.run_main(module)
+
+        self.assertNotEqual(exc.code, 0)
+
+    def test_thread_on_the_removed_line_of_a_renamed_file_is_not_posted_again(self):
+        module = load_module()
+        self.write_threads(
+            [{"path": "src/new/foo.py", "old_path": "src/old/foo.py", "old_line": 7, "body": "nit"}]
+        )
+        sent = []
+        existing = [make_old_discussion("d1", "src/old/foo.py", 7)]
+        out = io.StringIO()
+        with patch.object(
+            module, "glab_api", side_effect=make_echo_glab_api(ANALYZED_SHA, sent, existing)
+        ), redirect_stdout(out):
+            exc = self.run_main(module)
+
+        self.assertEqual(exc.code, 0)
+        self.assertEqual(sent, [])
+        self.assertIn("[DUP] foo.py:7 (removed) -> thread d1", out.getvalue())
+
+    def test_malformed_second_thread_stops_the_run_before_the_first_is_posted(self):
+        module = load_module()
+        for bad in (
+            {"path": "bar.py", "line": 3, "old_line": 7, "body": "nit"},
+            {"path": "bar.py", "body": "nit"},
+            {"path": "bar.py", "line": "soon", "body": "nit"},
+            {"line": 3, "body": "nit"},
+        ):
+            with self.subTest(bad=bad):
+                self.write_threads([{"path": "foo.py", "line": 3, "body": "nit"}, bad])
+                sent = []
+                with patch.object(
+                    module, "glab_api", side_effect=make_echo_glab_api(ANALYZED_SHA, sent)
+                ) as mock_api:
+                    exc = self.run_main(module)
+
+                self.assertIn("threads[2]", str(exc.code))
+                self.assertIn("nothing posted", str(exc.code))
+                self.assertEqual(mock_api.call_args_list, [])
 
     def test_thread_with_both_line_and_old_line_is_refused(self):
         module = load_module()

@@ -300,8 +300,10 @@ Every finding includes file path and line number:
   position map either — was terminal-only. The threads JSON takes `old_line` instead of `line`
   (plus `old_path` for a renamed file): GitLab gets a position with `old_line` and no `new_line`,
   GitHub a comment on the LEFT side. Both helpers dedup on the same side only and check that the
-  note came back on the removed line, not on an unchanged one with the same number. `/rereview`
-  keeps the old-side anchor of such a thread and verifies it through the hunk that removed the line.
+  note came back on the removed line, not on an unchanged one with the same number. A threads entry
+  with both `line` and `old_line`, or with neither, stops the run before anything is posted.
+  `/rereview` keeps the old-side anchor of such a thread and verifies it through the hunk that
+  removed the line, taken from the diff the comment was made on.
 
 ### 1.17.1
 

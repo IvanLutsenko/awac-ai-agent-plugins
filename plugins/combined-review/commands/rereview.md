@@ -86,9 +86,9 @@ Filter `notes[0]` by:
   can't resolve at all; count them separately and say so, don't try to resolve them.
 
 For each thread keep: `id`, `position.new_path`, `position.new_line` — or, for a thread on a
-removed line (`new_line` null), `position.old_path` + `position.old_line` — `position.head_sha`
-(the revision the comment was anchored to), `original_position` (the fallback anchor when
-`head_sha` is unreachable — see Step 3), your body, and all replies.
+removed line (`new_line` null), `position.old_path` + `position.old_line` + `position.base_sha` —
+`position.head_sha` (the revision the comment was anchored to), `original_position` (the fallback
+anchor when `head_sha` is unreachable — see Step 3), your body, and all replies.
 
 **GitHub:** resolution state lives in GraphQL only — the REST review-comments endpoint never says
 whether a thread is resolved, so a REST-based re-review would re-report threads you closed last week.
@@ -133,10 +133,11 @@ the first page while looking complete.
 
 ## Step 3 — Diff what changed since each comment
 
-**GitHub first, because most threads need no diff at all.** A thread with a non-null `line` is one
-GitHub already re-anchored to the current head — take that line and go straight to Step 4. Only an
-outdated thread (`isOutdated: true`, `line: null`) needs the mapping below, from `originalLine` at
-`originalCommit.oid`.
+**GitHub first, because most threads need no diff at all.** A `diffSide: RIGHT` thread with a
+non-null `line` is one GitHub already re-anchored to the current head — take that line and go
+straight to Step 4. An outdated thread (`isOutdated: true`, `line: null`) needs the mapping below,
+from `originalLine` at `originalCommit.oid`. So does every `diffSide: LEFT` thread, outdated or not:
+its `line` counts lines of the old file, and there is nothing at head to read by that number.
 
 ```bash
 git fetch origin "refs/pull/<number>/head:refs/remotes/pr/<number>"
@@ -179,22 +180,42 @@ that's missing too — or, on GitHub, if the outdated thread's `originalCommit` 
 anchor is unrecoverable: mark it **position lost**, drop it from Step 4's verdicts, and call it out
 separately in Step 5's report — don't let it just disappear from the count.
 
+**A thread on a removed line** (GitLab `old_line` with `new_line` null, GitHub `diffSide: LEFT`)
+needs one more diff. The one above starts at `<anchor_sha>`, and the line was removed before that,
+between the base and `<anchor_sha>` — the hunk that removed it is not in it, and when the author
+pushed nothing since the comment it is empty. Take the hunk from the diff the comment was made on:
+
+```bash
+git diff -M --unified=0 "<base_sha>" "<anchor_sha>"                # no pathspec, as above
+```
+
+`<base_sha>` is `position.base_sha` on GitLab (`original_position.base_sha` if the anchor fell back
+to `original_position`). On GitHub it is `git merge-base "origin/<base.ref>" "<anchor_sha>"`, after
+`git fetch origin "<base.ref>"` — `base.ref` is in Step 1's answer. In the old file's section find
+the hunk whose `-` lines cover the thread's `old_line` (`originalLine` on GitHub): `@@ -a,b +c,d @@`
+covers old lines `a` to `a+b-1`. Its `+c` is where the removal sits in the file at `<anchor_sha>` —
+line `c` when the hunk also added lines, the gap right after line `c` when `d` is 0. No hunk covering
+the line means the anchor cannot be placed: mark the thread **position lost**.
+
 ## Step 4 — Verify each thread against the current head
 
-Resolve the thread's line to `<head_sha>` first, unless Step 3 already had it (a GitHub thread with a
-non-null `line`): take the new path from Step 3's `git diff --name-status -M` and map the line (from
-`position.new_line` / `originalLine`, or from `original_position` if that's what Step 3 fell back to)
-through that diff's hunks to the matching line at head — not the raw number from the comment, which
-points at a revision that no longer matches. Only then read the code as it is now, not the diff alone:
+Resolve the thread's line to `<head_sha>` first, unless Step 3 already had it (a GitHub RIGHT-side
+thread with a non-null `line`): take the new path from Step 3's `git diff --name-status -M` and map
+the line (from `position.new_line` / `originalLine`, or from `original_position` if that's what
+Step 3 fell back to) through that diff's hunks to the matching line at head — not the raw number
+from the comment, which points at a revision that no longer matches. Only then read the code as it
+is now, not the diff alone:
 
 ```bash
 git show "<head_sha>:<new_path>" | sed -n '<start>,<head_line+15>p'
 ```
 
-A thread on a removed line (GitLab `old_line` with `new_line` null, GitHub `diffSide: LEFT`) has no
-line at head to map. Find the hunk that removed it in Step 3's diff, then read the code at head where
-that hunk sits: the ask is met if the removed code is back, or if its concern is handled in what
-replaced it — not because the line is still gone.
+A thread on a removed line has no line of its own at head. Step 3 found the hunk that removed it and
+where that hunk sits at `<anchor_sha>`; map that place to head through the `<anchor_sha>..<head_sha>`
+diff like any other line — it is already at head when the two are the same commit — and read the
+code there. The ask is met if the removed code is back, or if its concern is handled in what replaced
+it. It is not met because the line is still gone, and an empty `<anchor_sha>..<head_sha>` diff is
+not a fix either: nothing changed since the comment, so the verdict is ❌ unless a reply defers it.
 
 `<start>` is `head_line - 15` **clamped to 1**: `sed` rejects address `0` and anything negative, so a
 finding on one of a file's first 15 lines errors out instead of printing.
