@@ -17,9 +17,11 @@ import json
 import os
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
@@ -33,7 +35,7 @@ def classify(pr):
 
     pr: draft, files, head, ball ('mine' | 'author' | 'done'), reviewed_sha (the head your last review
     or thread was made against, None if you never looked), open_threads (your unresolved ones),
-    answered (how many of those end with someone else's note), commits ([{sha, parents}], oldest first).
+    answered (how many of those end with someone else's note), commits ([{sha, parents: [sha]}], any order).
     """
     if pr["draft"]:
         return "hold", "draft", []
@@ -47,17 +49,19 @@ def classify(pr):
         if threads:
             return "review", "your threads carry no commit to diff from - full review", recheck + ["review"]
         return "review", "", ["review"]
-    shas = [c["sha"] for c in pr["commits"]]
+    graph = {c["sha"]: c["parents"] for c in pr["commits"]}
     if seen == pr["head"]:
         new = []
-    elif seen not in shas:
+    elif seen not in graph:
         return "review", f"the head you reviewed ({seen[:8]}) is gone - rebase or force-push", recheck + ["review"]
     else:
-        new = pr["commits"][shas.index(seen) + 1:]
-    # ponytail: a merge commit counts as "the target's code". One that resolved conflicts by hand can
-    # carry the author's lines; merge_only is listed in the report for that reason. Diff the merge
-    # against its first parent if this ever hides real code.
-    own = [c for c in new if c["parents"] < 2]
+        new = unseen(graph, seen)
+    # A merge of the target brings in commits that are not the PR's own, so the forge leaves them out
+    # of the PR's list; a merge of a side branch brings in commits that are. Only the first is the
+    # target's code. ponytail: a target merge that resolved conflicts by hand can still carry the
+    # author's lines; merge_only is listed in the report for that reason. Diff it against its first
+    # parent if this ever hides real code.
+    own = [c for c in new if len(c["parents"]) < 2 or any(p in graph for p in c["parents"][1:])]
     if own:  # whoever's turn the forge says it is: pushed code that nobody read is yours to read
         return "delta", f"{len(own)} new commits since {seen[:8]}", recheck + [f"review --since {seen}"]
     merges = f"only merges since {seen[:8]}: {len(new)}" if new else ""
@@ -74,8 +78,21 @@ def classify(pr):
     return "review", "review requested again, nothing of yours is open", ["review"]
 
 
+def unseen(graph, seen):
+    """Commits of the PR that are neither `seen` nor its ancestors - by the parent graph, not by the
+    list order: a side branch merged after the review can hold commits dated before it."""
+    reached, stack = set(), [seen]
+    while stack:
+        sha = stack.pop()
+        if sha in graph and sha not in reached:
+            reached.add(sha)
+            stack += graph[sha]
+    return [{"sha": sha, "parents": parents} for sha, parents in graph.items() if sha not in reached]
+
+
 def sh(cmd):
-    r = subprocess.run(cmd, capture_output=True, text=True)
+    # utf-8 explicitly: without UTF-8 mode, Windows decodes as cp1251 and fails on Cyrillic and Kazakh text
+    r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
     if r.returncode:
         sys.exit(f"{' '.join(cmd[:4])} ... failed ({r.returncode}): {r.stderr.strip()[:400]}")
     return r.stdout
@@ -158,7 +175,7 @@ def github_pr(me, pr, requested, reviews, threads, commits):
             else "done" if state == "APPROVED" else "author")
     return {"draft": pr["isDraft"], "files": pr["changedFiles"], "head": head, "ball": ball, "reviewed_sha": seen,
             "open_threads": len(opened), "answered": sum(login(t["last"]["nodes"][0]) != me for t in opened),
-            "commits": [{"sha": c["sha"], "parents": len(c["parents"])} for c in commits]}
+            "commits": [{"sha": c["sha"], "parents": [p["sha"] for p in c["parents"]]} for c in commits]}
 
 
 def github_plan(repo):
@@ -206,18 +223,29 @@ def gitlab_mr(me, mr, approved_by, state, discussions, versions, commits):
     return {"draft": mr["draft"], "files": int(str(mr.get("changes_count") or 0).rstrip("+") or 0),
             "head": mr["sha"], "ball": ball, "reviewed_sha": newest(seen), "open_threads": len(opened),
             "answered": sum(who(human(d)[-1]) != me for d in opened),
-            "commits": [{"sha": c["id"], "parents": len(c["parent_ids"])} for c in reversed(commits)]}
+            "commits": [{"sha": c["id"], "parents": c["parent_ids"]} for c in commits]}
 
 
 def gitlab_plan(repo):
     project = f"projects/{quote(repo, safe='')}"
     me = json.loads(sh(["glab", "api", "user"]))["username"]
-    for listed in glab_pages(f"{project}/merge_requests?state=opened&reviewer_username={me}"):
+    # Like reviewed-by:@me on GitHub: an MR you approved stays yours after you leave its reviewers.
+    # ponytail: one you only left threads on, or whose approval a push reset, is not found - GitLab
+    # has no filter for past participation. Scan open MRs' discussions if that ever matters.
+    found, reviewer = {}, set()
+    for query in (f"reviewer_username={me}", f"approved_by_usernames[]={me}"):
+        for listed in glab_pages(f"{project}/merge_requests?state=opened&{query}"):
+            found[listed["iid"]] = listed
+            if query.startswith("reviewer"):
+                reviewer.add(listed["iid"])
+    for iid, listed in sorted(found.items()):
         if listed["author"]["username"] == me:
             continue
-        base = f"{project}/merge_requests/{listed['iid']}"
-        mr = json.loads(sh(["glab", "api", base]))  # the list has no changes_count
+        base = f"{project}/merge_requests/{iid}"
         approved_by = [a["user"]["username"] for a in json.loads(sh(["glab", "api", f"{base}/approvals"]))["approved_by"]]
+        if iid not in reviewer and me not in approved_by:
+            continue  # a GitLab without approval filters ignores the parameter and lists every open MR
+        mr = json.loads(sh(["glab", "api", base]))  # the list has no changes_count
         state = next((r["state"] for r in json.loads(sh(["glab", "api", f"{base}/reviewers"]))
                       if r["user"]["username"] == me), "unreviewed")
         yield ({"number": mr["iid"], "title": mr["title"], "author": {"login": mr["author"]["username"]},
@@ -241,7 +269,8 @@ def plan(args):
                       "bucket": bucket, "detail": detail,
                       "steps": [" ".join([f"/combined-review:{s.split()[0]}", ref, *s.split()[1:]]) for s in steps]})
     out = Path(args.out) if args.out else Path(tempfile.mkdtemp(prefix="review-sweep-")) / "plan.json"
-    out.write_text(json.dumps({"forge": forge, "host": host, "repo": repo, "items": items}, ensure_ascii=False, indent=1))
+    out.write_text(json.dumps({"forge": forge, "host": host, "repo": repo, "items": items}, ensure_ascii=False, indent=1),
+                   encoding="utf-8")
     print(f"{forge} {host}/{repo}: {len(items)} open PR/MR where you are a reviewer")
     for bucket in ("review", "delta", "rereview", "merge_only", "waiting", "hold", "done"):
         rows = [i for i in items if i["bucket"] == bucket]
@@ -259,24 +288,53 @@ def me_ok(forge):
     return shutil.which(cmd[0]) and subprocess.run(cmd, capture_output=True).returncode == 0
 
 
+LIVE = set()  # sessions still running, killed with their children when the sweep itself is stopped
+STOP = threading.Event()  # set when the sweep is stopped: no further step may start
+
+
+def kill_tree(proc):
+    """The session and everything it started: on Windows `claude` is claude.cmd, and its node outlives it."""
+    if os.name == "nt":
+        subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], capture_output=True)
+    else:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    proc.wait()
+
+
 def run_item(item, outdir, timeout, claude):
     results = []
     for k, step in enumerate(item["steps"]):
+        if STOP.is_set():
+            break
         report = outdir / f"{item['number']}-{k}-{step.split()[0].rsplit(':', 1)[1]}.md"
-        try:
-            with open(report, "w") as out, open(report.with_suffix(".err"), "w") as err:
-                rc = subprocess.run([claude, "-p", step], stdout=out, stderr=err, timeout=timeout).returncode
-            # Exit 0 with text is not yet a review: a session that stopped early ("cannot check out ...")
-            # or never loaded the command also prints something. Both reports open with a "## " heading.
-            if rc:
-                status = f"failed (exit {rc}, see {report.with_suffix('.err')})"
-            elif not any(line.startswith("## ") for line in report.read_text().splitlines()):
-                status = "failed (the session ended without a report - read the file)"
-            else:
-                status = "ok"
-        except subprocess.TimeoutExpired:
+        with open(report, "w", encoding="utf-8") as out, open(report.with_suffix(".err"), "w", encoding="utf-8") as err:
+            # own process group, so a timeout takes down the agents and tools the session started too
+            proc = subprocess.Popen([claude, "-p", step], stdout=out, stderr=err, start_new_session=True)
+            LIVE.add(proc)
+            if STOP.is_set():  # stopped between the start and the line above: the kill pass missed it
+                kill_tree(proc)
+            try:
+                rc = proc.wait(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                kill_tree(proc)
+                rc = None
+            finally:
+                LIVE.discard(proc)
+        # Exit 0 with text is not yet a review: a session that stopped early ("cannot check out ...")
+        # or never loaded the command also prints something. Both reports open with a "## " heading.
+        if rc is None:
             status = f"failed (no result in {timeout}s)"
+        elif rc:
+            status = f"failed (exit {rc}, see {report.with_suffix('.err')})"
+        elif not any(line.startswith("## ") for line in report.read_text(encoding="utf-8", errors="replace").splitlines()):
+            status = "failed (the session ended without a report - read the file)"
+        else:
+            status = "ok"
         results.append({"step": step, "status": status, "report": str(report)})
+        print(f"{item['ref']}  {status:<8}  {step}\n      {report}", flush=True)
     return {"ref": item["ref"], "head": item["head"], "results": results}
 
 
@@ -307,7 +365,7 @@ def panes(items, per_workspace=3):
 
 def run(args):
     plan_path = Path(args.plan)
-    items = [i for i in json.loads(plan_path.read_text())["items"] if i["steps"]]
+    items = [i for i in json.loads(plan_path.read_text(encoding="utf-8"))["items"] if i["steps"]]
     if args.only:
         keep = {s.strip().lstrip("!") for s in args.only.split(",")}
         items = [i for i in items if str(i["number"]) in keep]
@@ -321,14 +379,20 @@ def run(args):
     if not claude:
         sys.exit("NO_HEADLESS_RUNNER: `claude` is not on PATH - run the plan's steps one after another in this session")
     outdir = Path(tempfile.mkdtemp(prefix="review-sweep-"))  # 0700: reports of private repos
+    print(f"Reports: {outdir}", flush=True)  # first, so a stopped sweep still leaves its finished reports
+    if os.name != "nt":
+        signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))  # through the finally below
     # ponytail: the sessions share one clone, so two fetches of the same base can collide on a ref
     # lock. That session then fails and is reported as failed; rerun it with --only, or use --jobs 1.
     with ThreadPoolExecutor(max_workers=args.jobs) as pool:
-        done = list(pool.map(lambda i: run_item(i, outdir, args.timeout, claude), items))
-    (outdir / "results.json").write_text(json.dumps(done, ensure_ascii=False, indent=1))
-    for d in done:
-        for r in d["results"]:
-            print(f"{d['ref']}  {r['status']:<8}  {r['step']}\n      {r['report']}")
+        try:
+            done = list(pool.map(lambda i: run_item(i, outdir, args.timeout, claude), items))
+        finally:  # stopped: no session may outlive the sweep and keep spending, none may start
+            STOP.set()
+            pool.shutdown(wait=False, cancel_futures=True)
+            for proc in list(LIVE):
+                kill_tree(proc)
+    (outdir / "results.json").write_text(json.dumps(done, ensure_ascii=False, indent=1), encoding="utf-8")
     failed = sum(r["status"] != "ok" for d in done for r in d["results"])
     print(f"\n{len(done)} PR/MR, {failed} failed steps. Results: {outdir / 'results.json'}")
     sys.exit(1 if failed else 0)
@@ -336,6 +400,7 @@ def run(args):
 
 if __name__ == "__main__":
     os.umask(0o077)
+    sys.stdout.reconfigure(encoding="utf-8")  # titles in Kazakh do not encode in a cp1251 console
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     a = sub.add_parser("plan")

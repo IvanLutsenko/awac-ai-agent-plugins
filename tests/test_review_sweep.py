@@ -1,8 +1,11 @@
 """review-sweep.py: what a PR/MR needs is decided from what was reviewed, not from who typed last."""
 import importlib.util
 import stat
+import sys
 import tempfile
+import time
 import unittest
+from unittest import mock
 from pathlib import Path
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "plugins/combined-review/scripts/review-sweep.py"
@@ -20,7 +23,7 @@ M = load_module()
 
 def pr(**kw):
     base = {"draft": False, "files": 5, "head": "h2", "ball": "mine", "reviewed_sha": None,
-            "open_threads": 0, "answered": 0, "commits": [{"sha": "h1", "parents": 1}, {"sha": "h2", "parents": 1}]}
+            "open_threads": 0, "answered": 0, "commits": [{"sha": "h1", "parents": ["base"]}, {"sha": "h2", "parents": ["h1"]}]}
     return {**base, **kw}
 
 
@@ -45,10 +48,22 @@ class ClassifyTest(unittest.TestCase):
     def test_approval_does_not_cover_commits_pushed_after_it(self):
         self.check("delta", ["review --since h1"], reviewed_sha="h1", ball="done")
 
-    def test_only_merges_after_my_review(self):
-        commits = [{"sha": "h1", "parents": 1}, {"sha": "h2", "parents": 2}]
+    def test_only_merges_of_the_target_after_my_review(self):
+        """The target's commits are not the PR's own: the forge leaves them out of its list."""
+        commits = [{"sha": "h1", "parents": ["base"]}, {"sha": "h2", "parents": ["h1", "target-tip"]}]
         self.check("merge_only", [], reviewed_sha="h1", commits=commits)
         self.check("rereview", ["rereview"], reviewed_sha="h1", commits=commits, open_threads=1)
+
+    def test_side_branch_merged_after_my_review_is_new_code(self):
+        """s1 was committed before the review, so the forge lists it before h1 - it is still unread."""
+        commits = [{"sha": "s1", "parents": ["base"]}, {"sha": "h1", "parents": ["base"]},
+                   {"sha": "h2", "parents": ["h1", "s1"]}]
+        self.check("delta", ["review --since h1"], reviewed_sha="h1", commits=commits)
+
+    def test_commits_reviewed_before_are_not_new_whatever_their_order(self):
+        commits = [{"sha": "h2", "parents": ["h1", "target-tip"]}, {"sha": "h1", "parents": ["h0"]},
+                   {"sha": "h0", "parents": ["base"]}]  # newest first, as GitLab lists them
+        self.check("merge_only", [], reviewed_sha="h1", commits=commits)
 
     def test_reviewed_head_gone_means_full_review(self):
         self.check("review", ["review"], reviewed_sha="gone")
@@ -81,7 +96,7 @@ def thread(opener, last, sha="h1", at="2026-01-01", resolved=False):
 
 class GithubTest(unittest.TestCase):
     PR = {"isDraft": False, "changedFiles": 3, "headRefOid": "h2"}
-    COMMITS = [{"sha": "h1", "parents": [{}]}, {"sha": "h2", "parents": [{}]}]
+    COMMITS = [{"sha": "h1", "parents": [{"sha": "base"}]}, {"sha": "h2", "parents": [{"sha": "h1"}]}]
 
     def norm(self, reviews=(), threads=(), requested=False):
         return M.github_pr("me", self.PR, requested, list(reviews), list(threads), self.COMMITS)
@@ -126,7 +141,7 @@ class GitlabTest(unittest.TestCase):
         versions = [{"head_commit_sha": "h2", "created_at": "2026-01-03"},
                     {"head_commit_sha": "h1", "created_at": "2026-01-01"}]
         discussions = [{"notes": [self.note("me", "approved this merge request", system=True)]}]
-        commits = [{"id": "h2", "parent_ids": ["a"]}, {"id": "h1", "parent_ids": ["a"]}]  # newest first
+        commits = [{"id": "h2", "parent_ids": ["h1"]}, {"id": "h1", "parent_ids": ["a"]}]  # newest first
         got = M.gitlab_mr("me", {**self.MR, "changes_count": "4"}, [], "unapproved", discussions, versions, commits)
         self.assertEqual(got["reviewed_sha"], "h1")
         self.assertEqual(M.classify(got)[2], ["review --since h1"])
@@ -136,6 +151,29 @@ class GitlabTest(unittest.TestCase):
         discussions = [{"notes": [mine, self.note("author")]}]
         got = M.gitlab_mr("me", {**self.MR, "changes_count": "4"}, [], "requested_changes", discussions, [], [])
         self.assertEqual((got["ball"], got["open_threads"], got["answered"]), ("author", 1, 1))
+
+    def test_approved_mrs_are_swept_and_an_ignored_filter_adds_nothing(self):
+        """!1 lists me as reviewer, !2 I approved after leaving its reviewers, !3 is someone else's MR
+        that a GitLab ignoring approved_by_usernames lists anyway."""
+        mr = lambda iid: {"iid": iid, "author": {"username": "author"}}
+        lists = {"reviewer_username=me": [mr(1)], "approved_by_usernames[]=me": [mr(1), mr(2), mr(3)]}
+        approvals = {1: [], 2: ["me"], 3: ["other"]}
+
+        def sh(cmd):
+            path = cmd[-1]
+            if path == "user":
+                return '{"username": "me"}'
+            iid = int(path.split("/merge_requests/")[1].split("/")[0])
+            if path.endswith("/approvals"):
+                return M.json.dumps({"approved_by": [{"user": {"username": u}} for u in approvals[iid]]})
+            if path.endswith("/reviewers"):
+                return "[]"
+            return M.json.dumps({**self.MR, "changes_count": "4", "iid": iid, "title": "t", "author": {"username": "author"},
+                                 "web_url": "u", "updated_at": "2026-01-01"})
+
+        pages = lambda path: next((v for k, v in lists.items() if path.endswith(k)), [])
+        with mock.patch.object(M, "sh", sh), mock.patch.object(M, "glab_pages", pages):
+            self.assertEqual([meta["number"] for meta, _ in M.gitlab_plan("g/p")], [1, 2])
 
     def test_changes_count_with_a_plus_is_large(self):
         got = M.gitlab_mr("me", self.MR, [], "unreviewed", [], [], [])
@@ -169,6 +207,35 @@ class RunTest(unittest.TestCase):
 
     def test_empty_output_is_not_no_findings(self):
         self.assertTrue(self.run_with("exit 0").startswith("failed"))
+
+    def test_timeout_kills_what_the_session_started(self):
+        with tempfile.TemporaryDirectory() as d:
+            marker = Path(d) / "survived"
+            fake = Path(d) / "claude"
+            fake.write_text(f"#!/bin/sh\n(sleep 2; touch {marker}) &\nsleep 30\n")
+            fake.chmod(fake.stat().st_mode | stat.S_IXUSR)
+            item = {"number": 7, "ref": "7", "head": "h", "steps": ["/combined-review:review 7"]}
+            status = M.run_item(item, Path(d), 1, str(fake))["results"][0]["status"]
+            time.sleep(2.5)
+            self.assertTrue(status.startswith("failed (no result"))
+            self.assertFalse(marker.exists())
+
+    def test_stopped_sweep_starts_no_further_step(self):
+        M.STOP.set()
+        try:
+            self.assertEqual(M.run_item({"number": 7, "ref": "7", "head": "h", "steps": ["/combined-review:review 7"]},
+                                        Path("/nonexistent"), 1, "/nonexistent/claude")["results"], [])
+        finally:
+            M.STOP.clear()
+
+
+class EncodingTest(unittest.TestCase):
+    def test_forge_output_is_utf8_under_a_cp1251_locale(self):
+        """Windows without UTF-8 mode: 'И' is D0 98 in UTF-8, and 0x98 is undefined in cp1251."""
+        cmd = [sys.executable, "-c", "import sys; sys.stdout.buffer.write('Иә'.encode())"]
+        with mock.patch("locale.getencoding", return_value="cp1251"), \
+             mock.patch("locale.getpreferredencoding", return_value="cp1251"):
+            self.assertEqual(M.sh(cmd), "Иә")
 
 
 if __name__ == "__main__":
