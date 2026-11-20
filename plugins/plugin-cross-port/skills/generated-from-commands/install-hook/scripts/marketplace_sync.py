@@ -1,7 +1,6 @@
 """Pure marketplace transformations for plugin-cross-port."""
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -34,7 +33,7 @@ def plugin_source_path(plugin_path: Path, repo_root: Path, plugins_dir: Path) ->
     resolved_plugin = plugin_path.resolve()
     if not _is_relative_to(resolved_plugin, allowed_dir):
         raise ValueError(f"Plugin path is outside plugins_dir: {plugin_path}")
-    relative = os.path.relpath(resolved_plugin, root)
+    relative = resolved_plugin.relative_to(root).as_posix()
     return f"./{relative}"
 
 

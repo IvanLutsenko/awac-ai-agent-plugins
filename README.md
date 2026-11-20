@@ -217,10 +217,10 @@ python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/exa
 python3 plugins/plugin-cross-port/scripts/cross_port.py plugin adapt plugins/example --apply
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.12.3
+**Status:** 🔨 Beta | **Version:** 0.12.4
 
-**What's New in 0.12.3:**
-- The generated Codex manifest declares `"commands": []`. Codex turns every `commands/*.md` it can parse into a `source-command-*` skill of its own at install time; with the commands already converted to skills, each of those appeared twice. Found by `scripts/codex-smoke.py`.
+**What's New in 0.12.4:**
+- Runs on Windows produce the same files as on macOS/Linux: LF line ends, `/` in every generated path, and a report that no longer crashes on a legacy console code page.
 
 **Features:**
 - CC → Codex: manifest conversion, `commands/` → `skills/generated-from-commands/`
