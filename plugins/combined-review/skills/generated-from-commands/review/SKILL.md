@@ -46,14 +46,23 @@ author cannot write:
   (or empty) applies.
 - **Which path.** `~/…` or absolute, and outside the repository once symlinks are resolved. A relative
   path is not resolved at all: it would point into the tree under review. A path inside the checkout is
-  the branch's file whatever the config says, so it is refused the same way.
+  the branch's file whatever the config says, so it is refused the same way. Inside or outside is what
+  the `python3` call below prints, comparing whole path components (`commonpath`), not a string
+  prefix: `/x/repo-rules/a.md` is outside `/x/repo`. A path on another drive is outside.
 - **Which file.** Read it once here. Missing, a directory, unreadable, empty (whitespace only) or over
   64 KB → do not pass it; review as if `rules` were empty.
 
 ```bash
 git ls-files --error-unmatch .claude/combined-review.local.md >/dev/null 2>&1 && echo tracked
-git rev-parse --show-toplevel
-python3 -c 'import os,sys; print(os.path.realpath(os.path.expanduser(sys.argv[1])))' "<path>"
+python3 -c 'import os,sys
+root = os.path.normcase(os.path.realpath(sys.argv[2]))
+path = os.path.realpath(os.path.expanduser(sys.argv[1]))
+try:
+    inside = os.path.commonpath([root, os.path.normcase(path)]) == root
+except ValueError:
+    inside = False
+print(path)
+print("inside" if inside else "outside")' "<path>" "$(git rev-parse --show-toplevel)"
 wc -c < "<resolved path>"
 ```
 
