@@ -1,6 +1,7 @@
 import ast
 import importlib.util
 import io
+import ntpath
 import os
 import subprocess
 import sys
@@ -15,7 +16,7 @@ TESTS_ROOT = Path(__file__).resolve().parent
 SCRIPTS = sorted((PLUGIN_ROOT / "scripts").glob("*.py"))
 sys.path.insert(0, str(TESTS_ROOT))
 
-from helpers import make_cc_plugin, make_codex_marketplace, make_codex_plugin
+from helpers import make_cc_marketplace, make_cc_plugin, make_codex_marketplace, make_codex_plugin
 
 
 def calls(path: Path):
@@ -41,19 +42,65 @@ class PlatformNeutralOutputTest(unittest.TestCase):
             "use write_bytes(text.encode('utf-8'))",
         )
 
-    def test_no_relative_path_is_stringified_with_the_os_separator(self):
+    def test_no_script_uses_os_path_relpath(self):
         offenders = [
             f"{path.name}:{node.lineno}"
             for path in SCRIPTS
             for node in calls(path)
-            if isinstance(node.func, ast.Name)
-            and node.func.id == "str"
-            and node.args
-            and isinstance(node.args[0], ast.Call)
-            and isinstance(node.args[0].func, ast.Attribute)
-            and node.args[0].func.attr in ("relative_to", "relpath")
+            if isinstance(node.func, ast.Attribute) and node.func.attr == "relpath"
         ]
-        self.assertEqual(offenders, [], "str(<path>.relative_to(...)) gives backslashes on Windows")
+        self.assertEqual(
+            offenders,
+            [],
+            "os.path.relpath gives backslashes on Windows; use <path>.relative_to(...).as_posix()",
+        )
+
+    def test_no_relative_path_is_formatted_with_the_os_separator(self):
+        offenders = []
+        for path in SCRIPTS:
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.FormattedValue):
+                    inner = node.value
+                elif (
+                    isinstance(node, ast.Call)
+                    and node.args
+                    and (
+                        (isinstance(node.func, ast.Name) and node.func.id == "str")
+                        or (isinstance(node.func, ast.Attribute) and node.func.attr == "fspath")
+                    )
+                ):
+                    inner = node.args[0]
+                else:
+                    continue
+                if (
+                    isinstance(inner, ast.Call)
+                    and isinstance(inner.func, ast.Attribute)
+                    and inner.func.attr == "relative_to"
+                ):
+                    offenders.append(f"{path.name}:{node.lineno}")
+        self.assertEqual(
+            offenders,
+            [],
+            "str() or an f-string over <path>.relative_to(...) gives backslashes on Windows; "
+            "use .as_posix()",
+        )
+
+    def test_marketplace_source_path_does_not_depend_on_the_os_path_flavour(self):
+        spec = importlib.util.spec_from_file_location(
+            "cross_port_marketplace_sync", PLUGIN_ROOT / "scripts" / "marketplace_sync.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory).resolve()
+            plugin = repo / "plugins" / "foo"
+            plugin.mkdir(parents=True)
+            with patch.object(os, "path", ntpath):
+                source = module.plugin_source_path(plugin, repo, Path("plugins"))
+
+        self.assertEqual(source, "./plugins/foo")
 
 
 class LegacyConsoleTest(unittest.TestCase):
@@ -110,6 +157,31 @@ class LegacyConsoleTest(unittest.TestCase):
                 result = self.run_converter(script, make_plugin)
                 self.assertEqual(result.returncode, 0, result.stderr.decode("utf-8", "replace"))
                 self.assertIn("✅".encode("utf-8"), result.stdout)
+
+
+    def test_cross_port_cli_survives_a_legacy_console(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            make_cc_marketplace(repo, ["sample"])
+            make_cc_plugin(repo, "sample")
+            env = dict(os.environ, PYTHONIOENCODING="cp1251")
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PLUGIN_ROOT / "scripts" / "cross_port.py"),
+                    "--repo-root",
+                    str(repo),
+                    "marketplace",
+                    "attach",
+                    "--source",
+                    "claude-code",
+                ],
+                capture_output=True,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr.decode("utf-8", "replace"))
+        self.assertIn("✅".encode("utf-8"), result.stdout)
 
 
 if __name__ == "__main__":
