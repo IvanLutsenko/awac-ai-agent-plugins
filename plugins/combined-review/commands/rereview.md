@@ -55,7 +55,7 @@ Without those flags this command is read-only: it reports and asks.
 **GitLab:**
 ```bash
 glab api user                                                    # -> .username (that's "mine")
-glab api "projects/<group%2Fproject>/merge_requests/<iid>"       # title, state, source/target, diff_refs
+glab api "projects/<group%2Fproject>/merge_requests/<iid>"       # title, author.username, web_url, state, source/target, diff_refs
 ```
 
 Project path = origin, URL-encoded (`my-group%2Fmy-repo`). If the MR lives in another
@@ -64,7 +64,7 @@ project, take the path from the URL argument.
 **GitHub:**
 ```bash
 gh api user                                                      # -> .login (that's "mine")
-gh api "repos/<owner>/<repo>/pulls/<number>"                     # title, state, base/head, head.sha
+gh api "repos/<owner>/<repo>/pulls/<number>"                     # title, user.login (author), html_url, state, base/head, head.sha
 ```
 
 Keep the head SHA — `diff_refs.head_sha` on GitLab, `head.sha` on GitHub. That's the current
@@ -257,7 +257,13 @@ Revision <short head_sha> ("<last commit subject>"), <N> commits since my commen
    Needs a manual look.
 
 <optional: one-line notes on side effects spotted in the new revision>
+
+---
+@<author> · <PR/MR URL>
 ```
+
+The report ends on the author and the link from Step 1 (`user.login` + `html_url` on GitHub,
+`author.username` + `web_url` on GitLab) — whom the open threads wait on, and where.
 
 A side note is a new finding, not a re-review verdict: before offering to post it, run Step 5's
 "Generated lines" check from `/review` on it. A line the author doesn't write by hand is not the

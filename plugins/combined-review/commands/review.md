@@ -129,7 +129,7 @@ instead of re-deriving:
 
 **GitHub PR:**
 ```bash
-gh pr view "<number>" --json title,state,baseRefName,headRefName
+gh pr view "<number>" --json title,state,author,url,baseRefName,headRefName
 git fetch origin "refs/pull/<number>/head:refs/remotes/pr/<number>"
 git fetch origin "<base>"
 git diff "origin/<base>...pr/<number>" > "$CRDIR/pr.diff"       # save the diff
@@ -146,7 +146,7 @@ git rev-parse "pr/<number>"                             # the revision under rev
 
 **GitLab MR** (repo path from origin, e.g. `group/project`; the MR may live on a different project — pass `-R <group/project>`):
 ```bash
-glab mr view "<iid>" -R "<group/project>"              # title, source→target, pipeline
+glab mr view "<iid>" -R "<group/project>"              # title, author, url, source→target, pipeline
 git fetch "<repo>" "refs/merge-requests/<iid>/head:refs/remotes/mr/<iid>"
 git fetch origin "<target>"
 git diff "origin/<target>...mr/<iid>" > "$CRDIR/mr.diff"     # save the diff
@@ -597,13 +597,24 @@ Agent findings already arrive in the resolved language (via the `Language:` pref
 ### Positive
 
 - What's done well (2-3 points)
+
+---
+@<author> · <PR/MR URL>
 ```
+
+The last line names the PR/MR author and links the PR/MR, both from Step 2 (`author.login` + `url` on
+GitHub, the author and URL `glab mr view` prints on GitLab) — whom the findings go to, and where. It
+stays last, after everything else, so a review in a side pane ends on it. Branch-diff and `current`
+modes have neither: drop the line there.
 
 If no findings after filtering:
 ```markdown
 ## Code Review: [what was reviewed]
 
 No issues found. Checked: CLAUDE.md, bugs, git history, error handling, tests.
+
+---
+@<author> · <PR/MR URL>
 ```
 
 **Do NOT post to the PR/MR automatically.** Output to the user only — unless `+threads` was passed or the user explicitly asks to post threads (then do Step 7).

@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.17.0
+**Version:** 1.17.1
 
 ---
 
@@ -292,6 +292,11 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.17.1
+
+- `/review` and `/rereview` end the report with the PR/MR author and its link (`@author · URL`).
+  Branch-diff and `current` modes have neither and drop the line.
 
 ### 1.17.0
 

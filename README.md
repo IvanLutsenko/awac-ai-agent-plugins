@@ -136,7 +136,10 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.17.0
+**Status:** ✅ Production Ready | **Version:** 1.17.1
+
+**What's New in 1.17.1:**
+- `/review` and `/rereview` end the report with the PR/MR author and a link to it, so a review running in a side pane says whom the findings go to and where.
 
 **What's New in 1.17.0:**
 - `/review` sends findings on generated lines to the generator, not the author; `/rereview` flags threads whose reply says "fixed" while the code says not (🚩), first in the report and blocking resolve/approve.
