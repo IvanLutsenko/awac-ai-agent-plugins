@@ -28,7 +28,7 @@ def load(path: Path, *, default: dict[str, Any]) -> dict[str, Any]:
 
 def save(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(dumps(payload), encoding="utf-8")
+    path.write_bytes(dumps(payload).encode("utf-8"))
 
 
 def new_plugin_state(name: str, source_of_truth: str) -> dict[str, Any]:

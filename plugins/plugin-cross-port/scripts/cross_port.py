@@ -10,6 +10,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import adaptation
+from console import utf8_console
 from convert_cc_to_codex import Converter
 from convert_codex_to_cc import ReverseConverter
 from marketplace_sync import plugin_source_path, upsert_cc_entry, upsert_codex_entry
@@ -19,6 +20,7 @@ from reconcile import ReconcileReport, Reconciler
 
 
 def main(argv: list[str] | None = None) -> int:
+    utf8_console()
     parser = build_parser()
     args = parser.parse_args(argv)
     repo_root = Path(args.repo_root).resolve()
@@ -144,7 +146,7 @@ def plugin_attach(args: argparse.Namespace, repo_root: Path) -> ReconcileReport:
     plugin_state = new_plugin_state(name, args.source)
     save_state(plugin_path / ".plugin-cross-port.json", plugin_state)
     state.setdefault("plugins", {})[name] = {
-        "path": str(plugin_path.relative_to(repo_root)),
+        "path": plugin_path.relative_to(repo_root).as_posix(),
         "source_of_truth": args.source,
         "status": "synced",
     }
@@ -194,9 +196,8 @@ def append_to_canonical(
         upsert_cc_entry(canonical, manifest, source_path, "development")
     else:
         upsert_codex_entry(canonical, manifest, source_path, "synced", "Development")
-    canonical_path.write_text(
-        json.dumps(canonical, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+    canonical_path.write_bytes(
+        (json.dumps(canonical, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
     )
 
 
