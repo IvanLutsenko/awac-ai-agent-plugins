@@ -413,7 +413,7 @@ also leaves `$NOW` empty, and reporting that as "the branch moved" sends the use
 `/rereview`, which fixes nothing. Say the head could not be read, and why.
 
 Report the resulting approvals — `approved_by` on GitLab, the review's `state: APPROVED` on GitHub.
-If anything is still ❌ *not fixed*, ⚠️ *partial*, or
+If anything is still 🚩 *claimed*, ❌ *not fixed*, ⚠️ *partial*, or
 🕓 *deferred*, or a thread is **position lost** or hit a **git failure** — no verdict means nothing
 says it was fixed — don't approve on your own initiative: say what's open and ask. Only proceed past
 such a thread on the user's explicit go-ahead, same as "close everything" in Step 6 — and name which
