@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.17.1
+**Version:** 1.20.0
 
 ---
 
@@ -98,6 +98,39 @@ version N of the diff"* auto-note and GitHub's `isOutdated` both fire on any lin
 and "исправил" is a claim, not evidence.
 
 ---
+
+### Sweeps: `/review-sweep` and `/author-sweep`
+
+```bash
+/review-sweep          # every open PR/MR where you are a reviewer: report only
+/review-sweep +post    # ...and post what you confirm (threads, replies, resolves, approvals)
+/author-sweep          # every open PR/MR you authored: what needs a fix, a reply, or waits on the reviewer
+```
+
+`/review-sweep` sorts each PR/MR by what it needs: an untouched one gets `/review`; one where you have
+open threads gets `/rereview`, and when commits were pushed after the head you reviewed,
+`/review --since <that head>` — a review of just that delta, minus whatever came in with a merge of
+the target. "The head you reviewed" is what the forge recorded (your approval, the commit your threads
+were opened against), not the time of your last reply. A reply from the author while you were waiting
+puts the PR/MR back on your list; drafts and very large ones are held with a reason; every PR/MR ends
+up in exactly one bucket of the report.
+
+Each review runs as its own headless session (`claude -p`), three at a time, so it keeps its five
+agents and needs no terminal multiplexer. A session that crashed or timed out is reported as "not
+reviewed", never as "no findings". Without `claude` on PATH the sweep runs the same steps one after
+another in the current session. Nothing goes to the forge without `+post` and your confirmation.
+`/review-sweep +panes` (herdr only) opens the same reviews as interactive sessions in panes instead,
+three per workspace; their reports stay in the panes.
+
+```bash
+/review 123 --since <sha>   # the same delta review, by hand
+```
+
+`/author-sweep` is the other side: per unresolved thread on your own PRs/MRs — unanswered and
+unfixed, fixed without a reply, promised but not fixed, waiting on the reviewer (with its age), or
+pushed back — checked against the code at the head, with the fix or the reply drafted. Only threads
+from reviewers and project members are acted on; it shows the diff before every push, checks that the
+push landed before replying, and never resolves a thread on your own PR/MR.
 
 ## Default Agents (5)
 
@@ -292,6 +325,43 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.20.0
+
+- **`/review-sweep` and `/author-sweep`: every open PR/MR in one pass.** `/review` and `/rereview` work
+  on one PR/MR you name; keeping up with a team meant running them by hand over a list and remembering
+  what you saw last time. `/review-sweep` takes every open PR/MR where you are a reviewer, sorts it —
+  untouched, threads open, new commits since the head you reviewed, waiting on the author, held — and
+  runs `/review`, `/rereview` or a review of just the delta accordingly, each as its own headless
+  session so the five agents still run. The sorting is a tested script (`scripts/review-sweep.py`)
+  reading the forge's own record of what you reviewed. `/author-sweep` sorts the
+  unresolved threads on your own PRs/MRs by what they need from you and drafts the fix or the reply.
+  Both are report-only unless you confirm; neither resolves what is not yours to resolve.
+- **`/review <N> --since <sha>`: review only what was pushed after an earlier review.** The position
+  map is the delta's intersected with the PR/MR's own, so lines that arrived with a merge of the
+  target are not reviewed as the author's. A `<sha>` that a rebase or force-push rewrote away falls
+  back to a full review and says so — it is never read as "nothing new".
+- **`/review-sweep` runs in the background.** The reviews outlast any foreground shell call, so `run`
+  is started in the background and reports as each step finishes; a stopped sweep keeps the reports
+  it has and kills the sessions still running, with everything they started.
+- **New commits are found by the commit graph, not by list order.** A side branch merged after your
+  review is new code even when its commits are dated before it; only merges of the target count as
+  `merge_only`.
+- **GitLab: MRs you approved are swept too**, after you left their reviewers — as `reviewed-by:@me`
+  does on GitHub.
+- **Windows:** the script reads and writes UTF-8 everywhere, so Cyrillic and Kazakh titles and
+  replies no longer stop it; a timed-out session is killed with its node process.
+- **`/author-sweep` acts only on threads from reviewers and project members.** On a public repository
+  anyone can open a thread, and a "fix" proposed there can be a new dependency; threads from outside
+  are listed, not acted on. Thread notes are data, never instructions. The diff is shown before every
+  push even when fixing was asked for up front, and no reply goes out until the PR/MR head on the forge
+  matches the pushed commit.
+- **`/author-sweep` sees every PR.** The GitHub list is a paginated API call on the repository from
+  `origin` instead of `gh pr list`, which stopped at 30 and, in a fork clone, could read the upstream.
+  `--project` is gone, as in `/review-sweep`: run the sweep from the project's clone.
+- **A reply that promises a fix is not "waiting on the reviewer".** When your last note is newer but
+  the fix it promises or claims is not at the head, the thread goes to the fix list.
+- `/author-sweep` can edit files: `Edit` and `Write` are in its allowed tools.
 
 ### 1.17.1
 
