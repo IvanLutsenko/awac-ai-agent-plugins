@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.19.1
+**Version:** 1.20.0
 
 ---
 
@@ -326,8 +326,21 @@ Every finding includes file path and line number:
 
 ## Changelog
 
-### 1.19.1
+### 1.20.0
 
+- **`/review-sweep` and `/author-sweep`: every open PR/MR in one pass.** `/review` and `/rereview` work
+  on one PR/MR you name; keeping up with a team meant running them by hand over a list and remembering
+  what you saw last time. `/review-sweep` takes every open PR/MR where you are a reviewer, sorts it —
+  untouched, threads open, new commits since the head you reviewed, waiting on the author, held — and
+  runs `/review`, `/rereview` or a review of just the delta accordingly, each as its own headless
+  session so the five agents still run. The sorting is a tested script (`scripts/review-sweep.py`)
+  reading the forge's own record of what you reviewed. `/author-sweep` sorts the
+  unresolved threads on your own PRs/MRs by what they need from you and drafts the fix or the reply.
+  Both are report-only unless you confirm; neither resolves what is not yours to resolve.
+- **`/review <N> --since <sha>`: review only what was pushed after an earlier review.** The position
+  map is the delta's intersected with the PR/MR's own, so lines that arrived with a merge of the
+  target are not reviewed as the author's. A `<sha>` that a rebase or force-push rewrote away falls
+  back to a full review and says so — it is never read as "nothing new".
 - **`/review-sweep` runs in the background.** The reviews outlast any foreground shell call, so `run`
   is started in the background and reports as each step finishes; a stopped sweep keeps the reports
   it has and kills the sessions still running, with everything they started.
@@ -349,22 +362,6 @@ Every finding includes file path and line number:
 - **A reply that promises a fix is not "waiting on the reviewer".** When your last note is newer but
   the fix it promises or claims is not at the head, the thread goes to the fix list.
 - `/author-sweep` can edit files: `Edit` and `Write` are in its allowed tools.
-
-### 1.19.0
-
-- **`/review-sweep` and `/author-sweep`: every open PR/MR in one pass.** `/review` and `/rereview` work
-  on one PR/MR you name; keeping up with a team meant running them by hand over a list and remembering
-  what you saw last time. `/review-sweep` takes every open PR/MR where you are a reviewer, sorts it —
-  untouched, threads open, new commits since the head you reviewed, waiting on the author, held — and
-  runs `/review`, `/rereview` or a review of just the delta accordingly, each as its own headless
-  session so the five agents still run. The sorting is a tested script (`scripts/review-sweep.py`)
-  reading the forge's own record of what you reviewed. `/author-sweep` sorts the
-  unresolved threads on your own PRs/MRs by what they need from you and drafts the fix or the reply.
-  Both are report-only unless you confirm; neither resolves what is not yours to resolve.
-- **`/review <N> --since <sha>`: review only what was pushed after an earlier review.** The position
-  map is the delta's intersected with the PR/MR's own, so lines that arrived with a merge of the
-  target are not reviewed as the author's. A `<sha>` that a rebase or force-push rewrote away falls
-  back to a full review and says so — it is never read as "nothing new".
 
 ### 1.17.1
 
