@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.18.0
+**Version:** 1.19.0
 
 ---
 
@@ -301,7 +301,7 @@ Every finding includes file path and line number:
 
 ## Changelog
 
-### 1.18.0
+### 1.19.0
 
 - **`rules` config key: review rules kept outside the repository.** A team often reviews by rules the
   repo's `CLAUDE.md`/`AGENTS.md` don't carry — complexity limits stricter than the linter, an MR size

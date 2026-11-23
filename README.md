@@ -136,9 +136,9 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.18.0
+**Status:** ✅ Production Ready | **Version:** 1.19.0
 
-**What's New in 1.18.0:**
+**What's New in 1.19.0:**
 - `rules` config key: a file of review rules kept outside the repository, passed to the agents beside `CLAUDE.md`/`AGENTS.md`; the repo policy wins where they disagree.
 
 **What's New in 1.17.1:**
