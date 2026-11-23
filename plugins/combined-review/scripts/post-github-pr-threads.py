@@ -33,7 +33,38 @@ change what to do (never pile a second thread onto a discussed line), so the aut
 is not read at all. A skip is not a failure — exit code is non-zero only if a thread
 that was actually attempted failed to anchor.
 """
-import argparse, json, subprocess, sys, tempfile, os
+import argparse, json, subprocess, sys, tempfile, os, re
+
+
+ZWSP = "\u200b"
+# Only a closed fence is exempt; an unclosed one stays prose. Errors here must fall to the safe side.
+_FENCE = re.compile(r"(^ {0,3}(?:```[^`\n]*\n.*?^ {0,3}```|~~~[^\n]*\n.*?^ {0,3}~~~)[ \t]*$)", re.M | re.S)
+# one line only (a stray backtick must not swallow paragraphs); runs match whole, as in CommonMark
+_INLINE = re.compile(r"(?<!`)(`+)(?!`)([^\n]+?)(?<!`)\1(?!`)")
+
+
+def neutralize(body):
+    """Defuse text an agent may have copied from the diff or MR before it is posted as you.
+
+    A line starting with `/` is a GitLab quick action (`/merge`, `/approve`, `/assign`) run with
+    the poster's rights; `@name` pings people. Both get a zero-width space after the trigger
+    character. Fenced blocks and inline code are left byte-exact: quick actions and mentions
+    don't fire there, and a snippet must stay copy-pasteable.
+    """
+    def prose(t):
+        t = re.sub(r"^(\s*)/", r"\1/" + ZWSP, t, flags=re.M)  # before inline split: line starts only
+        parts = _INLINE.split(t)  # [text, ticks, code, text, ...]
+        for i in range(0, len(parts), 3):
+            parts[i] = re.sub(r"@(?=[\w-])", "@" + ZWSP, parts[i])
+        out, i = [], 0
+        while i < len(parts):
+            out.append(parts[i])
+            if i + 2 < len(parts):
+                out.append(parts[i + 1] + parts[i + 2] + parts[i + 1])
+            i += 3
+        return "".join(out)
+    chunks = _FENCE.split(body)  # odd indexes are fenced blocks
+    return "".join(c if i % 2 else prose(c) for i, c in enumerate(chunks))
 
 
 def gh_api(path, method=None, headers=None, input_file=None, paginate=False):
@@ -179,7 +210,7 @@ def main():
             print(f"[DUP] {short} -> thread {cid} already on that line, not posted")
             continue
         tried += 1
-        good, msg = post_thread(a.repo, a.pr, head_sha, path, line, t["body"])
+        good, msg = post_thread(a.repo, a.pr, head_sha, path, line, neutralize(t["body"]))
         print(f"[{'OK ' if good else 'ERR'}] {short} -> {msg}")
         ok += 1 if good else 0
     print(f"--- {ok}/{tried} inline threads posted, {skipped} skipped as already covered ---")
