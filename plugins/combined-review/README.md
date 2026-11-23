@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.17.1
+**Version:** 1.18.0
 
 ---
 
@@ -292,6 +292,25 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.18.0
+
+- **A finding on removed code with no surviving neighbour is posted on the removed line.** Until now
+  such a finding — a dropped guard in a hunk that only deletes, whose next line is not in the
+  position map either — was terminal-only. The threads JSON takes `old_line` instead of `line`
+  (plus `old_path` for a renamed file): GitLab gets a position with `old_line` and no `new_line`,
+  GitHub a comment on the LEFT side. Both helpers dedup on the same side only and check that the
+  note came back on the removed line, not on an unchanged one with the same number. A threads entry
+  with both `line` and `old_line`, or with neither, stops the run before anything is posted, and so
+  does one that is not an object, has no non-empty string `path` or `body`, or a line number that is
+  not a positive integer.
+  `/rereview` keeps the old-side anchor of such a thread and verifies it through the hunk that
+  removed the line, taken from the diff the comment was made on: on GitHub against the merge-base
+  of `base.sha` (never the branch name), checked against the comment's `diffHunk`; a LEFT thread
+  that is not outdated is read from the current diff. A deleted file is followed to where its code
+  went. A failed git command is reported as such, not as position lost, and neither position lost
+  nor a git failure is approved over without an explicit go-ahead. `/review` checks the `-` lines
+  before accepting any `[DROP ]` on a file that lost lines, whatever the reason text.
 
 ### 1.17.1
 

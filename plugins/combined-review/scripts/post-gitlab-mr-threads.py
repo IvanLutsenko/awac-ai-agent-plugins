@@ -18,6 +18,14 @@ Usage:
   --threads        JSON file: [{"path": "...", "line": 42, "body": "..."}, ...]
                     `line` is the line number in the NEW (post-change) file; it must be
                     an added or in-hunk line of the MR diff, or GitLab rejects it.
+                    A finding on a line the MR removed carries `old_line` instead of
+                    `line`: its number in the OLD (pre-change) file, a `-` line of the
+                    diff. Add `old_path` when the file was renamed and its old name
+                    differs from `path`.
+                    An entry with both `line` and `old_line`, or with neither,
+                    stops the run before anything is posted. So does an entry that
+                    is not an object, a `path` or `body` that is not a non-empty string,
+                    or a line number that is not a positive integer.
   --expected-head  SHA the findings were analyzed against. Required: compared against
                     the MR's live diff_refs.head_sha before posting anything; if the
                     branch moved since analysis, nothing is posted and the script exits
@@ -26,10 +34,11 @@ Usage:
 Reads diff_refs from the MR itself, so the caller only supplies findings.
 
 Before posting, reads the MR's existing discussions and skips findings whose
-`new_path` + `new_line` already carry a thread — anyone's: `[DUP]`. Whose it is does
-not change what to do (never pile a second thread onto a discussed line), so the
-author is not read at all. A skip is not a failure — exit code is non-zero only if a
-thread that was actually attempted failed to anchor.
+`new_path` + `new_line` (for a removed line, `old_path` + `old_line`) already carry
+a thread — anyone's: `[DUP]`. Whose it is does not change what to do (never pile a
+second thread onto a discussed line), so the author is not read at all. A skip is not
+a failure — exit code is non-zero only if a thread that was actually attempted failed
+to anchor.
 """
 import argparse, json, subprocess, sys, tempfile, os, re
 
@@ -120,11 +129,63 @@ def get_discussions(proj, mr):
         sys.exit(f"cannot read discussions for {proj}!{mr}: {(out + err)[:300]}")
 
 
-def match_thread(discussions, path, line):
+def line_number(t, key):
+    """`t[key]` as a line number. JSON `true` is a Python bool, which is an int,
+    so `type(...) is int` is the check: `line: true` must not post on line 1."""
+    x = t[key]
+    if type(x) is not int or x < 1:
+        raise ValueError(f"`{key}` must be a positive integer, got {x!r}")
+    return x
+
+
+def anchor_of(t):
+    """("new", path, line) for a thread entry, or ("old", old_path, old_line) for a
+    removed line. Raises ValueError for an entry with both `line` and `old_line`, or
+    with neither."""
+    if t.get("old_line") is not None:
+        if t.get("line") is not None:
+            raise ValueError("a thread takes `line` or `old_line`, not both")
+        return "old", t.get("old_path") or t["path"], line_number(t, "old_line")
+    if t.get("line") is None:
+        raise ValueError("a thread needs `line` or `old_line`")
+    return "new", t["path"], line_number(t, "line")
+
+
+def resolve_anchors(threads):
+    """Anchors of all entries, in order. Exits on the first malformed one, so a bad
+    entry stops the run before anything is posted, not halfway through it: every
+    field the posting loop reads is checked here."""
+    if not isinstance(threads, list):
+        sys.exit(f"threads file must hold a JSON list, got {type(threads).__name__} - nothing posted")
+    anchors = []
+    for i, t in enumerate(threads, 1):
+        label = "<no path>"
+        try:
+            if not isinstance(t, dict):
+                raise ValueError(f"an entry must be an object, got {type(t).__name__}")
+            path = t.get("path")
+            if not isinstance(path, str) or not path:
+                raise ValueError("a thread needs `path` as a non-empty string")
+            label = path
+            old_path = t.get("old_path")
+            if old_path is not None and (not isinstance(old_path, str) or not old_path):
+                raise ValueError("`old_path`, when given, must be a non-empty string")
+            body = t.get("body")
+            if not isinstance(body, str) or not body.strip():
+                raise ValueError("a thread needs `body` as a non-empty string")
+            anchors.append(anchor_of(t))
+        except (ValueError, TypeError) as e:
+            sys.exit(f"threads[{i}] {label}: {e} - nothing posted")
+    return anchors
+
+
+def match_thread(discussions, path, line, side="new"):
     """Is this finding's line already covered by an existing thread?
 
     Match is on the first note's `position.new_path` + `new_line`; a thread with
     `position: null` is a plain MR comment, not anchored to a line, and never matches.
+    A removed line (`side="old"`) matches on `old_path` + `old_line` with no
+    `new_line`: a position with both numbers is an unchanged line, a different place.
 
     Returns (outcome, discussion_id):
       ("post", None)   - nothing there, post it
@@ -135,24 +196,36 @@ def match_thread(discussions, path, line):
         if not notes:
             continue
         pos = notes[0].get("position") or {}
-        if pos.get("new_path") != path or pos.get("new_line") != line:
+        if side == "old":
+            if (
+                pos.get("old_path") != path
+                or pos.get("old_line") != line
+                or pos.get("new_line") is not None
+            ):
+                continue
+        elif pos.get("new_path") != path or pos.get("new_line") != line:
             continue
         return "dup", d.get("id")
     return "post", None
 
 
-def post_thread(proj, mr, refs, path, line, body):
+def build_position(refs, path, line, side="new", old_path=None):
+    pos = {
+        "position_type": "text",
+        "base_sha": refs["base_sha"],
+        "start_sha": refs["start_sha"],
+        "head_sha": refs["head_sha"],
+        "new_path": path,
+        "old_path": old_path or path,
+    }
+    pos["old_line" if side == "old" else "new_line"] = line
+    return pos
+
+
+def post_thread(proj, mr, refs, path, line, body, side="new", old_path=None):
     payload = {
         "body": body,
-        "position": {
-            "position_type": "text",
-            "base_sha": refs["base_sha"],
-            "start_sha": refs["start_sha"],
-            "head_sha": refs["head_sha"],
-            "new_path": path,
-            "old_path": path,
-            "new_line": line,
-        },
+        "position": build_position(refs, path, line, side, old_path),
     }
     fd, fn = tempfile.mkstemp(suffix=".json")
     os.write(fd, json.dumps(payload).encode())
@@ -170,6 +243,17 @@ def post_thread(proj, mr, refs, path, line, body):
         d = json.loads(out)
         n = d["notes"][0]
         pos = n.get("position") or {}
+        if side == "old":
+            ok = (
+                n.get("type") == "DiffNote"
+                and pos.get("old_path") == (old_path or path)
+                and pos.get("old_line") == line
+                and pos.get("new_line") is None
+            )
+            return ok, (
+                f"{d['id'][:10]} type={n.get('type')} "
+                f"old_path={pos.get('old_path')} old_line={pos.get('old_line')}"
+            )
         ok = n.get("type") == "DiffNote" and pos.get("new_line") == line
         return ok, f"{d['id'][:10]} type={n.get('type')} line={pos.get('new_line')}"
     except Exception:
@@ -186,6 +270,7 @@ def main():
 
     proj = a.repo if a.repo.isdigit() else quote(a.repo, safe="")
     threads = json.load(open(a.threads))
+    anchors = resolve_anchors(threads)
     refs = get_diff_refs(proj, a.mr)
 
     if refs["head_sha"] != a.expected_head:
@@ -196,16 +281,18 @@ def main():
     discussions = get_discussions(proj, a.mr)
 
     ok = tried = skipped = 0
-    for t in threads:
-        path, line = t["path"], int(t["line"])
-        short = f"{path.split('/')[-1]}:{line}"
-        outcome, did = match_thread(discussions, path, line)
+    for t, (side, at_path, line) in zip(threads, anchors):
+        path = t["path"]
+        short = f"{path.split('/')[-1]}:{line}" + (" (removed)" if side == "old" else "")
+        outcome, did = match_thread(discussions, at_path, line, side)
         if outcome == "dup":
             skipped += 1
             print(f"[DUP] {short} -> thread {did} already on that line, not posted")
             continue
         tried += 1
-        good, msg = post_thread(proj, a.mr, refs, path, line, neutralize(t["body"]))
+        good, msg = post_thread(
+            proj, a.mr, refs, path, line, neutralize(t["body"]), side, t.get("old_path")
+        )
         print(f"[{'OK ' if good else 'ERR'}] {short} -> {msg}")
         ok += 1 if good else 0
     print(f"--- {ok}/{tried} inline threads posted, {skipped} skipped as already covered ---")
