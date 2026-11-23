@@ -97,7 +97,7 @@ class PlatformNeutralOutputTest(unittest.TestCase):
             repo = Path(directory).resolve()
             plugin = repo / "plugins" / "foo"
             plugin.mkdir(parents=True)
-            with patch.object(os, "path", ntpath):
+            with patch.object(os.path, "relpath", ntpath.relpath):
                 source = module.plugin_source_path(plugin, repo, Path("plugins"))
 
         self.assertEqual(source, "./plugins/foo")
