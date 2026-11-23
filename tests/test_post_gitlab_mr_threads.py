@@ -370,6 +370,20 @@ class PostGitlabMrThreadsTest(unittest.TestCase):
             {"path": "bar.py", "body": "nit"},
             {"path": "bar.py", "line": "soon", "body": "nit"},
             {"line": 3, "body": "nit"},
+            {"path": "bar.py", "line": 3},
+            {"path": "bar.py", "line": 3, "body": "   "},
+            {"path": "bar.py", "line": 3, "body": 5},
+            {"path": 5, "line": 3, "body": "nit"},
+            {"path": "", "line": 3, "body": "nit"},
+            {"path": "bar.py", "line": True, "body": "nit"},
+            {"path": "bar.py", "line": 0, "body": "nit"},
+            {"path": "bar.py", "line": "3", "body": "nit"},
+            {"path": "bar.py", "old_line": -1, "body": "nit"},
+            {"path": "bar.py", "line": 3.0, "body": "nit"},
+            "bar.py:3 nit",
+            ["bar.py", 3, "nit"],
+            {"path": "bar.py", "old_path": 5, "old_line": 7, "body": "nit"},
+            {"path": "bar.py", "old_path": "", "old_line": 7, "body": "nit"},
         ):
             with self.subTest(bad=bad):
                 self.write_threads([{"path": "foo.py", "line": 3, "body": "nit"}, bad])
@@ -382,6 +396,19 @@ class PostGitlabMrThreadsTest(unittest.TestCase):
                 self.assertIn("threads[2]", str(exc.code))
                 self.assertIn("nothing posted", str(exc.code))
                 self.assertEqual(mock_api.call_args_list, [])
+
+    def test_threads_file_that_is_not_a_list_stops_the_run(self):
+        module = load_module()
+        self.write_threads({"path": "foo.py", "line": 3, "body": "nit"})
+        sent = []
+        with patch.object(
+            module, "glab_api", side_effect=make_echo_glab_api(ANALYZED_SHA, sent)
+        ) as mock_api:
+            exc = self.run_main(module)
+
+        self.assertIn("JSON list", str(exc.code))
+        self.assertIn("nothing posted", str(exc.code))
+        self.assertEqual(mock_api.call_args_list, [])
 
     def test_thread_with_both_line_and_old_line_is_refused(self):
         module = load_module()

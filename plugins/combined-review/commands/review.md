@@ -503,13 +503,15 @@ for raw in sys.stdin:
    read it, don't ignore it. Carry the `[MOVED]` line numbers into the report and into Step 7; a
    `[DROP ]` reason is what you say if the user asks why a finding vanished.
 
-   **`[DROP ]` on removed code is not a verdict.** The map holds added lines only, so the script
-   cannot place a finding whose code the change removed: it prints `[DROP ]` with `quoted code not
-   found in the file`, or `file untouched by this diff` when the file only lost lines or was deleted.
-   Before dropping such a finding, look for its quoted code on a `-` line of
-   `git diff --unified=0 "<diff-spec>"`. If it is there, the finding stays and goes through
-   "Findings on deleted lines" below — re-anchored to a surviving line, or carried as `old_line`.
-   If it is on neither side of the diff, the `[DROP ]` stands.
+   **`[DROP ]` on a file that lost lines is not a verdict.** The map holds added lines only, so the
+   script cannot place a finding whose code the change removed, and the reason it prints depends on
+   what else is in the file: the quoted code is not found, it sits on lines the diff did not touch
+   (the removed code also occurs elsewhere in the file), there is no quoted code to search for, the
+   file is untouched (it only lost lines, or was deleted). Don't go by the wording. For **any**
+   `[DROP ]` on a file with `-` lines in `git diff --unified=0 "<diff-spec>"`, look for the finding's
+   code there first — its quote, or the code it describes when it quotes none. If it is on a `-` line,
+   the finding stays and goes through "Findings on deleted lines" below — re-anchored to a surviving
+   line, or carried as `old_line`. If it is on neither side of the diff, the `[DROP ]` stands.
 
    **A wrong line is not the same as out of scope** — which is what the script implements, and why
    you don't do this by eye. Agents do miscount, and the usual failure is quoting a position inside

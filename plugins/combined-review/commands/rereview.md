@@ -106,7 +106,7 @@ query($owner:String!, $name:String!, $number:Int!, $endCursor:String) {
         nodes {
           id isResolved isOutdated path line originalLine diffSide
           comments(first: 50) {
-            nodes { author { login } body originalCommit { oid } }
+            nodes { author { login } body originalCommit { oid } diffHunk }
           }
         }
       }
@@ -120,8 +120,9 @@ Filter `nodes` by `isResolved == false` and `comments.nodes[0].author.login` == 
 For each thread keep: `id` (a **node id**, the only thing `resolveReviewThread` accepts — not the REST
 comment id), `path`, `line` (the line at the current head; `null` once the thread went outdated),
 `originalLine`, `diffSide` (`LEFT` = a thread on a removed line), `isOutdated`,
-`comments.nodes[0].originalCommit.oid` (the revision the comment was anchored to), your body, and
-all replies.
+`comments.nodes[0].originalCommit.oid` (the revision the comment was anchored to),
+`comments.nodes[0].diffHunk` (the hunk the comment was made on, ending at the commented line), your
+body, and all replies.
 
 PR-level comments are a different endpoint (`repos/<owner>/<repo>/issues/<number>/comments`) and are
 not resolvable — the GitHub counterpart of GitLab's plain MR comments. Count them separately too.
@@ -136,8 +137,10 @@ the first page while looking complete.
 **GitHub first, because most threads need no diff at all.** A `diffSide: RIGHT` thread with a
 non-null `line` is one GitHub already re-anchored to the current head — take that line and go
 straight to Step 4. An outdated thread (`isOutdated: true`, `line: null`) needs the mapping below,
-from `originalLine` at `originalCommit.oid`. So does every `diffSide: LEFT` thread, outdated or not:
-its `line` counts lines of the old file, and there is nothing at head to read by that number.
+from `originalLine` at `originalCommit.oid`, whichever side it is on. A `diffSide: LEFT` thread that
+is not outdated is in between: GitHub keeps its `line` in the current diff, but that number counts
+lines of the old file, so there is nothing at head to read by it. It takes the removed-line path
+below against the current diff, and needs no `originalCommit`.
 
 ```bash
 git fetch origin "refs/pull/<number>/head:refs/remotes/pr/<number>"
@@ -186,16 +189,43 @@ between the base and `<anchor_sha>` — the hunk that removed it is not in it, a
 pushed nothing since the comment it is empty. Take the hunk from the diff the comment was made on:
 
 ```bash
-git diff -M --unified=0 "<base_sha>" "<anchor_sha>"                # no pathspec, as above
+git diff -M --unified=0 "<base_sha>" "<rev>"                        # no pathspec, as above
 ```
 
-`<base_sha>` is `position.base_sha` on GitLab (`original_position.base_sha` if the anchor fell back
-to `original_position`). On GitHub it is `git merge-base "origin/<base.ref>" "<anchor_sha>"`, after
-`git fetch origin "<base.ref>"` — `base.ref` is in Step 1's answer. In the old file's section find
-the hunk whose `-` lines cover the thread's `old_line` (`originalLine` on GitHub): `@@ -a,b +c,d @@`
-covers old lines `a` to `a+b-1`. Its `+c` is where the removal sits in the file at `<anchor_sha>` —
-line `c` when the hunk also added lines, the gap right after line `c` when `d` is 0. No hunk covering
-the line means the anchor cannot be placed: mark the thread **position lost**.
+Which `<base_sha>` and `<rev>`:
+- GitLab: `<base_sha>` is `position.base_sha` (`original_position.base_sha` if the anchor fell back
+  to `original_position`), `<rev>` is `<anchor_sha>`. GitLab stores that base with the comment, so
+  it is the base the comment was made on.
+- GitHub, outdated LEFT thread: `<base_sha>` is `git merge-base "<base.sha>" "<anchor_sha>"`, `<rev>`
+  is `<anchor_sha>`, the old line is `originalLine`.
+- GitHub, LEFT thread that is not outdated: `<base_sha>` is `git merge-base "<base.sha>"
+  "<head_sha>"`, `<rev>` is `<head_sha>`, the old line is the thread's `line`.
+
+`base.sha` is in Step 1's answer. Take the SHA, never `base.ref`: a branch name from an API answer
+does not belong in a shell command (`git check-ref-format` lets `$(...)` through), and after a
+retarget the branch is no longer the base the comment was made on. Every SHA from an API answer that
+goes into a git command — `base.sha`, `position.base_sha`, `<anchor_sha>` — must match
+`^[0-9a-f]{40}$` first. If `base.sha` is not local (`git cat-file -e "<base.sha>^{commit}"` fails),
+`git fetch origin "<base.sha>"`.
+
+In the old file's section find the hunk whose `-` lines cover the thread's old line:
+`@@ -a,b +c,d @@` covers old lines `a` to `a+b-1`. **A missing count is 1** — git omits it exactly
+when one line is removed or added, so `@@ -42 +41,0 @@` removes line 42 alone; read as 0, the hunk
+covers nothing and the thread falls into position lost for no reason. The hunk's `+c` is where the
+removal sits in the file at `<rev>` — line `c` when the hunk also added lines, the gap right after
+line `c` when `d` is 0.
+
+On GitHub, check that the hunk is the one the comment was made on: the last line of the comment's
+`diffHunk` (Step 2) is the commented `-` line, and it must match, as text, the hunk's `-` line at the
+thread's old line. A mismatch means the merge-base drifted (a retarget, a rewritten base branch) and
+the hunk belongs to another change: mark the thread **position lost**. On GitLab the base comes from
+the comment itself, so there is nothing to cross-check.
+
+No hunk covering the line means the anchor cannot be placed: mark the thread **position lost**. A
+failed command is not that. A non-zero exit from `git fetch`, `git merge-base` or `git diff` here, an
+empty or malformed SHA, `bad object` on `<base_sha>` — the thread gets **git failure**: no verdict,
+and Step 5 lists it apart from position lost with the command and its error. Folded into position
+lost, a fixable cause reads as a final answer.
 
 ## Step 4 — Verify each thread against the current head
 
@@ -211,11 +241,21 @@ git show "<head_sha>:<new_path>" | sed -n '<start>,<head_line+15>p'
 ```
 
 A thread on a removed line has no line of its own at head. Step 3 found the hunk that removed it and
-where that hunk sits at `<anchor_sha>`; map that place to head through the `<anchor_sha>..<head_sha>`
-diff like any other line — it is already at head when the two are the same commit — and read the
-code there. The ask is met if the removed code is back, or if its concern is handled in what replaced
-it. It is not met because the line is still gone, and an empty `<anchor_sha>..<head_sha>` diff is
-not a fix either: nothing changed since the comment, so the verdict is ❌ unless a reply defers it.
+where that hunk sits at `<rev>`; map that place to head through the `<anchor_sha>..<head_sha>` diff
+like any other line — nothing to map when `<rev>` is `<head_sha>` (a GitHub LEFT thread that is not
+outdated) or when the author pushed nothing since the comment — and read the code there. The ask is
+met if the removed code is back, or if its concern is handled in what replaced it. It is not met
+because the line is still gone, and an empty `<anchor_sha>..<head_sha>` diff is not a fix either:
+nothing changed since the comment, so the verdict is ❌ unless a reply defers it.
+
+**A thread on a deleted file** (`/review` posts it on the old path; its hunk is `@@ -1,N +0,0 @@`
+against `+++ /dev/null`) has no place at head to read, and `git show "<head_sha>:<path>"` fails.
+Check the path first: `git cat-file -e "<head_sha>:<path>"`. If the file is back, read it as above.
+If it is still gone, look for where its logic went and who still depends on it — a rename in
+`git diff --name-status -M "<anchor_sha>" "<head_sha>"`, then
+`git grep -n "<identifier from the removed lines>" "<head_sha>"` for the moved code and the callers
+left behind. The file being absent is not a fix: it was absent when you commented. The ask is met
+only if what it asked for — a caller migrated, the behavior kept elsewhere — is in the code at head.
 
 `<start>` is `head_line - 15` **clamped to 1**: `sed` rejects address `0` and anything negative, so a
 finding on one of a file's first 15 lines errors out instead of printing.
@@ -262,8 +302,9 @@ Verdict per thread:
 Group by verdict, most actionable first — 🚩 *claimed, not there* opens the report as its own group,
 above everything else. Cite `new_path:new_line` **at head**, not the stale
 position from the comment. One line of evidence per thread — the applied hunk or its absence.
-Threads marked **position lost** in Step 3 don't get a verdict — list them in their own group so
-they don't read as silently skipped.
+Threads marked **position lost** or **git failure** in Step 3 don't get a verdict — list each kind in
+its own group so they don't read as silently skipped. A git failure carries the command and its
+error: that one can be fixed and re-run.
 
 ```markdown
 ## Re-review: <PR #<number> | MR !<iid>> — <title>
@@ -283,6 +324,9 @@ Revision <short head_sha> ("<last commit subject>"), <N> commits since my commen
 **Position lost — <n>:**
 1. `Foo.kt` — anchor commit is gone (rebase/force-push), no `original_position` to fall back to.
    Needs a manual look.
+
+**Git failure — <n>:**
+1. `Foo.kt` — `git merge-base <base.sha> <anchor_sha>` exited 128: `bad object`. Fetch and re-run.
 
 <optional: one-line notes on side effects spotted in the new revision>
 
@@ -369,7 +413,8 @@ also leaves `$NOW` empty, and reporting that as "the branch moved" sends the use
 `/rereview`, which fixes nothing. Say the head could not be read, and why.
 
 Report the resulting approvals — `approved_by` on GitLab, the review's `state: APPROVED` on GitHub.
-If anything is still 🚩 *claimed*, ❌ *not fixed*, ⚠️ *partial*, or
-🕓 *deferred*, don't approve on your own initiative — say what's open and ask. Only proceed past
-an open 🚩/❌/⚠️/🕓 thread on the user's explicit go-ahead, same as "close everything" in Step 6 —
-and name which unfixed threads you approved over, so the gap doesn't get lost.
+If anything is still ❌ *not fixed*, ⚠️ *partial*, or
+🕓 *deferred*, or a thread is **position lost** or hit a **git failure** — no verdict means nothing
+says it was fixed — don't approve on your own initiative: say what's open and ask. Only proceed past
+such a thread on the user's explicit go-ahead, same as "close everything" in Step 6 — and name which
+threads you approved over, so the gap doesn't get lost.

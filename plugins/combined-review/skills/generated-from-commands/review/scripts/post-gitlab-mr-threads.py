@@ -23,7 +23,9 @@ Usage:
                     diff. Add `old_path` when the file was renamed and its old name
                     differs from `path`.
                     An entry with both `line` and `old_line`, or with neither,
-                    stops the run before anything is posted.
+                    stops the run before anything is posted. So does an entry that
+                    is not an object, a `path` or `body` that is not a non-empty string,
+                    or a line number that is not a positive integer.
   --expected-head  SHA the findings were analyzed against. Required: compared against
                     the MR's live diff_refs.head_sha before posting anything; if the
                     branch moved since analysis, nothing is posted and the script exits
@@ -127,6 +129,15 @@ def get_discussions(proj, mr):
         sys.exit(f"cannot read discussions for {proj}!{mr}: {(out + err)[:300]}")
 
 
+def line_number(t, key):
+    """`t[key]` as a line number. JSON `true` is a Python bool, which is an int,
+    so `type(...) is int` is the check: `line: true` must not post on line 1."""
+    x = t[key]
+    if type(x) is not int or x < 1:
+        raise ValueError(f"`{key}` must be a positive integer, got {x!r}")
+    return x
+
+
 def anchor_of(t):
     """("new", path, line) for a thread entry, or ("old", old_path, old_line) for a
     removed line. Raises ValueError for an entry with both `line` and `old_line`, or
@@ -134,23 +145,37 @@ def anchor_of(t):
     if t.get("old_line") is not None:
         if t.get("line") is not None:
             raise ValueError("a thread takes `line` or `old_line`, not both")
-        return "old", t.get("old_path") or t["path"], int(t["old_line"])
+        return "old", t.get("old_path") or t["path"], line_number(t, "old_line")
     if t.get("line") is None:
         raise ValueError("a thread needs `line` or `old_line`")
-    return "new", t["path"], int(t["line"])
+    return "new", t["path"], line_number(t, "line")
 
 
 def resolve_anchors(threads):
     """Anchors of all entries, in order. Exits on the first malformed one, so a bad
-    entry stops the run before anything is posted, not halfway through it."""
+    entry stops the run before anything is posted, not halfway through it: every
+    field the posting loop reads is checked here."""
+    if not isinstance(threads, list):
+        sys.exit(f"threads file must hold a JSON list, got {type(threads).__name__} - nothing posted")
     anchors = []
     for i, t in enumerate(threads, 1):
+        label = "<no path>"
         try:
-            if not t.get("path"):
-                raise ValueError("a thread needs `path`")
+            if not isinstance(t, dict):
+                raise ValueError(f"an entry must be an object, got {type(t).__name__}")
+            path = t.get("path")
+            if not isinstance(path, str) or not path:
+                raise ValueError("a thread needs `path` as a non-empty string")
+            label = path
+            old_path = t.get("old_path")
+            if old_path is not None and (not isinstance(old_path, str) or not old_path):
+                raise ValueError("`old_path`, when given, must be a non-empty string")
+            body = t.get("body")
+            if not isinstance(body, str) or not body.strip():
+                raise ValueError("a thread needs `body` as a non-empty string")
             anchors.append(anchor_of(t))
         except (ValueError, TypeError) as e:
-            sys.exit(f"threads[{i}] {t.get('path') or '<no path>'}: {e} - nothing posted")
+            sys.exit(f"threads[{i}] {label}: {e} - nothing posted")
     return anchors
 
 

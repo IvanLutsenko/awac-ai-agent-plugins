@@ -284,6 +284,18 @@ class PostGithubPrThreadsTest(unittest.TestCase):
             {"path": "bar.py", "body": "nit"},
             {"path": "bar.py", "line": "soon", "body": "nit"},
             {"line": 3, "body": "nit"},
+            {"path": "bar.py", "line": 3},
+            {"path": "bar.py", "line": 3, "body": "   "},
+            {"path": "bar.py", "line": 3, "body": 5},
+            {"path": 5, "line": 3, "body": "nit"},
+            {"path": "", "line": 3, "body": "nit"},
+            {"path": "bar.py", "line": True, "body": "nit"},
+            {"path": "bar.py", "line": 0, "body": "nit"},
+            {"path": "bar.py", "line": "3", "body": "nit"},
+            {"path": "bar.py", "old_line": -1, "body": "nit"},
+            {"path": "bar.py", "line": 3.0, "body": "nit"},
+            "bar.py:3 nit",
+            ["bar.py", 3, "nit"],
         ):
             with self.subTest(bad=bad):
                 self.write_threads([{"path": "foo.py", "line": 3, "body": "nit"}, bad])
@@ -295,6 +307,18 @@ class PostGithubPrThreadsTest(unittest.TestCase):
                 self.assertIn("threads[2]", str(exc.code))
                 self.assertIn("nothing posted", str(exc.code))
                 self.assertEqual(mock_api.call_args_list, [])
+
+    def test_threads_file_that_is_not_a_list_stops_the_run(self):
+        module = load_module()
+        self.write_threads({"path": "foo.py", "line": 3, "body": "nit"})
+        with patch.object(
+            module, "gh_api", side_effect=make_gh_api(ANALYZED_SHA)
+        ) as mock_api:
+            exc = self.run_main(module)
+
+        self.assertIn("JSON list", str(exc.code))
+        self.assertIn("nothing posted", str(exc.code))
+        self.assertEqual(mock_api.call_args_list, [])
 
     def test_paginated_call_that_fails_midway_aborts(self):
         module = load_module()
