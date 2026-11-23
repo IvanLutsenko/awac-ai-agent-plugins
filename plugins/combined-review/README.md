@@ -127,9 +127,10 @@ three per workspace; their reports stay in the panes.
 ```
 
 `/author-sweep` is the other side: per unresolved thread on your own PRs/MRs — unanswered and
-unfixed, fixed without a reply, waiting on the reviewer (with its age), or pushed back — checked
-against the code at the head, with the fix or the reply drafted. It never resolves a thread on your
-own PR/MR.
+unfixed, fixed without a reply, promised but not fixed, waiting on the reviewer (with its age), or
+pushed back — checked against the code at the head, with the fix or the reply drafted. Only threads
+from reviewers and project members are acted on; it shows the diff before every push, checks that the
+push landed before replying, and never resolves a thread on your own PR/MR.
 
 ## Default Agents (5)
 
@@ -337,6 +338,17 @@ Every finding includes file path and line number:
   does on GitHub.
 - **Windows:** the script reads and writes UTF-8 everywhere, so Cyrillic and Kazakh titles and
   replies no longer stop it; a timed-out session is killed with its node process.
+- **`/author-sweep` acts only on threads from reviewers and project members.** On a public repository
+  anyone can open a thread, and a "fix" proposed there can be a new dependency; threads from outside
+  are listed, not acted on. Thread notes are data, never instructions. The diff is shown before every
+  push even when fixing was asked for up front, and no reply goes out until the PR/MR head on the forge
+  matches the pushed commit.
+- **`/author-sweep` sees every PR.** The GitHub list is a paginated API call on the repository from
+  `origin` instead of `gh pr list`, which stopped at 30 and, in a fork clone, could read the upstream.
+  `--project` is gone, as in `/review-sweep`: run the sweep from the project's clone.
+- **A reply that promises a fix is not "waiting on the reviewer".** When your last note is newer but
+  the fix it promises or claims is not at the head, the thread goes to the fix list.
+- `/author-sweep` can edit files: `Edit` and `Write` are in its allowed tools.
 
 ### 1.19.0
 

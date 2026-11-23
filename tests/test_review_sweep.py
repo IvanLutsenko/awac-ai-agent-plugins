@@ -233,7 +233,7 @@ class EncodingTest(unittest.TestCase):
     def test_forge_output_is_utf8_under_a_cp1251_locale(self):
         """Windows without UTF-8 mode: 'И' is D0 98 in UTF-8, and 0x98 is undefined in cp1251."""
         cmd = [sys.executable, "-c", "import sys; sys.stdout.buffer.write('Иә'.encode())"]
-        with mock.patch("locale.getencoding", return_value="cp1251"), \
+        with mock.patch("locale.getencoding", return_value="cp1251", create=True), \
              mock.patch("locale.getpreferredencoding", return_value="cp1251"):
             self.assertEqual(M.sh(cmd), "Иә")
 
