@@ -472,14 +472,27 @@ note, trust boundary), then the Evidence rule above, then verbatim:
 > No style nits, no praise, no summary. Do not edit files. Nothing found → answer with the single
 > word "clean" as the last line.
 
-**Run** it in Claude Code in the background (`run_in_background: true`), sent in the same message as
-the other agents. `perl -e 'alarm 600; exec @ARGV'` caps the CLI at 10 minutes on macOS and Linux
-alike (no coreutils `timeout` on macOS): on expiry the CLI dies with rc 142 and the `rc=` line still
-prints. Both CLIs bill the user's own subscription of that vendor; the plugin passes no keys.
+**Run** it so you keep working while it runs, launched together with the other agents: in Claude Code
+in the background (`run_in_background: true`), in Codex as a background terminal session you poll or a
+subagent whose only job is this command. Both CLIs bill the user's own subscription of that vendor;
+the plugin passes no keys.
+
+**Time limit: the other agents + 10 minutes.** `vendor-run.py` runs the CLI in its own process group
+and watches `$CRDIR/vendor.deadline`. Nothing is in that file at launch, so the pass is never cut
+while the rest of the review is still working. When every other agent and CodeRabbit have finished,
+set the deadline:
+```bash
+python3 -c 'import time; print(time.time() + 600)' > "$CRDIR/vendor.deadline"
+```
+Past it, the wrapper stops the whole process group and exits 124; the `rc=` line still prints. Ten
+minutes past the others covers what was measured: a `codex exec` review on effort high took a median
+of under 3 minutes, eight runs of nine finished within 6. If your runtime can only run the command
+blocking, the deadline is never written and the wrapper's one-hour backstop is the only limit — say
+so in the report when it fires.
 
 From Claude Code:
 ```bash
-perl -e 'alarm 600; exec @ARGV' codex exec -c model_reasoning_effort=high --sandbox read-only \
+python3 "<this skill directory>/scripts/vendor-run.py" "$CRDIR/vendor.deadline" -- codex exec -c model_reasoning_effort=high --sandbox read-only \
   --ignore-rules --skip-git-repo-check -C "$CRDIR" -o "$CRDIR/vendor.md" - \
   < "$CRDIR/vendor-prompt.md" > "$CRDIR/vendor.log" 2>&1; echo "rc=$?"
 ```
@@ -498,7 +511,8 @@ perl -e 'alarm 600; exec @ARGV' codex exec -c model_reasoning_effort=high --sand
 From Codex:
 ```bash
 printf '%s' '{"env":{"CLAUDE_CODE_MAX_OUTPUT_TOKENS":"32000"}}' > "$CRDIR/claude-settings.json" && \
-( cd "<repository root>" && perl -e 'alarm 600; exec @ARGV' claude -p --restricted --strict-mcp-config \
+( cd "<repository root>" && python3 "<this skill directory>/scripts/vendor-run.py" "$CRDIR/vendor.deadline" -- \
+  claude -p --restricted --strict-mcp-config \
   --settings "$CRDIR/claude-settings.json" --tools "Read,Grep,Glob" --allowed-tools "Read,Grep,Glob" \
   --permission-mode plan \
   < "$CRDIR/vendor-prompt.md" ) > "$CRDIR/vendor.md" 2> "$CRDIR/vendor.log"; echo "rc=$?"
@@ -527,11 +541,11 @@ Take the `path:line — description` entries from it as this agent's findings; a
 file is not a finding. The review is clean only when there is no such entry and the last non-empty
 line is exactly `clean`. Anything else is unavailable, never a clean pass.
 
-**Unavailable** — no `rc=` line, `rc` other than 0 (142 is the timeout), empty output, `Not logged
+**Unavailable** — no `rc=` line, `rc` other than 0 (124 is the deadline), empty output, `Not logged
 in`, a rate-limit or quota message, approval declined or impossible → name it
 `unavailable (<reason>)` in the report, the reason from the last line of `vendor.log` or, if the log is
 empty, the last line of `vendor.md` (`claude -p` prints `Not logged in` there), and go on. Partial findings from a failed run are dropped. The
-wait is bounded by the 10-minute cap; the review never fails because of this agent.
+wait ends 10 minutes after the other agents at the latest; the review never fails because of this agent.
 
 Its findings are claims like any agent's: Step 5 applies to them in full, tagged
 `[source: codex]` or `[source: claude]`.

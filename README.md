@@ -136,7 +136,10 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.18.1
+**Status:** ✅ Production Ready | **Version:** 1.18.2
+
+**What's New in 1.18.2:**
+- The second-vendor pass now runs until 10 minutes after the other agents finish instead of a fixed 10 minutes from launch, so a long review on a big MR is not cut while the rest of the review is still working. Its child processes are stopped with it.
 
 **What's New in 1.18.1:**
 - The second-vendor pass is locked down further: `codex exec` starts from a temp dir with `--ignore-rules`, so the reviewed branch's `.codex/` config, MCP servers and rules never load; `claude -p` runs with `--restricted`, so it reads nothing outside the repository. Both CLIs are capped at 10 minutes, and only a run that exits 0 with findings or a final `clean` counts — anything else is `unavailable`.

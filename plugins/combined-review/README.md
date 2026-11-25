@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.18.1
+**Version:** 1.18.2
 
 ---
 
@@ -155,7 +155,7 @@ voice:              # empty | path to a style file (used by +threads only)
   branch's `.claude/` hooks and MCP servers never load) when it runs in Codex. The
   diff and the PR/MR description go to that vendor under your own subscription and spend its limits —
   check that the code may go there. Its findings pass the same filter as the agents' and carry
-  `[source: codex]` / `[source: claude]`; a missing CLI, timeout or quota error is one
+  `[source: codex]` / `[source: claude]`; it may run until 10 minutes after the other agents finish; a missing CLI, timeout or quota error is one
   `unavailable (<reason>)` line in the report. **From Codex:** `claude` needs the Keychain and the
   network, which the Codex sandbox closes, so each run asks to leave the sandbox; under `codex exec`
   nobody can approve, and the pass is unavailable. Don't silence the prompt with a
@@ -306,6 +306,14 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.18.2
+
+- Second vendor, time limit: no longer a fixed 10 minutes from launch but 10 minutes after the other
+  agents and CodeRabbit finish, so a slow review on effort high is not cut while the rest is still
+  running. `scripts/vendor-run.py` replaces `perl alarm`: it runs the CLI in its own process group,
+  stops the whole group at the deadline (rc 124, child processes included) and has a one-hour
+  backstop that applies only while no deadline is written, and a TERM to the wrapper takes the group down too. `Bash(perl:*)` left the allowed tools.
 
 ### 1.18.1
 
