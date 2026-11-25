@@ -133,10 +133,13 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 /review feature/X feature/Y +comments     # Add an optional agent (+comments, +types, +simplify)
 /review feature/X feature/Y all           # All agents, optional ones included
 /review-config                             # Language, model, CodeRabbit, second vendor
-/rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
+/rereview 123 +resolve +approve            # Were my threads fixed? New code ok? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.18.2
+**Status:** ✅ Production Ready | **Version:** 1.19.0
+
+**What's New in 1.19.0:**
+- `/rereview` now also reviews the code added since your last review — a full `/review` pass limited to the new lines — so `+approve` no longer approves code nobody read. A finding there holds back the approval; `-new` skips the pass.
 
 **What's New in 1.18.2:**
 - The second-vendor pass now runs until 10 minutes after the other agents finish instead of a fixed 10 minutes from launch, so a long review on a big MR is not cut while the rest of the review is still working. Its child processes are stopped with it.

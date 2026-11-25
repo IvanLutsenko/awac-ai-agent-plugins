@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.18.2
+**Version:** 1.19.0
 
 ---
 
@@ -82,7 +82,8 @@ you decline.
 ### Re-review: `/rereview`
 
 Follow-up to `/review ... +threads` — checks whether **your own** unresolved threads were
-actually fixed in the new revision, then resolves them and approves. GitHub PRs and GitLab MRs.
+actually fixed in the new revision, reviews the code added since your last review, then resolves
+and approves. GitHub PRs and GitLab MRs.
 
 ```bash
 /rereview !158                # report only: per-thread ✅ / ⚠️ / ❌ / 🕓 verdicts
@@ -90,12 +91,20 @@ actually fixed in the new revision, then resolves them and approves. GitHub PRs 
 /rereview !158 +approve       # ...and approve the MR
 /rereview 42 +approve         # same on a GitHub PR
 /rereview !158 +agents        # one agent per file instead of inline checking
+/rereview !158 +threads       # post findings on the new code as inline threads
+/rereview !158 -new           # thread verdicts only, skip the new-code review
+/rereview !158 +approve-anyway # approve even with findings on the new code
 /rereview                     # PR/MR of the current branch
 ```
 
 Verdicts come from the code at the head revision, not from replies: GitLab's *"changed this line in
 version N of the diff"* auto-note and GitHub's `isOutdated` both fire on any line shift or file move,
 and "исправил" is a claim, not evidence.
+
+The new code gets a full `/review` pass — the five agents, CodeRabbit, the second vendor — on the
+current diff, with findings kept only on lines added since the revision your newest thread was left
+on. A rebase onto the target doesn't count as new code. A finding there holds back `+approve`;
+`+approve-anyway` overrides it. `-new` skips the pass and also holds back the approval.
 
 ---
 
@@ -306,6 +315,17 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.19.0
+
+- `/rereview` reviews the code added since your last review (Step 4b). Before, it only checked your
+  threads and glanced at ±15 lines around each, so `+approve` approved code no reviewer had read.
+  The baseline is the anchor of your newest thread, resolved ones included; the pass runs `/review`
+  Steps 2–5 in full and keeps findings only on lines added since the baseline that are also in the
+  PR/MR diff, so a rebase onto the target is not new code. Unreachable baseline → the whole diff is
+  reviewed and the report says so. A finding there holds back `+approve` unless `+approve-anyway`;
+  `+threads` posts them; `-new` skips the pass. A position map that fails to build is reported as
+  "not reviewed", never as "nothing new", and holds back `+approve` too.
 
 ### 1.18.2
 
