@@ -51,7 +51,8 @@ Stop here.
    when the review runs in Claude Code, `claude` when it runs in Codex. Say plainly before they pick
    `auto`: the diff and the PR/MR description go to that vendor under the user's own subscription and
    spend its limits; check that the code is allowed to go there. From Codex the call needs approval
-   to leave the sandbox on every run unless the user allows `claude -p` in `~/.codex/rules/` themselves.
+   to leave the sandbox on every run; do not suggest a `prefix_rule` for `claude -p` — it would match
+   any flags after it.
 5. **Voice for posted threads** — empty (default: threads carry the agents' wording) or a path to a
    file describing how the user writes review comments, e.g. `~/.claude/skills/my-voice/SKILL.md`.
    Only `+threads` uses it. Personal by nature — put it in the user-level file, not a shared project one.

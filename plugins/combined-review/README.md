@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.18.0
+**Version:** 1.18.1
 
 ---
 
@@ -151,15 +151,17 @@ voice:              # empty | path to a style file (used by +threads only)
   (`coderabbit auth login` / `coderabbit auth status`); the plugin stores none.
 - **`second_vendor`** — `off` by default. `auto` adds one pass by the other vendor's CLI next to the
   five agents: `codex exec` (read-only sandbox, effort high, your `~/.codex/config.toml` model) when
-  `/review` runs in Claude Code, `claude -p` (read-only tools, plan mode, user settings only — the reviewed branch's
-  `.claude/` hooks and MCP servers never load) when it runs in Codex. The
+  `/review` runs in Claude Code, `claude -p` (`--restricted`, read-only tools confined to the repo, plan mode — the reviewed
+  branch's `.claude/` hooks and MCP servers never load) when it runs in Codex. The
   diff and the PR/MR description go to that vendor under your own subscription and spend its limits —
   check that the code may go there. Its findings pass the same filter as the agents' and carry
   `[source: codex]` / `[source: claude]`; a missing CLI, timeout or quota error is one
   `unavailable (<reason>)` line in the report. **From Codex:** `claude` needs the Keychain and the
   network, which the Codex sandbox closes, so each run asks to leave the sandbox; under `codex exec`
-  nobody can approve, and the pass is unavailable. To stop the prompt, allow it yourself in
-  `~/.codex/rules/default.rules`: `prefix_rule(pattern=["claude", "-p"], decision="allow")`.
+  nobody can approve, and the pass is unavailable. Don't silence the prompt with a
+  `prefix_rule` for `claude -p`: it would match any flags after it, including ones a prompt-injected
+  diff asks for. The Claude Code side runs `codex exec` with `--ignore-rules` from a temp dir, so the
+  reviewed branch's `.codex/` config and rules never load.
 - **`voice`** — empty by default. Set it to a file describing how you write review comments
   (e.g. `~/.claude/skills/my-voice/SKILL.md`) and `+threads` rewords every posted thread by it:
   the claim first in your words, then the line and scenario as evidence. What is found and the
@@ -304,6 +306,17 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.18.1
+
+- Second vendor, isolation: `codex exec` runs from `$CRDIR` with `--ignore-rules` — started in a
+  worktree of a trusted repo it would load the reviewed branch's `.codex/` config, MCP servers and
+  rules outside the sandbox. `claude -p` swaps `--setting-sources user` for `--restricted`, which also
+  confines Read/Grep/Glob to the repository. The docs no longer suggest a `prefix_rule` for
+  `claude -p`: it matches any flags after it. `Bash(claude:*)` left the allowed tools.
+- Second vendor, failures: both CLIs run under `perl -e 'alarm 600'`, so a timeout still prints
+  `rc=`. Only `rc=0` is a result; clean means a last line of exactly `clean`; partial output of a
+  failed run is dropped; a declined approval is `unavailable`.
 
 ### 1.18.0
 

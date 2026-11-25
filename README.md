@@ -136,7 +136,10 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 /rereview 123 +resolve +approve            # Were my threads fixed? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.18.0
+**Status:** ✅ Production Ready | **Version:** 1.18.1
+
+**What's New in 1.18.1:**
+- The second-vendor pass is locked down further: `codex exec` starts from a temp dir with `--ignore-rules`, so the reviewed branch's `.codex/` config, MCP servers and rules never load; `claude -p` runs with `--restricted`, so it reads nothing outside the repository. Both CLIs are capped at 10 minutes, and only a run that exits 0 with findings or a final `clean` counts — anything else is `unavailable`.
 
 **What's New in 1.18.0:**
 - `second_vendor: auto` adds one pass by the other vendor's CLI — `codex exec` when `/review` runs in Claude Code, `claude -p` when it runs in Codex. Off by default: the diff goes to that vendor under the reviewer's own subscription. A missing CLI, a timeout or a quota error shows as `unavailable` in the report and never fails the review.

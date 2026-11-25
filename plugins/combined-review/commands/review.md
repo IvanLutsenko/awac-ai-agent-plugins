@@ -1,7 +1,7 @@
 ---
 description: "Combined code review: multi-agent analysis + CodeRabbit + optional second-vendor pass (Codex from Claude Code, Claude from Codex). Supports GitHub PR, GitLab MR, branch diff, uncommitted changes."
 argument-hint: "[PR#|!MR#] | [branch1 branch2] | [--base branch] | [+comments] [+types] [+simplify] [+threads] [all]"
-allowed-tools: Bash(gh:*), Bash(glab:*), Bash(git:*), Bash(coderabbit:*), Bash(cr:*), Bash(codex:*), Bash(claude:*), Bash(curl:*), Bash(python3:*), Bash(which:*), Bash(wc:*), Bash(head:*), Bash(tail:*), Bash(cat:*), Bash(find:*), Bash(grep:*), Bash(rg:*), Bash(mktemp:*), Bash(rm:*), Bash(rmdir:*), Bash(awk:*), Bash(cut:*), Bash(sort:*), Bash(uniq:*), Bash(sed:*), Bash(pwd:*), Bash(echo:*), Bash(umask:*), Agent, Read, Glob, Grep
+allowed-tools: Bash(gh:*), Bash(glab:*), Bash(git:*), Bash(coderabbit:*), Bash(cr:*), Bash(codex:*), Bash(perl:*), Bash(curl:*), Bash(python3:*), Bash(which:*), Bash(wc:*), Bash(head:*), Bash(tail:*), Bash(cat:*), Bash(find:*), Bash(grep:*), Bash(rg:*), Bash(mktemp:*), Bash(rm:*), Bash(rmdir:*), Bash(awk:*), Bash(cut:*), Bash(sort:*), Bash(uniq:*), Bash(sed:*), Bash(pwd:*), Bash(echo:*), Bash(umask:*), Agent, Read, Glob, Grep
 ---
 
 # Combined Code Review
@@ -463,50 +463,69 @@ note, trust boundary), then the Evidence rule above, then verbatim:
 > 3. Fake tests — a test that would still pass if every function under test returned
 >    null/empty/default is not a test; say so. Also: tests asserting implementation, not behavior.
 > Before writing a finding, try to disprove it; drop the ones that don't survive.
-> No style nits, no praise, no summary. Do not edit files. Nothing found → say "clean".
+> No style nits, no praise, no summary. Do not edit files. Nothing found → answer with the single
+> word "clean" as the last line.
 
-**Run** it with your shell tool's timeout at 10 minutes — in Claude Code in the background
-(`run_in_background: true`), sent in the same message as the other agents. Both CLIs bill the user's
-own subscription of that vendor; the plugin passes no keys.
+**Run** it in Claude Code in the background (`run_in_background: true`), sent in the same message as
+the other agents. `perl -e 'alarm 600; exec @ARGV'` caps the CLI at 10 minutes on macOS and Linux
+alike (no coreutils `timeout` on macOS): on expiry the CLI dies with rc 142 and the `rc=` line still
+prints. Both CLIs bill the user's own subscription of that vendor; the plugin passes no keys.
 
 From Claude Code:
 ```bash
-codex exec -c model_reasoning_effort=high --sandbox read-only --skip-git-repo-check \
-  -C "<repository root>" -o "$CRDIR/vendor.md" - < "$CRDIR/vendor-prompt.md" > "$CRDIR/vendor.log" 2>&1; echo "rc=$?"
+perl -e 'alarm 600; exec @ARGV' codex exec -c model_reasoning_effort=high --sandbox read-only \
+  --ignore-rules --skip-git-repo-check -C "$CRDIR" -o "$CRDIR/vendor.md" - \
+  < "$CRDIR/vendor-prompt.md" > "$CRDIR/vendor.log" 2>&1; echo "rc=$?"
 ```
-`-o` writes only the final answer; the session log goes to `vendor.log`. The model is whatever the
-user's `~/.codex/config.toml` sets.
+- `-C "$CRDIR"`, not the repository root, is deliberate: Codex loads project config, MCP servers and
+  `.rules` from its working directory when that project is trusted, and a worktree of the user's own
+  repo inherits that trust. Started in the reviewed branch, its `.codex/` would run outside the
+  sandbox. `$CRDIR` is a fresh temp dir; the read-only sandbox still lets the model read the
+  repository root named in the prompt. It does not confine reads to it — the model can read whatever
+  the user can, exactly like the five agents in Claude Code. The trust-boundary note in the prompt and
+  the Step 5 filter are the guard against an injected «quote ~/.ssh/…», not the sandbox.
+- `--ignore-rules` drops every `.rules` file, the user's included: a review needs no command outside
+  the sandbox, and an injected diff must not reach one the user once allowed.
+- `-o` writes only the final answer; the session log goes to `vendor.log`. The model is whatever the
+  user's `~/.codex/config.toml` sets.
 
 From Codex:
 ```bash
-printf '%s' '{"env":{"CLAUDE_CODE_MAX_OUTPUT_TOKENS":"32000"}}' > "$CRDIR/claude-settings.json"
-( cd "<repository root>" && claude -p --setting-sources user --strict-mcp-config \
+printf '%s' '{"env":{"CLAUDE_CODE_MAX_OUTPUT_TOKENS":"32000"}}' > "$CRDIR/claude-settings.json" && \
+( cd "<repository root>" && perl -e 'alarm 600; exec @ARGV' claude -p --restricted --strict-mcp-config \
   --settings "$CRDIR/claude-settings.json" --tools "Read,Grep,Glob" --allowed-tools "Read,Grep,Glob" \
   --permission-mode plan \
   < "$CRDIR/vendor-prompt.md" ) > "$CRDIR/vendor.md" 2> "$CRDIR/vendor.log"; echo "rc=$?"
 ```
-- `--setting-sources user --strict-mcp-config` is not optional. The repository root is the branch
-  under review, and `-p` skips the workspace-trust prompt: without these flags that branch's
-  `.claude/settings.json` hooks and its MCP servers would run — outside the Codex sandbox, with the
-  user's Keychain. Plan mode and the tool flags limit the model, not hooks.
+- `--restricted --strict-mcp-config` is not optional. The repository root is the branch under review,
+  and `-p` skips the workspace-trust prompt: without these flags that branch's `.claude/settings.json`
+  hooks and its MCP servers would run — outside the Codex sandbox, with the user's Keychain.
+  `--restricted` also ignores user and project settings, removes code-running tools and confines the
+  file tools to the repository root, so an injected «quote ~/.codex/auth.json» has nothing to read.
+  Plan mode and the tool flags limit the model, not hooks.
 - `--tools` is what takes Bash and Edit away; `--allowed-tools` only skips the approval prompt for the
   three it names. Keep both.
 - The output ceiling goes through `--settings` only: the default 8000 tokens turns a long report into
   a single `API Error: ... exceeded the 8000 output token maximum` line, and the variable set in the
   process environment is not picked up.
 - `claude` needs the Keychain and the network, which the Codex sandbox closes — inside it the call
-  prints `Not logged in`. Request to run this one command outside the sandbox, with the reason. Where
-  nobody can approve (`codex exec`, CI), it ends as unavailable. Allowing it for good is the user's
-  call (a `prefix_rule` in `~/.codex/rules/`); never write that rule yourself.
+  prints `Not logged in`. Request to run this one command outside the sandbox, with the reason; ask
+  every run. Do not suggest a standing `prefix_rule` for it: a prefix rule on `claude -p` matches any
+  flags that follow, so a prompt-injected `claude -p --permission-mode bypassPermissions …` would
+  leave the sandbox unasked. Where nobody can approve (`codex exec`, CI), or the user declines, it
+  ends as unavailable.
 
-**Reading the result.** Wait for the `rc=` line, then read `$CRDIR/vendor.md` — the final answer
-only; stderr and the session log are in `$CRDIR/vendor.log`. Take the `path:line — description`
-entries from it as this agent's findings; anything else in the file is not a finding. A file with no
-such entry and no "clean" is not a clean review — it is unavailable, with its first line as the reason.
+**Reading the result.** Wait for the `rc=` line. Only `rc=0` makes the file a result; then read
+`$CRDIR/vendor.md` — the final answer only; stderr and the session log are in `$CRDIR/vendor.log`.
+Take the `path:line — description` entries from it as this agent's findings; anything else in the
+file is not a finding. The review is clean only when there is no such entry and the last non-empty
+line is exactly `clean`. Anything else is unavailable, never a clean pass.
 
-**Unavailable** — a timeout, non-zero exit, empty output, `Not logged in`, a rate-limit or quota
-message → name it `unavailable (<reason>)` in the report and go on. The review never waits on or
-fails because of this agent.
+**Unavailable** — no `rc=` line, `rc` other than 0 (142 is the timeout), empty output, `Not logged
+in`, a rate-limit or quota message, approval declined or impossible → name it
+`unavailable (<reason>)` in the report, the reason from the last line of `vendor.log` or, if the log is
+empty, the last line of `vendor.md` (`claude -p` prints `Not logged in` there), and go on. Partial findings from a failed run are dropped. The
+wait is bounded by the 10-minute cap; the review never fails because of this agent.
 
 Its findings are claims like any agent's: Step 5 applies to them in full, tagged
 `[source: codex]` or `[source: claude]`.
