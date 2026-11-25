@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.17.1
+**Version:** 1.18.0
 
 ---
 
@@ -135,6 +135,7 @@ or by hand as YAML frontmatter:
 language: system    # system | en | ru | uk
 model: sonnet       # sonnet | opus | haiku | inherit
 coderabbit: auto    # auto | off
+second_vendor: off  # off | auto
 voice:              # empty | path to a style file (used by +threads only)
 ---
 ```
@@ -148,6 +149,17 @@ voice:              # empty | path to a style file (used by +threads only)
 - **`coderabbit`** — `auto` uses the CLI when it's installed and authenticated, `off` skips the check
   entirely (no install prompt, no CodeRabbit section). Credentials stay with the CLI
   (`coderabbit auth login` / `coderabbit auth status`); the plugin stores none.
+- **`second_vendor`** — `off` by default. `auto` adds one pass by the other vendor's CLI next to the
+  five agents: `codex exec` (read-only sandbox, effort high, your `~/.codex/config.toml` model) when
+  `/review` runs in Claude Code, `claude -p` (read-only tools, plan mode, user settings only — the reviewed branch's
+  `.claude/` hooks and MCP servers never load) when it runs in Codex. The
+  diff and the PR/MR description go to that vendor under your own subscription and spend its limits —
+  check that the code may go there. Its findings pass the same filter as the agents' and carry
+  `[source: codex]` / `[source: claude]`; a missing CLI, timeout or quota error is one
+  `unavailable (<reason>)` line in the report. **From Codex:** `claude` needs the Keychain and the
+  network, which the Codex sandbox closes, so each run asks to leave the sandbox; under `codex exec`
+  nobody can approve, and the pass is unavailable. To stop the prompt, allow it yourself in
+  `~/.codex/rules/default.rules`: `prefix_rule(pattern=["claude", "-p"], decision="allow")`.
 - **`voice`** — empty by default. Set it to a file describing how you write review comments
   (e.g. `~/.claude/skills/my-voice/SKILL.md`) and `+threads` rewords every posted thread by it:
   the claim first in your words, then the line and scenario as evidence. What is found and the
@@ -292,6 +304,15 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.18.0
+
+- `second_vendor: auto|off` (default `off`): one more reviewer from the other vendor — `codex exec`
+  from Claude Code, `claude -p` from Codex. The agent picks the CLI by what it is, not by environment
+  variables: nested runs inherit both `CLAUDECODE` and `CODEX_*`. `claude -p` gets a 32k output ceiling
+  through `--settings` (the 8000 default turns a long report into an API error). From Codex the call
+  asks to leave the sandbox; the plugin never writes a Codex rule itself. `claude -p` runs with
+  `--setting-sources user --strict-mcp-config`, so a reviewed branch cannot run its own hooks.
 
 ### 1.17.1
 

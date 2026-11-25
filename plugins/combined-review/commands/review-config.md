@@ -1,5 +1,5 @@
 ---
-description: "Set up combined-review: language, subagent model, CodeRabbit. Writes a config that survives plugin updates."
+description: "Set up combined-review: language, subagent model, CodeRabbit, second vendor. Writes a config that survives plugin updates."
 argument-hint: "[--project] [--show]"
 allowed-tools: Bash(head:*), Bash(coderabbit:*), Bash(cat:*), Bash(ls:*), Bash(mkdir:*), Bash(which:*), Read, Write, AskUserQuestion
 ---
@@ -31,6 +31,7 @@ error; missing key falls through to the next level.
 cat ~/.claude/combined-review.md 2>/dev/null
 cat .claude/combined-review.local.md 2>/dev/null
 which coderabbit >/dev/null 2>&1 && coderabbit auth status 2>&1 | head -5
+which codex claude
 ```
 
 With `--show`: print each key, its effective value, and where it came from (project / user / default).
@@ -46,14 +47,19 @@ Stop here.
    If the CLI is missing: `npm i -g coderabbitai` or see coderabbit.ai/cli. If it is installed but
    `coderabbit auth status` says unauthenticated: `coderabbit auth login`. The plugin stores no
    CodeRabbit credentials — the CLI keeps its own.
-4. **Voice for posted threads** — empty (default: threads carry the agents' wording) or a path to a
+4. **Second vendor** — `off` (default) or `auto`: one extra pass by the other vendor's CLI — `codex`
+   when the review runs in Claude Code, `claude` when it runs in Codex. Say plainly before they pick
+   `auto`: the diff and the PR/MR description go to that vendor under the user's own subscription and
+   spend its limits; check that the code is allowed to go there. From Codex the call needs approval
+   to leave the sandbox on every run unless the user allows `claude -p` in `~/.codex/rules/` themselves.
+5. **Voice for posted threads** — empty (default: threads carry the agents' wording) or a path to a
    file describing how the user writes review comments, e.g. `~/.claude/skills/my-voice/SKILL.md`.
    Only `+threads` uses it. Personal by nature — put it in the user-level file, not a shared project one.
 The agents themselves have no setting: all five run on every review. If the user asks to switch one
 off, say that the roster is fixed on purpose — which agent pays off changes per diff — and that
 `model` is the lever for cost.
 
-Accept the defaults without ceremony if the user says so — the answer to all four can be «defaults».
+Accept the defaults without ceremony if the user says so — the answer to all five can be «defaults».
 
 ## Step 3 — Write
 
@@ -69,7 +75,7 @@ coderabbit: auto
 # Combined Review config
 
 Written by /review-config. Keys: language (system|en|ru|uk), model (sonnet|opus|haiku|inherit),
-coderabbit (auto|off), voice (empty|path to a style file). Project-level overrides live in
+coderabbit (auto|off), second_vendor (off|auto), voice (empty|path to a style file). Project-level overrides live in
 `.claude/combined-review.local.md`.
 ```
 

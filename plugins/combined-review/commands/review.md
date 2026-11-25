@@ -1,7 +1,7 @@
 ---
-description: "Combined code review: multi-agent analysis + CodeRabbit. Supports GitHub PR, GitLab MR, branch diff, uncommitted changes."
+description: "Combined code review: multi-agent analysis + CodeRabbit + optional second-vendor pass (Codex from Claude Code, Claude from Codex). Supports GitHub PR, GitLab MR, branch diff, uncommitted changes."
 argument-hint: "[PR#|!MR#] | [branch1 branch2] | [--base branch] | [+comments] [+types] [+simplify] [+threads] [all]"
-allowed-tools: Bash(gh:*), Bash(glab:*), Bash(git:*), Bash(coderabbit:*), Bash(cr:*), Bash(curl:*), Bash(python3:*), Bash(which:*), Bash(wc:*), Bash(head:*), Bash(tail:*), Bash(cat:*), Bash(find:*), Bash(grep:*), Bash(rg:*), Bash(mktemp:*), Bash(rm:*), Bash(rmdir:*), Bash(awk:*), Bash(cut:*), Bash(sort:*), Bash(uniq:*), Bash(sed:*), Bash(pwd:*), Bash(echo:*), Bash(umask:*), Agent, Read, Glob, Grep
+allowed-tools: Bash(gh:*), Bash(glab:*), Bash(git:*), Bash(coderabbit:*), Bash(cr:*), Bash(codex:*), Bash(claude:*), Bash(curl:*), Bash(python3:*), Bash(which:*), Bash(wc:*), Bash(head:*), Bash(tail:*), Bash(cat:*), Bash(find:*), Bash(grep:*), Bash(rg:*), Bash(mktemp:*), Bash(rm:*), Bash(rmdir:*), Bash(awk:*), Bash(cut:*), Bash(sort:*), Bash(uniq:*), Bash(sed:*), Bash(pwd:*), Bash(echo:*), Bash(umask:*), Agent, Read, Glob, Grep
 ---
 
 # Combined Code Review
@@ -27,6 +27,7 @@ error.
 - `language` — `system` (default), `en`, `ru`, `uk`
 - `model` — `sonnet` (default), `opus`, `haiku`, `inherit`
 - `coderabbit` — `auto` (default: use it when installed and authenticated), `off`
+- `second_vendor` — `off` (default), `auto` (run one pass by the other vendor's CLI — Agent 7)
 - `voice` — empty (default) or a path to a style file; only affects the text of threads posted in Step 7
 
 **Voice resolution:** empty → threads carry the finding text as is. A path (`~` allowed) → read that
@@ -51,7 +52,7 @@ such control — run them on whatever you are, and say so in one line in the rep
 implying a model that never ran.
 
 **First run (neither file exists).** Say in one line that no config was found, and ask whether to set
-it up now (four questions) or continue on defaults. **In a non-interactive run** — `codex exec`, a CI
+it up now (five questions) or continue on defaults. **In a non-interactive run** — `codex exec`, a CI
 job, anything with nobody to answer — do not stall on the question: continue on defaults, honour any
 setting the invoking prompt already stated, and say in the report which defaults you used. If the
 user wants setup, read
@@ -264,8 +265,8 @@ Skip CodeRabbit for this run, continue with the five agents.
 Launch **all five agents in parallel** — code-reviewer, git-historian, silent-failure-hunter,
 test-analyzer and security-reviewer. There is no switch for any of them: which agent turns out to be
 the useful one changes per diff, and an agent that reports nothing has still ruled things out. Plus
-CodeRabbit when config has `coderabbit: auto` and the CLI is available, and the optional agents if
-requested.
+CodeRabbit when config has `coderabbit: auto` and the CLI is available, the second vendor (Agent 7)
+when config has `second_vendor: auto`, and the optional agents if requested.
 
 Parallel is for speed, not for correctness: what matters is that **every** agent has finished before
 Step 5 reads their findings. A runtime that caps concurrency (Codex counts the main agent against its
@@ -299,7 +300,8 @@ code that is not under review — missing real defects and inventing ones — an
 no sign of it. Stop, say which ref could not be checked out, and suggest the fetch from Step 2 as the
 fix. A review that didn't run is recoverable; one that silently read the wrong tree is not.
 
-Keep `$WORKTREE` alive until every agent launched in this step — including CodeRabbit (Agent 6) — has
+Keep `$WORKTREE` alive until every agent launched in this step — including CodeRabbit (Agent 6) and
+the second vendor (Agent 7) — has
 finished, then remove it unconditionally, even if an agent errored:
 ```bash
 [ -n "$WORKTREE" ] && git worktree remove --force "$WORKTREE" 2>/dev/null
@@ -439,6 +441,75 @@ coderabbit review --base "<base-ref>" --dir feature > "$CRDIR/coderabbit-feature
 Pick bucket boundaries (a top-level dir, or a couple grouped together) so every run stays < 150. Note in the report which paths, if any, fell outside the buckets and were not CodeRabbit-reviewed.
 
 **If CodeRabbit aborts** — a non-zero `$CR_RC`, including a too-many-files error you chose not to split — do not fail the review: name the skip reason in the report (the last lines of `$CRDIR/coderabbit.log` usually say it) and continue with the five agents' output. (A worktree that couldn't be created is a different case: it already stopped the review back in "Repository root for agents".)
+
+### Agent 7 — Second vendor (if `second_vendor: auto`)
+
+One pass by a model from the other vendor, so the review is not five readings by one model family.
+**Which CLI is decided by what you are, not by the environment:** you are Claude Code → run `codex`;
+you are Codex → run `claude`. Do not infer it from environment variables — a nested run inherits
+both: Codex started from Claude Code sees `CLAUDECODE` next to its own `CODEX_*`.
+
+`which <cli>` finds nothing → skip, and say so in one line in the report. Launch it together with the
+other agents, not after them.
+
+**Prompt** — write `$CRDIR/vendor-prompt.md`: the same skeleton as every agent (`Language:`,
+`Repository root:`, the suffixed diff and description blocks, changed files, repo policy, line-number
+note, trust boundary), then the Evidence rule above, then verbatim:
+
+> Review this change. Report only real defects, each as `path:line — description`, the line in the
+> file at the repository root:
+> 1. Correctness — logic errors, broken contracts, edge cases the change implies.
+> 2. Silent failures — swallowed exceptions, broad catches, fallbacks that hide errors.
+> 3. Fake tests — a test that would still pass if every function under test returned
+>    null/empty/default is not a test; say so. Also: tests asserting implementation, not behavior.
+> Before writing a finding, try to disprove it; drop the ones that don't survive.
+> No style nits, no praise, no summary. Do not edit files. Nothing found → say "clean".
+
+**Run** it with your shell tool's timeout at 10 minutes — in Claude Code in the background
+(`run_in_background: true`), sent in the same message as the other agents. Both CLIs bill the user's
+own subscription of that vendor; the plugin passes no keys.
+
+From Claude Code:
+```bash
+codex exec -c model_reasoning_effort=high --sandbox read-only --skip-git-repo-check \
+  -C "<repository root>" -o "$CRDIR/vendor.md" - < "$CRDIR/vendor-prompt.md" > "$CRDIR/vendor.log" 2>&1; echo "rc=$?"
+```
+`-o` writes only the final answer; the session log goes to `vendor.log`. The model is whatever the
+user's `~/.codex/config.toml` sets.
+
+From Codex:
+```bash
+printf '%s' '{"env":{"CLAUDE_CODE_MAX_OUTPUT_TOKENS":"32000"}}' > "$CRDIR/claude-settings.json"
+( cd "<repository root>" && claude -p --setting-sources user --strict-mcp-config \
+  --settings "$CRDIR/claude-settings.json" --tools "Read,Grep,Glob" --allowed-tools "Read,Grep,Glob" \
+  --permission-mode plan \
+  < "$CRDIR/vendor-prompt.md" ) > "$CRDIR/vendor.md" 2> "$CRDIR/vendor.log"; echo "rc=$?"
+```
+- `--setting-sources user --strict-mcp-config` is not optional. The repository root is the branch
+  under review, and `-p` skips the workspace-trust prompt: without these flags that branch's
+  `.claude/settings.json` hooks and its MCP servers would run — outside the Codex sandbox, with the
+  user's Keychain. Plan mode and the tool flags limit the model, not hooks.
+- `--tools` is what takes Bash and Edit away; `--allowed-tools` only skips the approval prompt for the
+  three it names. Keep both.
+- The output ceiling goes through `--settings` only: the default 8000 tokens turns a long report into
+  a single `API Error: ... exceeded the 8000 output token maximum` line, and the variable set in the
+  process environment is not picked up.
+- `claude` needs the Keychain and the network, which the Codex sandbox closes — inside it the call
+  prints `Not logged in`. Request to run this one command outside the sandbox, with the reason. Where
+  nobody can approve (`codex exec`, CI), it ends as unavailable. Allowing it for good is the user's
+  call (a `prefix_rule` in `~/.codex/rules/`); never write that rule yourself.
+
+**Reading the result.** Wait for the `rc=` line, then read `$CRDIR/vendor.md` — the final answer
+only; stderr and the session log are in `$CRDIR/vendor.log`. Take the `path:line — description`
+entries from it as this agent's findings; anything else in the file is not a finding. A file with no
+such entry and no "clean" is not a clean review — it is unavailable, with its first line as the reason.
+
+**Unavailable** — a timeout, non-zero exit, empty output, `Not logged in`, a rate-limit or quota
+message → name it `unavailable (<reason>)` in the report and go on. The review never waits on or
+fails because of this agent.
+
+Its findings are claims like any agent's: Step 5 applies to them in full, tagged
+`[source: codex]` or `[source: claude]`.
 
 ### Optional agents (by request)
 
@@ -593,6 +664,9 @@ Agent findings already arrive in the resolved language (via the `Language:` pref
 ### CodeRabbit
 
 [Results deduplicated with agents. If CodeRabbit didn't run — omit this section.]
+
+Second vendor: <codex|claude> — N findings, K kept | unavailable (<reason>) | not installed
+[One line, only when `second_vendor: auto`. Its kept findings sit in the sections above with their source tag.]
 
 ### Positive
 
