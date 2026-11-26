@@ -399,7 +399,7 @@ Automated vertical clip creator for talks and presentations. Whisper + Claude + 
 
 Talk decks on top of the [Craft](https://github.com/IvanLutsenko/craft) skill: a fresh holiday theme per talk, the author's defaults, a themed Harold on the closing slide, a PDF for organizers and a card on the author's site.
 
-**What's New in 0.5.1:** `/deck-publish --public` takes a deck published with `--hidden` onto the site. 0.5.0: `/deck-google-slides` in 2x with counters as GIFs and `--update` in place, so transitions and the organizer's copy survive; `/deck-publish --hidden` for a deck reachable by link only.
+**What's New in 0.6.0:** `/deck-new` may offer one or two signature SVG scenes for claims the audience would underestimate, built only on the author's pick. 0.5.1: `/deck-publish --public` takes a deck published with `--hidden` onto the site. 0.5.0: `/deck-google-slides` in 2x with counters as GIFs and `--update` in place, so transitions and the organizer's copy survive; `/deck-publish --hidden` for a deck reachable by link only.
 
 📚 **[Full Documentation](plugins/talk-deck/README.md)**
 
@@ -421,7 +421,7 @@ Talk decks on top of the [Craft](https://github.com/IvanLutsenko/craft) skill: a
 /deck-publish --event "Podlodka #17"            # card on the author's site, no push; --hidden for link-only
 ```
 
-**Status:** 🔨 Beta | **Version:** 0.5.1
+**Status:** 🔨 Beta | **Version:** 0.6.0
 
 **Features:**
 - Needs the Craft skill; the plugin holds only commands and a hook

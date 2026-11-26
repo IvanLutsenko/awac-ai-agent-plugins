@@ -2,9 +2,13 @@
 
 Talk decks on top of the [Craft](https://github.com/IvanLutsenko/craft) skill: a fresh holiday theme per talk, the author's defaults, a themed Harold on the closing slide, a PDF for organizers or a repo, a Google Slides copy, a roast by every agent and a card on the author's site. The plugin holds only commands and a hook; the design system, the samples and the checks stay in Craft.
 
-Version: 0.5.1
+Version: 0.6.0
 
-## What's New in 0.5.1
+## What's New in 0.6.0
+
+- `/deck-new` may offer one or two signature scenes: a bespoke SVG scene for a claim the audience would underestimate, such as a scale off the slide, a turning mechanism or a playable metaphor. Only on the author's pick, and the claim stays in text.
+
+## 0.5.1
 
 - `/deck-publish --public` takes a deck published with `--hidden` onto the site: `noindex` off, card on. Before, a hidden deck stayed hidden on every re-publish with no way back.
 
