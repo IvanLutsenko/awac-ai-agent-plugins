@@ -136,7 +136,10 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 /rereview 123 +resolve +approve            # Were my threads fixed? New code ok? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.19.0
+**Status:** ✅ Production Ready | **Version:** 1.20.0
+
+**What's New in 1.20.0:**
+- `security-reviewer` also looks for weakened tamper defences (root/jailbreak, integrity and anti-fraud checks bypassed or gated on a flag that can reach release), web-view bridges open to any origin, sensitive screens left capturable, and biometric fallbacks that look accidental. Worded per class, not per stack.
 
 **What's New in 1.19.0:**
 - `/rereview` now also reviews the code added since your last review — a full `/review` pass limited to the new lines — so `+approve` no longer approves code nobody read. A finding there holds back the approval; `-new` skips the pass.

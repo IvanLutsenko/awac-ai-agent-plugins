@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.19.0
+**Version:** 1.20.0
 
 ---
 
@@ -315,6 +315,15 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.20.0
+
+- `security-reviewer` covers four mobile-app classes the generic list missed. Critical: tamper
+  defences (root/jailbreak, app-integrity, anti-fraud) removed, short-circuited or gated on a flag
+  or build setting that can reach a release build; a native bridge in an embedded web view callable
+  from any origin. Warning: a sensitive screen left capturable while the app protects its others; a
+  biometric passcode fallback that reads as accidental. Phrased per class, not per stack, so the
+  agent stays stack-agnostic.
 
 ### 1.19.0
 

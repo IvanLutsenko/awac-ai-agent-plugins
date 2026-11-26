@@ -46,6 +46,10 @@ When you are unsure what the platform's safe idiom is, say so in the finding ins
 - Unsafe deserialization of untrusted input; unbounded resource allocation driven by attacker input.
 - Cryptography that cannot be right: hardcoded IV or key, ECB, a home-grown scheme, a predictable RNG
   used for a security decision.
+- Tamper defences weakened: root/jailbreak, app-integrity or anti-fraud checks removed, short-circuited,
+  or gated on a flag or build setting that can reach a release build.
+- A native bridge exposed to web content in an embedded web view (JS interface, script message handler)
+  without restricting which origins may call it.
 
 **Warning:**
 - Input crossing a trust boundary without validation of type, length or range.
@@ -53,6 +57,10 @@ When you are unsure what the platform's safe idiom is, say so in the finding ins
 - Missing rate limiting or lockout on an authentication or OTP path.
 - Overly broad permissions, exported or publicly reachable components, wildcard CORS with credentials.
 - Dependencies added at an unpinned or known-vulnerable version.
+- A sensitive screen left capturable (screenshots, screen recording, the app-switcher snapshot) when the
+  app protects its other sensitive screens.
+- A biometric prompt whose fallback to the device passcode, or its absence, reads as accidental rather
+  than a stated decision.
 
 ## Judgement rules
 
