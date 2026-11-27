@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.21.0
+**Version:** 1.21.1
 
 ---
 
@@ -317,6 +317,13 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.21.1
+
+- `/rereview` Step 7 on GitLab: after a successful approve, lifts your own «Request changes» (GraphQL
+  `mergeRequestDestroyRequestedChanges`, only when your `reviewState` is `REQUESTED_CHANGES`). An
+  approval does not lift it, and the step was missing, so each run improvised it. A held-back or 409
+  approve never lifts it; a failed lift is reported with the call to run by hand.
 
 ### 1.21.0
 

@@ -388,6 +388,26 @@ if the branch moved since Step 1, GitLab answers 409 instead of approving the wr
 Treat 409 as a rejection, not a warning — don't approve, tell the user the branch moved since
 you checked, and suggest re-running `/rereview`.
 
+**GitLab: after the approve succeeds, lift your own «Request changes».** Do this only after the approve
+step has succeeded. An approval does not remove the «Request changes» you set earlier, and the MR stays
+blocked by it. A held-back or rejected approve (409) leaves the status alone, so an MR nobody approved
+is never unblocked. Check whether you set the status, using your username from Step 1:
+```bash
+glab api --method POST graphql -H "Content-Type: application/json" --input - <<'JSON'
+{"query":"{ project(fullPath: \"<group/project>\") { mergeRequest(iid: \"<iid>\") { reviewers { nodes { username mergeRequestInteraction { reviewState } } } } } }"}
+JSON
+```
+Your `reviewState` is `REQUESTED_CHANGES` → lift it, in a separate call. Only GraphQL can do it:
+```bash
+glab api --method POST graphql -H "Content-Type: application/json" --input - <<'JSON'
+{"query":"mutation { mergeRequestDestroyRequestedChanges(input: {projectPath: \"<group/project>\", iid: \"<iid>\"}) { errors } }"}
+JSON
+```
+Success is exit code 0 and `data.mergeRequestDestroyRequestedChanges.errors == []`.
+Anything else counts as a failure: a non-zero exit code, a top-level `errors` with no `data`, or a
+non-empty `errors`. In that case report that the approval is in, the «Request changes» is still set,
+and the MR is still blocked. Quote the error and give the user the call to run.
+
 ```bash
 # GitHub - no server-side guard exists, so check first and pin what you approved
 VERIFIED_HEAD="<head.sha from Step 1>"

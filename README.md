@@ -136,7 +136,10 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 /rereview 123 +resolve +approve            # Were my threads fixed? New code ok? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.21.0
+**Status:** ✅ Production Ready | **Version:** 1.21.1
+
+**What's New in 1.21.1:**
+- `/rereview` lifts your own GitLab «Request changes» after a successful approve; an approval alone left the MR blocked.
 
 **What's New in 1.21.0:**
 - CodeRabbit findings no longer vanish: every one goes through the same filter as the agents', and the report counts them and lists each dropped one with a reason.
