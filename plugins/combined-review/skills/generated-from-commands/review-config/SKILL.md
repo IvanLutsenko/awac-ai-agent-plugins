@@ -56,6 +56,10 @@ Stop here.
    spend its limits; check that the code is allowed to go there. From Codex the call needs approval
    to leave the sandbox on every run; do not suggest a `prefix_rule` for `claude -p` — it would match
    any flags after it.
+   With `auto`, also ask about `vendor_model` and `vendor_effort`. Leave them empty to use the vendor
+   CLI's own config. Set them to make the review cheaper than the user's everyday setting, for example
+   `gpt-6.2-sol` and `medium` for Codex. One pass over one diff does not need the most capable model
+   at high effort. That combination is the fastest way to use up the vendor's plan.
 5. **Voice for posted threads** — empty (default: threads carry the agents' wording) or a path to a
    file describing how the user writes review comments, e.g. `~/.claude/skills/my-voice/SKILL.md`.
    Only `+threads` uses it. Personal by nature — put it in the user-level file, not a shared project one.
@@ -79,7 +83,8 @@ coderabbit: auto
 # Combined Review config
 
 Written by /review-config. Keys: language (system|en|ru|uk), model (sonnet|opus|haiku|inherit),
-coderabbit (auto|off), second_vendor (off|auto), voice (empty|path to a style file). Project-level overrides live in
+coderabbit (auto|off), second_vendor (off|auto), vendor_model (empty|model id), vendor_effort
+(empty|low|medium|high), voice (empty|path to a style file). Project-level overrides live in
 `.claude/combined-review.local.md`.
 ```
 

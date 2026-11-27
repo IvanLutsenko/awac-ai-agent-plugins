@@ -2,7 +2,7 @@
 
 Multi-agent code review with CodeRabbit CLI integration.
 
-**Version:** 1.20.0
+**Version:** 1.21.0
 
 ---
 
@@ -145,6 +145,8 @@ language: system    # system | en | ru | uk
 model: sonnet       # sonnet | opus | haiku | inherit
 coderabbit: auto    # auto | off
 second_vendor: off  # off | auto
+vendor_model:       # empty | model id for the second vendor (e.g. gpt-6.2-sol)
+vendor_effort:      # empty | low | medium | high
 voice:              # empty | path to a style file (used by +threads only)
 ---
 ```
@@ -159,7 +161,7 @@ voice:              # empty | path to a style file (used by +threads only)
   entirely (no install prompt, no CodeRabbit section). Credentials stay with the CLI
   (`coderabbit auth login` / `coderabbit auth status`); the plugin stores none.
 - **`second_vendor`** — `off` by default. `auto` adds one pass by the other vendor's CLI next to the
-  five agents: `codex exec` (read-only sandbox, effort high, your `~/.codex/config.toml` model) when
+  five agents: `codex exec` (read-only sandbox; model and effort from `vendor_model` / `vendor_effort`, else your `~/.codex/config.toml`) when
   `/review` runs in Claude Code, `claude -p` (`--restricted`, read-only tools confined to the repo, plan mode — the reviewed
   branch's `.claude/` hooks and MCP servers never load) when it runs in Codex. The
   diff and the PR/MR description go to that vendor under your own subscription and spend its limits —
@@ -315,6 +317,21 @@ Every finding includes file path and line number:
 ---
 
 ## Changelog
+
+### 1.21.0
+
+- CodeRabbit: every finding in the log becomes a `[source: coderabbit]` line in `findings.txt` and goes
+  through Step 5 like an agent's; question-style findings get the check they name. The report always
+  says `N findings, K kept` and lists each dropped one with its reason; it is omitted only with
+  `coderabbit: off`. Runs with 16 and 20 CodeRabbit findings had produced reports that never mentioned
+  CodeRabbit.
+- The report's last line is `Name (@login) · URL`: `gh pr view` author name, `glab api` `.author.name`,
+  `gh api users/<login>` in `/rereview`. Login alone only when the forge has no name.
+- `/rereview` Step 4b: the pass counts only when all five agents ran on the new lines; the report's
+  `Ran:` line names what ran, an incomplete pass says so and holds back approval.
+- Second vendor: `-c model_reasoning_effort=high` is gone — it overrode the user's own effort and spent
+  the Codex plan in a few reviews. New keys `vendor_model` and `vendor_effort` (`codex exec -m/-c`,
+  `claude -p --model/--effort`); empty means the CLI's own config.
 
 ### 1.20.0
 

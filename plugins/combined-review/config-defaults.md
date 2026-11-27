@@ -7,6 +7,8 @@ language: system
 model: sonnet
 coderabbit: auto
 second_vendor: off
+vendor_model:
+vendor_effort:
 voice:
 ---
 
@@ -39,6 +41,11 @@ when `/review` runs in Claude Code, `claude -p` when it runs in Codex. It bills 
 subscription of whoever runs the review, and the diff goes to that vendor; `off` by default for that
 reason. A missing CLI, a timeout or a quota error makes it `unavailable` in the report, never a failed
 review.
+
+**`vendor_model`**, **`vendor_effort`** — empty (default) or a model id and `low|medium|high` for
+the second-vendor pass: `codex exec -m … -c model_reasoning_effort=…`, `claude -p --model … --effort …`.
+When empty, the vendor CLI uses its own config. The plugin forces no effort. Use these keys to make
+the review pass cheaper than your everyday model, for example `gpt-6.2-sol` and `medium`.
 
 **`voice`** — empty (default) or a path to a file describing how you write review comments. Only
 `+threads` reads it: before posting, each thread is reworded by that file — claim first in your words,

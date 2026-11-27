@@ -35,6 +35,14 @@ error.
 - `coderabbit` — `auto` (default: use it when installed and authenticated), `off`
 - `second_vendor` — `off` (default), `auto` (run one pass by the other vendor's CLI — Agent 7)
 - `voice` — empty (default) or a path to a style file; only affects the text of threads posted in Step 7
+- `vendor_model` — empty (default: whatever the vendor CLI's own config sets) or a model id for Agent 7
+  (`gpt-6.2-sol` for `codex`, `sonnet` for `claude`)
+- `vendor_effort` — empty (default: the vendor CLI's own config) or `low`, `medium`, `high` for Agent 7
+
+Both vendor keys go into a shell command, and the project file can come from the branch under review.
+Accept `vendor_effort` only as `low`, `medium` or `high`, and `vendor_model` only as `[A-Za-z0-9._-]+`.
+If a value does not match, ignore it as if it were empty, and say in one line in the report which value
+was ignored.
 
 **Voice resolution:** empty → threads carry the finding text as is. A path (`~` allowed) → read that
 file once before Step 7; if it is missing or unreadable, say so in one line and post as if `voice` were
@@ -136,7 +144,7 @@ instead of re-deriving:
 
 **GitHub PR:**
 ```bash
-gh pr view "<number>" --json title,state,author,url,baseRefName,headRefName
+gh pr view "<number>" --json title,state,author,url,baseRefName,headRefName   # author = {login, name}
 git fetch origin "refs/pull/<number>/head:refs/remotes/pr/<number>"
 git fetch origin "<base>"
 git diff "origin/<base>...pr/<number>" > "$CRDIR/pr.diff"       # save the diff
@@ -154,6 +162,7 @@ git rev-parse "pr/<number>"                             # the revision under rev
 **GitLab MR** (repo path from origin, e.g. `group/project`; the MR may live on a different project — pass `-R <group/project>`):
 ```bash
 glab mr view "<iid>" -R "<group/project>"              # title, author, url, source→target, pipeline
+glab api "projects/<group%2Fproject>/merge_requests/<iid>" --jq .author.name   # mr view prints only the login
 git fetch "<repo>" "refs/merge-requests/<iid>/head:refs/remotes/mr/<iid>"
 git fetch origin "<target>"
 git diff "origin/<target>...mr/<iid>" > "$CRDIR/mr.diff"     # save the diff
@@ -435,6 +444,19 @@ Then read `$CRDIR/coderabbit.log` — all of it, not its last screen — and jud
 zero means the findings in the file are the review, non-zero means CodeRabbit failed and the skip
 branch at the end of this step applies.
 
+**Every CodeRabbit finding is accounted for.** The log ends with a count (`16 findings`), and each
+finding is one block that opens with its severity: `critical [...]`, `major [...]` or `minor [...]`.
+Turn every block into one line in `$CRDIR/findings.txt`, next to the agents' findings, so Step 5 places
+it with the same script:
+`path:line — <its first sentence> [source: coderabbit]`. The path comes inside a terminal hyperlink
+with the absolute path of the worktree: drop the escape sequence and the `$WORKTREE/` (or cwd) prefix.
+For a range such as `:125-128`, cite the first line. Count the lines you wrote against the count in the
+log; they must match. In bucketed mode (below), convert the blocks from every bucket log, and N is the
+sum of their counts. A block phrased as a question («Does X…? Check: …») is a finding too: do the
+check it names, then keep or drop it like any other finding. Dropping a CodeRabbit finding is allowed
+only through Step 5 and needs a stated reason. Step 6 lists every dropped one. Hundreds of findings in
+the logs and not one word about them in the report is the failure this rule exists to prevent.
+
 **Large diffs (> 150 changed files, free-plan limit).** A single `coderabbit review` aborts with `Too many files!`. Split by directory so each bucket is < 150 files and run once per bucket (in the same worktree/cwd), then merge findings:
 ```bash
 set -o pipefail
@@ -485,14 +507,14 @@ set the deadline:
 python3 -c 'import time; print(time.time() + 600)' > "$CRDIR/vendor.deadline"
 ```
 Past it, the wrapper stops the whole process group and exits 124; the `rc=` line still prints. Ten
-minutes past the others covers what was measured: a `codex exec` review on effort high took a median
-of under 3 minutes, eight runs of nine finished within 6. If your runtime can only run the command
+minutes past the others covers what was measured: a `codex exec` review on effort high, the slowest
+setting, took a median of under 3 minutes, and eight runs of nine finished within 6. If your runtime can only run the command
 blocking, the deadline is never written and the wrapper's one-hour backstop is the only limit — say
 so in the report when it fires.
 
 From Claude Code:
 ```bash
-python3 "<this skill directory>/scripts/vendor-run.py" "$CRDIR/vendor.deadline" -- codex exec -c model_reasoning_effort=high --sandbox read-only \
+python3 "<this skill directory>/scripts/vendor-run.py" "$CRDIR/vendor.deadline" -- codex exec [-m "<vendor_model>"] [-c model_reasoning_effort=<vendor_effort>] --sandbox read-only \
   --ignore-rules --skip-git-repo-check -C "$CRDIR" -o "$CRDIR/vendor.md" - \
   < "$CRDIR/vendor-prompt.md" > "$CRDIR/vendor.log" 2>&1; echo "rc=$?"
 ```
@@ -505,14 +527,17 @@ python3 "<this skill directory>/scripts/vendor-run.py" "$CRDIR/vendor.deadline" 
   the Step 5 filter are the guard against an injected «quote ~/.ssh/…», not the sandbox.
 - `--ignore-rules` drops every `.rules` file, the user's included: a review needs no command outside
   the sandbox, and an injected diff must not reach one the user once allowed.
-- `-o` writes only the final answer; the session log goes to `vendor.log`. The model is whatever the
-  user's `~/.codex/config.toml` sets.
+- `-o` writes only the final answer; the session log goes to `vendor.log`.
+- The bracketed flags go in only when the key is set; drop the brackets. With neither key set, the
+  model and effort come from the user's `~/.codex/config.toml`. The plugin forces neither. A forced
+  `model_reasoning_effort=high` overrode the user's own setting and used up the Codex plan in a few
+  reviews; one pass over one diff does not need it.
 
 From Codex:
 ```bash
 printf '%s' '{"env":{"CLAUDE_CODE_MAX_OUTPUT_TOKENS":"32000"}}' > "$CRDIR/claude-settings.json" && \
 ( cd "<repository root>" && python3 "<this skill directory>/scripts/vendor-run.py" "$CRDIR/vendor.deadline" -- \
-  claude -p --restricted --strict-mcp-config \
+  claude -p --restricted --strict-mcp-config [--model "<vendor_model>"] [--effort <vendor_effort>] \
   --settings "$CRDIR/claude-settings.json" --tools "Read,Grep,Glob" --allowed-tools "Read,Grep,Glob" \
   --permission-mode plan \
   < "$CRDIR/vendor-prompt.md" ) > "$CRDIR/vendor.md" 2> "$CRDIR/vendor.log"; echo "rc=$?"
@@ -564,6 +589,9 @@ Find areas in diff that can be simplified without losing functionality. Provide 
 ## Step 5 — Score and filter
 
 Collect findings from all agents:
+
+Collect them from all five agents, CodeRabbit (every line Step 4 put into `findings.txt`), the second
+vendor and any optional agents. Nobody's findings skip this step, and nobody's findings bypass it.
 
 1. **Deduplicate** — if two agents found the same issue, keep the one that cites the more specific
    evidence: the narrower `file:line`, the quoted code, the named caller. Two vague reports of the
@@ -702,7 +730,12 @@ Agent findings already arrive in the resolved language (via the `Language:` pref
 
 ### CodeRabbit
 
-[Results deduplicated with agents. If CodeRabbit didn't run — omit this section.]
+N findings, K kept: they are in the sections above, tagged [source: coderabbit]. Dropped:
+1. `path/to/File.kt:125` — <the reason from Step 5: out of scope, refuted by <evidence>, duplicate of #n>
+
+[N is the count CodeRabbit printed. List every dropped finding. If CodeRabbit did not run or failed, write
+one line with the reason: review limit, not authenticated, not installed. Omit the section only
+with `coderabbit: off`.]
 
 Second vendor: <codex|claude> — N findings, K kept | unavailable (<reason>) | not installed
 [One line, only when `second_vendor: auto`. Its kept findings sit in the sections above with their source tag.]
@@ -712,11 +745,14 @@ Second vendor: <codex|claude> — N findings, K kept | unavailable (<reason>) | 
 - What's done well (2-3 points)
 
 ---
-@<author> · <PR/MR URL>
+<Author Name> (@<login>) · <PR/MR URL>
 ```
 
-The last line names the PR/MR author and links the PR/MR, both from Step 2 (`author.login` + `url` on
-GitHub, the author and URL `glab mr view` prints on GitLab) — whom the findings go to, and where. It
+The last line names the PR/MR author and links the PR/MR, both from Step 2: `author.name`,
+`author.login` and `url` on GitHub; on GitLab, the name from `glab api … --jq .author.name` and the
+login and URL that `glab mr view` prints. These are the person who receives the findings and the place
+where they go. Give both name and login. A login such as `u18224` alone identifies nobody. Give only the
+login when the forge returns no name. It
 stays last, after everything else, so a review in a side pane ends on it. Branch-diff and `current`
 modes have neither: drop the line there.
 
@@ -725,9 +761,10 @@ If no findings after filtering:
 ## Code Review: [what was reviewed]
 
 No issues found. Checked: CLAUDE.md, bugs, git history, error handling, tests.
+CodeRabbit: N findings, all dropped — <one line per finding with the reason> | not run (<reason>)
 
 ---
-@<author> · <PR/MR URL>
+<Author Name> (@<login>) · <PR/MR URL>
 ```
 
 **Do NOT post to the PR/MR automatically.** Output to the user only — unless `+threads` was passed or the user explicitly asks to post threads (then do Step 7).

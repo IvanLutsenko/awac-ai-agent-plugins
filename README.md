@@ -136,7 +136,13 @@ Multi-agent code review with CodeRabbit CLI integration. 5 specialized agents �
 /rereview 123 +resolve +approve            # Were my threads fixed? New code ok? → resolve → approve (PR or MR)
 ```
 
-**Status:** ✅ Production Ready | **Version:** 1.20.0
+**Status:** ✅ Production Ready | **Version:** 1.21.0
+
+**What's New in 1.21.0:**
+- CodeRabbit findings no longer vanish: every one goes through the same filter as the agents', and the report counts them and lists each dropped one with a reason.
+- The report ends on the author's name and login, not the login alone.
+- `/rereview` counts the new-code pass as done only when all five agents ran on it; reading the commits in the main loop is not the pass, and approval is held back otherwise.
+- The second vendor no longer forces `model_reasoning_effort=high`; new `vendor_model` / `vendor_effort` keys pick a cheaper model and effort for the review pass.
 
 **What's New in 1.20.0:**
 - `security-reviewer` also looks for weakened tamper defences (root/jailbreak, integrity and anti-fraud checks bypassed or gated on a flag that can reach release), web-view bridges open to any origin, sensitive screens left capturable, and biometric fallbacks that look accidental. Worded per class, not per stack.

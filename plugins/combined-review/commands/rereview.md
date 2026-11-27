@@ -32,7 +32,7 @@ cat ~/.claude/combined-review.md 2>/dev/null        # user-level, applies everyw
 ```
 
 `language` is the report language (`system` → resolve from `CLAUDE.md`/`AGENTS.md`, else English). `model`,
-`coderabbit`, `second_vendor` and `voice` drive Step 4b exactly as they drive `/review`. Reading just the project
+`coderabbit`, `second_vendor`, `vendor_model`, `vendor_effort` and `voice` drive Step 4b exactly as they drive `/review`. Reading just the project
 file would ignore user-level keys.
 
 ## Arguments
@@ -70,6 +70,7 @@ project, take the path from the URL argument.
 ```bash
 gh api user                                                      # -> .login (that's "mine")
 gh api "repos/<owner>/<repo>/pulls/<number>"                     # title, user.login (author), html_url, state, base/head, head.sha
+gh api "users/<user.login>" --jq '.name // empty'                # the author's name: the pulls endpoint has none
 ```
 
 Keep the head SHA — `diff_refs.head_sha` on GitLab, `head.sha` on GitHub. That's the current
@@ -285,6 +286,14 @@ and the second vendor, the same worktree rules. In this order:
 Do not run `/review`'s Step 6 report — the findings go into this command's report (Step 5 below). With
 `+threads`, post them by `/review` Step 7, against the same narrowed map.
 
+**"Full" means every reviewer ran.** Reading the new commits yourself in the main loop gives you
+context. It does not count as this step, however carefully you read. The step ran only when all five
+agents ran on the new lines. CodeRabbit and the second vendor also count when config enables them.
+Each of those two either ran or has a reason it did not. If any of the five agents did not run, the
+report says "new code not fully reviewed — <what's missing>", and Step 7 holds back approval as if this
+step had failed. CodeRabbit findings follow `/review` Step 4: every one goes into `findings.txt`, and
+every dropped one is listed in the report with its reason.
+
 ## Step 5 — Report
 
 Group by verdict, most actionable first — 🚩 *claimed, not there* opens the report as its own group,
@@ -313,15 +322,21 @@ Revision <short head_sha> ("<last commit subject>"), <N> commits since my commen
    Needs a manual look.
 
 **New code since <short baseline> — <n> findings:** (or "no new code since <short baseline>", or
-"not reviewed (-new)", "not reviewed — <why>", or "no baseline — whole MR reviewed")
+"not reviewed (-new)", "not reviewed — <why>", "not fully reviewed — <what's missing>", or
+"no baseline — whole MR reviewed")
+Ran: 5 agents · CodeRabbit N findings, K kept · codex N, K kept   (or "<name> unavailable (<reason>)")
 1. `Bar.kt:88` — <finding in /review's format> [source: …]
+CodeRabbit dropped:
+1. `Bar.kt:120` — <reason>
 
 ---
-@<author> · <PR/MR URL>
+<Author Name> (@<login>) · <PR/MR URL>
 ```
 
-The report ends on the author and the link from Step 1 (`user.login` + `html_url` on GitHub,
-`author.username` + `web_url` on GitLab) — whom the open threads wait on, and where.
+The report ends on the author and the link from Step 1. On GitHub use the name from `users/<login>`,
+`user.login` and `html_url`. On GitLab use `author.name`, `author.username` and `web_url`. This is the
+person the open threads wait on, and the place where they are. Give both name and login. Give only the
+login when the forge returns no name.
 
 Step 4b's findings already passed `/review` Step 5, the "Generated lines" check included. A side note
 you spot outside Step 4b is a new finding too: run that check on it before offering to post it. A line the author doesn't write by hand is not the
